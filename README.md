@@ -11,6 +11,110 @@ A robust Python framework for cross-exchange stablecoin arbitrage, implementing 
 - **Synthetic Testing**: Includes generators for synthetic and adversarial test instances
 - **Comprehensive Analysis**: Experiment scripts for performance comparison and evaluation
 
+## System Architecture
+
+### High-Level Architecture
+
+```mermaid
+graph TB
+    subgraph Exchanges
+        K[Kraken API]
+        C[Coinbase API]
+    end
+    
+    subgraph Connectors
+        BC[Base Exchange Connector]
+        KC[Kraken Connector]
+        CC[Coinbase Connector]
+    end
+    
+    subgraph GraphConstruction
+        GB[Graph Builder]
+        AG[Arbitrage Graph]
+    end
+    
+    subgraph Agent
+        AA[Arbitrage Agent]
+    end
+    
+    subgraph User
+        U[User / CLI / Script]
+    end
+    
+    K --> KC
+    C --> CC
+    KC --> BC
+    CC --> BC
+    BC --> GB
+    GB --> AG
+    AG --> AA
+    AA --> U
+```
+
+### Graph and Cost Model
+
+```mermaid
+graph LR
+    subgraph ArbitrageGraph
+        K1[Kraken USDT<br/>$1.00]
+        K2[Kraken USDC<br/>$0.99]
+        C1[Coinbase USDT<br/>$1.01]
+        C2[Coinbase USDC<br/>$1.00]
+        
+        K1 -->|fee + volatility| K2
+        K1 -->|fee + volatility| C1
+        K2 -->|fee + volatility| C2
+        C1 -->|fee + volatility| K1
+    end
+    
+    subgraph EdgeCost["Edge Cost Calculation"]
+        F[Fee]
+        V[Volatility Cost<br/>= price_diff × volatility_factor]
+        TC[Total Cost<br/>= Fee + Volatility]
+        
+        F --> TC
+        V --> TC
+    end
+```
+
+### Two-Level Search and Agent Workflow
+
+```mermaid
+flowchart TD
+    Start([Start Two-Level Search]) --> EnumEx[Enumerate All Exchange Pairs<br/>e₁, e₂]
+    EnumEx --> EnumCoins[For Each Exchange Pair:<br/>Enumerate All Stablecoin Pairs]
+    EnumCoins --> BuildGraph[Build/Select Relevant<br/>Subgraph of ArbitrageGraph]
+    BuildGraph --> ChooseAlgo{Use A* or<br/>Dijkstra?}
+    
+    ChooseAlgo -->|A*| AStar[Run A* Algorithm<br/>with Heuristic]
+    ChooseAlgo -->|Dijkstra| Dijkstra[Run Dijkstra<br/>Algorithm]
+    
+    AStar --> CheckOpp[Check Arbitrage Opportunity:<br/>Path, Profit, ROI, Risk]
+    Dijkstra --> CheckOpp
+    
+    CheckOpp --> Profitable{Is<br/>Profitable?}
+    Profitable -->|Yes| AddToList[Add to List of<br/>Profitable Opportunities]
+    Profitable -->|No| NextComb[Try Next Combination]
+    
+    AddToList --> NextComb
+    NextComb --> EnumEx
+    NextComb --> End([End])
+```
+
+**Cost Function Formula:**
+```
+Total Edge Cost = Fee + Volatility Cost
+where:
+  Volatility Cost = |price_source - price_target| × volatility_factor
+  Fee = transaction_fee + withdrawal_fee
+```
+
+**Arbitrage Condition:**
+```
+Price Difference > Total Cost
+i.e., |P_target - P_source| > (Fee + Volatility Cost)
+```
+
 ## Installation
 
 1. Clone the repository:
