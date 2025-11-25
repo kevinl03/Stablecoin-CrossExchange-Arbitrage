@@ -1,0 +1,4 @@
+method,mean_error_s,percentile_coverage_pct,opportunities_found,successfully_executed,survival_rate_pct
+Fixed 60s,25.3,68,100,68,68.0
+Historical 95th,8.7,95,95,90,94.7
+
