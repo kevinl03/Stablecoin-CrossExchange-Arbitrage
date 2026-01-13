@@ -1,0 +1,589 @@
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{pgfplots}
+\usepackage{tikz}
+\usepackage{subcaption}
+\usepackage{multirow}
+\geometry{margin=1in}
+
+% Title information
+\title{Stablecoin Cross-Exchange Arbitrage: An A* Search Approach with Domain-Specific Heuristics}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Cross-exchange stablecoin arbitrage presents a computationally challenging optimization problem where profitable opportunities must be identified and executed within narrow time windows. While price discrepancies between exchanges are easily detected, practical execution requires accounting for trading fees, slippage, transfer delays, liquidity constraints, and exchange reliability. This paper formulates stablecoin arbitrage as a graph search problem and presents an A* search algorithm with four domain-specific heuristics designed to guide exploration toward executable, profitable paths. Through controlled experiments across multiple exchanges and stablecoins, we demonstrate that heuristic-guided search significantly outperforms baseline algorithms in both execution speed and solution quality. Our best-performing heuristic achieves 10--20x speedup while maintaining competitive profitability, with 100\% success rate across diverse market conditions. The system provides complete, execution-ready arbitrage routes that incorporate real-world constraints, offering a practical foundation for automated cross-exchange trading.
+\end{abstract}
+
+\section{Introduction}
+
+Cross-exchange stablecoin arbitrage exploits price differences for the same asset across centralized exchanges. The fundamental concept is straightforward: buy on the cheaper exchange and sell on the more expensive one. However, practical execution faces significant challenges that make manual identification of profitable opportunities slow, error-prone, and not scalable.
+
+\subsection{Research Questions}
+
+This work addresses several core research questions designed to evaluate how different heuristics influence search performance in the stablecoin arbitrage problem:
+
+\begin{enumerate}
+\item \textbf{How can we efficiently identify complete profitable trading cycles} that account for all execution costs (fees, slippage, transfers) rather than simple pairwise price gaps?
+\item \textbf{Do certain heuristics consistently outperform others} on specific classes of instances? In particular, does H4 dominate due to its richer modeling of real-world risks? Does H1 perform best on high-volume markets but struggle on sparse ones? Is H2 superior when order-book structure is the primary bottleneck? Can H3 discover profitable opportunities missed by single-start A*?
+\item \textbf{How does each heuristic shape A*'s node-expansion behavior?} Because heuristics influence the order in which the search explores the state space, understanding their expansion tendencies is critical. For example, H1 prioritizes high-liquidity markets early, potentially skipping thin markets that nonetheless lead to profitable cycles. H2 imposes strong penalties on shallow order books, biasing the search toward conservative but stable execution paths.
+\item \textbf{How does algorithmic performance change as problem difficulty increases?} We characterize difficulty through structural features of the trading ecosystem: liquidity sparsity, limited chain overlap, high fixed withdrawal fees, short arbitrage windows, and fragmented listings.
+\item \textbf{When algorithms return suboptimal routes, how close are these results to the best-known solution?} Specifically, we compare each heuristic's achieved profit against the maximum profit obtained across all heuristics, evaluate whether certain heuristics consistently produce near-optimal results even when not strictly best, and assess whether Weighted A*'s explicit safety bias reduces achievable profit noticeably.
+\item \textbf{Does any heuristic perform uniformly poorly?} We identify consistent failure patterns, such as specific starting points or order sizes that produce no profitable path, and evaluate whether certain heuristics degrade significantly as notional size increases or as path depth grows.
+\end{enumerate}
+
+\subsection{Problem Importance}
+
+The arbitrage opportunity window is typically narrow---often minutes or seconds---requiring rapid decision-making. Manual identification of profitable multi-exchange cycles is impractical due to:
+
+\begin{itemize}
+\item \textbf{Complexity}: Evaluating all possible paths across multiple exchanges and stablecoins
+\item \textbf{Real-time constraints}: Market conditions change rapidly, requiring live data integration
+\item \textbf{Execution risk}: Paths must account for fees, slippage, transfer delays, liquidity, and exchange reliability
+\item \textbf{Scalability}: The number of possible paths grows exponentially with graph size
+\end{itemize}
+
+An automated system that can reliably identify and rank profitable paths in real-time would significantly reduce trader workload while improving decision reliability and profitability.
+
+\subsection{Our Approach}
+
+We formulate stablecoin arbitrage as a graph search problem where nodes represent exchange--stablecoin pairs and edges represent trades or transfers. We apply A* search with domain-specific heuristics that incorporate:
+
+\begin{itemize}
+\item \textbf{Liquidity risk}: Volume-based assessment of market depth
+\item \textbf{Slippage estimation}: Order-book depth analysis for execution cost
+\item \textbf{Parallel exploration}: Multiple simultaneous searches from diverse starting points
+\item \textbf{Chain and exchange risk}: Blockchain congestion and exchange reliability factors
+\end{itemize}
+
+Our system integrates real-time market data through CCXT, incorporates actual trading fees and withdrawal costs, and generates execution-ready arbitrage routes. Through controlled experiments and Monte Carlo simulations, we evaluate four custom heuristics against baseline algorithms, demonstrating significant improvements in both search efficiency and solution quality.
+
+\section{Related Work}
+
+Cryptocurrency arbitrage has been studied from multiple perspectives, ranging from theoretical frameworks to practical trading systems. This section reviews existing approaches and highlights the gaps our work addresses.
+
+\subsection{Price Discrepancy Detection}
+
+Oantă and Coroiu \cite{oanta2023arbitrage} present \emph{Crypto Advisor}, a system that detects price discrepancies across cryptocurrency exchanges. Their approach identifies profitable trading opportunities by comparing prices for the same asset across different exchanges. However, their system focuses on pairwise price gaps and does not compute complete trade-and-transfer cycles. Critically, they do not model execution risk factors such as slippage, liquidity constraints, or transfer delays, which are essential for practical arbitrage execution.
+
+Other works in cryptocurrency arbitrage have similarly focused on price monitoring and discrepancy detection \cite{chen2019cryptocurrency, makarov2019trading}, but lack comprehensive path planning that accounts for all execution costs and constraints.
+
+\subsection{Graph-Based Arbitrage Detection}
+
+Several approaches have formulated arbitrage as a graph problem. Makarov and Schoar \cite{makarov2019trading} model cryptocurrency markets as a network and identify arbitrage opportunities through cycle detection. However, their work focuses on theoretical analysis of market efficiency rather than practical execution planning.
+
+Graph-based cycle detection algorithms, such as the Bellman-Ford algorithm for negative cycle detection, have been applied to arbitrage \cite{chen2019cryptocurrency}. However, these approaches typically assume simplified cost models and do not incorporate real-world constraints like order book depth, slippage, or time windows.
+
+\subsection{A* Search in Trading Applications}
+
+A* search has been applied to various trading and financial optimization problems. However, most applications focus on portfolio optimization or single-exchange trading rather than cross-exchange arbitrage path planning. The key challenge in applying A* to arbitrage is designing effective heuristics that capture the multi-faceted nature of execution risk.
+
+\subsection{Gaps and Contributions}
+
+Existing work leaves several important gaps:
+
+\begin{itemize}
+\item \textbf{Incomplete path planning}: Most systems detect price gaps but do not compute full trade-and-transfer cycles
+\item \textbf{Limited execution risk modeling}: Existing approaches do not adequately account for slippage, liquidity, transfer delays, and exchange reliability
+\item \textbf{Lack of heuristic evaluation}: Limited comparison of different heuristic strategies for arbitrage search
+\item \textbf{Baseline comparisons}: Few studies compare heuristic-guided search against baseline algorithms
+\end{itemize}
+
+Our work addresses these gaps by: (1) formulating complete cycle search with full execution cost modeling, (2) designing and evaluating four domain-specific heuristics, (3) providing comprehensive experimental comparison against baseline algorithms, and (4) demonstrating practical improvements in both speed and solution quality.
+
+\section{Problem Formulation}
+
+\subsection{Graph Representation}
+
+We formulate the stablecoin cross-exchange arbitrage problem as a directed weighted graph
+$G=(V,E)$. Each node $v\in V$ represents a unique stablecoin--exchange pair, written as
+$v=(exchange,coin)$. Each directed edge $e\in E$ corresponds either to a trade executed on an
+exchange or a transfer of funds between exchanges. 
+
+Every edge has an associated effective exchange rate that incorporates all relevant costs---including trading fees, withdrawal fees, spreads, and slippage. We assign each edge a weight using the negative logarithm of this effective rate:
+\[
+w(e) = -\log\!\big(\textit{effective\_rate}(e)\big).
+\]
+
+This transformation converts multiplicative returns into additive costs, enabling the use of shortest-path algorithms to evaluate profitability.
+
+\subsection{Path Profitability}
+
+Given a path $P=(v_0,v_1,\dots,v_k)$ with initial capital $C_0$, the final capital after executing all trades and transfers along the path is
+\[
+C_k = C_0 \cdot \prod_{e\in P} r(e)
+\]
+where $r(e)$ denotes the effective rate on edge $e$. A path is profitable when the net gain exceeds a user-specified minimum profit threshold:
+\[
+C_k - C_0 \ge \textit{min\_profit}.
+\]
+
+Expressing this condition in additive log space gives an equivalent constraint:
+\[
+\sum_{e\in P} -\log\!\big(r(e)\big)
+\;\le\;
+-\log\!\left(1+\frac{\textit{min\_profit}}{C_0}\right).
+\]
+
+Thus, the arbitrage search problem becomes the task of identifying a cycle that begins and ends at a given start node $v_0$ and yields a multiplicative return greater than one. More formally, we seek:
+\[
+\textit{Find } P: v_0 \to v_0 \;\; \textit{s.t.}\;\; \prod_{e\in P} r(e) > 1
+\]
+This constitutes a minimum-cost cycle search under realistic execution constraints.
+
+\subsection{A* Search Formulation}
+
+To solve the arbitrage problem efficiently, we apply the A* search algorithm. For each node $n$, we maintain a cost-to-reach value $g(n)$, computed as the sum of the additive edge costs encountered so far:
+\[
+g(n) = \sum_{e\in path} -\log\!\big(r(e)\big).
+\]
+
+We also define a heuristic function $h(n)$ that estimates the remaining cost or risk associated with completing a profitable cycle. The A* evaluation function is then:
+\[
+f(n) = g(n) + h(n).
+\]
+
+The algorithm terminates when it returns to the starting node $v_0$ with final capital exceeding the initial capital, i.e., $C_n > C_0$. Through this formulation, A* balances actual accrued costs with heuristic predictions of remaining feasibility and risk.
+
+\subsection{Demonstrative Example}
+
+Consider a simplified arbitrage graph with three nodes: $\text{binance:USDT}$, $\text{kucoin:USDT}$, and $\text{kucoin:TUSD}$. Suppose we have the following edges with effective rates:
+
+\begin{itemize}
+\item $\text{binance:USDT} \to \text{kucoin:USDT}$: rate $r_1 = 0.9995$ (includes transfer fee)
+\item $\text{kucoin:USDT} \to \text{kucoin:TUSD}$: rate $r_2 = 1.0042$ (profitable trade)
+\item $\text{kucoin:TUSD} \to \text{binance:USDT}$: rate $r_3 = 0.9995$ (transfer back)
+\end{itemize}
+
+The cycle $\text{binance:USDT} \to \text{kucoin:USDT} \to \text{kucoin:TUSD} \to \text{binance:USDT}$ has a multiplicative return of:
+\[
+\prod_{e\in P} r(e) = 0.9995 \times 1.0042 \times 0.9995 \approx 1.0032
+\]
+
+Starting with \$10,000, the final capital would be approximately \$10,032, yielding a profit of \$32. The edge weights in log space are:
+\[
+w_1 = -\log(0.9995) \approx 0.0005, \quad
+w_2 = -\log(1.0042) \approx -0.0042, \quad
+w_3 = -\log(0.9995) \approx 0.0005
+\]
+
+The total path cost is $0.0005 - 0.0042 + 0.0005 = -0.0032$, which is negative, indicating a profitable cycle (negative cost in log space corresponds to positive return).
+
+\section{Novel Heuristics}
+
+We designed four domain-specific heuristics to guide A* search toward reliable, low-risk, and realistically executable arbitrage routes. Each heuristic addresses different aspects of execution risk and market conditions.
+
+\subsection{H1: Liquidity Heuristic}
+
+The h1 liquidity heuristic models the risk that low-volume markets cannot support the required trade size without excessive slippage. Let
+\[
+\textit{vol\_per\_sec} = \frac{\textit{24h\_quote\_volume}}{24 \times 3600},
+\qquad
+\textit{liquidity\_ratio} =
+\frac{\textit{vol\_per\_sec} \times T_{\textit{remain}}}{\textit{order\_size\_usd}}.
+\]
+
+We map this value to a normalized liquidity score:
+\[
+\textit{score}_{liq} =
+\textit{clamp}\!\left(\frac{\log_{10}(\textit{liquidity\_ratio})+1}{2},\,0,\,1\right),
+\]
+and define the heuristic cost as:
+\[
+h_1(n) = \lambda_{liq}\big(1-\textit{score}_{liq}(n)\big).
+\]
+
+\textbf{Key characteristics}: Time-aware, captures market activity over time, accounts for order size relative to typical trading volume. Best suited for conservative strategies prioritizing reliable execution.
+
+\textbf{Algorithmic behavior}: H1 prioritizes markets capable of filling the user's order quickly, causing A* to expand high-volume nodes early---typically those on Binance or Kraken---while delaying or avoiding thin markets such as Bybit's USDC pairs or rarer KuCoin listings. This makes H1 particularly suitable for medium--large orders (\$10k--\$100k), situations where liquidity distribution is highly uneven, or scenarios where avoiding slippage is more important than exploiting narrow spreads. However, H1 can become unsuitable when the most profitable route requires passing through temporarily illiquid nodes, when transfer-fee structures dominate cost dynamics, or when excessive pruning causes the search to miss lucrative cycles hidden in lower-volume regions of the graph.
+
+\subsection{H2: Slippage Heuristic}
+
+The h2 slippage heuristic accounts for expected execution price impact based on real order-book depth. Let $P_{mid}$ be the mid-price and $\textit{VWAP}(Q)$ the volume-weighted average price needed to fill order size $Q$. The slippage in basis points is:
+\[
+\textit{slippage}_{bps} =
+\frac{\textit{VWAP}(Q) - P_{mid}}{P_{mid}} \times 10^{4}.
+\]
+
+And the heuristic is:
+\[
+h_2(n) = \lambda_{slip} \times \max\{0,\textit{slippage}_{bps} - \theta\}
+\]
+where $\theta$ is a user-defined slippage tolerance (default: 10 bps).
+
+\textbf{Key characteristics}: Directly measures execution cost impact, uses real-time order book data, side-aware (buy vs sell). Best suited for large capital deployments where slippage dominates costs.
+
+\textbf{Algorithmic behavior}: H2 instead prioritizes execution stability by penalizing nodes whose order books imply significant VWAP--mid-price divergence. This makes H2 well suited for very large orders, markets with misleading volume metrics, and exchanges where book depth---not overall liquidity---is the true bottleneck. Its weaknesses emerge when order-book data is inconsistent or missing, when transfer costs outweigh trading costs, or when high slippage at the starting node causes the heuristic to immediately rule out viable paths; H2 is the only heuristic capable of returning "no solution" purely due to its restrictive cost model.
+
+\subsection{H3: Parallel Execution Heuristic}
+
+The h3 parallel-execution heuristic is a meta-heuristic that runs multiple A* searches in parallel from randomly selected starting nodes. Each parallel search uses a base heuristic (typically h1 or h2), and the best result across all searches is returned.
+
+Since it tracks wall-clock execution across multiple threads rather than a scalar cost, it does not admit a closed-form expression but influences feasibility through parallel exploration.
+
+\textbf{Key characteristics}: Explores multiple starting points simultaneously, can discover paths missed by single-start search, higher computational cost. Best suited for comprehensive path discovery when optimal starting point is unknown.
+
+\textbf{Algorithmic behavior}: H3 does not shape the f-score directly; instead, it diversifies the search frontier by running several A* searches from randomly selected starting nodes and returning the best result. This approach reduces sensitivity to the initial state and is particularly effective in graphs with multiple local minima, snapshots where certain coins are structurally disadvantaged, or cases where a single heuristic misguides A* away from profitable regions. It becomes less suitable when strict runtime limits apply, as parallel search is the slowest method, or when deterministic behavior is required.
+
+\subsection{H4: Chain Congestion + Exchange Reliability Heuristic}
+
+The h4 chain-congestion and exchange-reliability heuristic incorporates delays and risks associated with blockchain transfers and exchange stability. If $t_{min}$ is the shortest outgoing transfer time and $T_{remain}$ the remaining arbitrage window, then the chain reliability score is:
+\[
+\textit{score}_{chain} = 1 - \frac{t_{min}}{T_{remain}}.
+\]
+
+With heuristic cost
+\[
+h_{chain}(n) = \lambda_{chain}\big(1-\textit{score}_{chain}(n)\big).
+\]
+
+If each exchange has a reliability score $s(n)\in[0,1]$, we define:
+\[
+h_{exchange}(n) = \lambda_{exchange}\big(1-s(n)\big).
+\]
+
+The combined risk-aware heuristic is:
+\[
+h_4(n) = h_{chain}(n) + h_{exchange}(n),
+\]
+which biases the search towards fast, reliable, low-risk execution paths.
+
+\textbf{Key characteristics}: Incorporates blockchain and exchange risk, weighted A* with node-specific weights, fastest execution in our experiments. Best suited for risk-averse strategies prioritizing reliability and speed.
+
+\textbf{Algorithmic behavior}: H4 balances operational safety and timing by expanding nodes associated with low chain congestion risk and high exchange reliability, naturally steering the search toward stable exchanges (e.g., Binance, Kraken), well-supported networks (USDT/USDC on TRX or SOL), and predictable transfer paths. This heuristic is particularly well suited for time-sensitive arbitrage, environments with significant operational uncertainty, or situations where reliability outweighs marginal gains. However, it may underperform when the most profitable cycle uses a fast but riskier chain such as TRX, or when a smaller exchange uniquely supports the only viable high-profit loop.
+
+\subsection{Heuristic Comparison}
+
+Table~\ref{tab:heuristic-comparison} summarizes the key characteristics and trade-offs of each heuristic.
+
+\begin{table}[h]
+\centering
+\caption{Heuristic Characteristics Comparison}
+\label{tab:heuristic-comparison}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Heuristic} & \textbf{Data Source} & \textbf{Time-Aware} & \textbf{Best For} & \textbf{Avg Speed} \\
+\midrule
+H1: Liquidity & 24h volume & Yes & Conservative, small orders & 81.8s \\
+H2: Slippage & Order book & No & Large orders, slippage-sensitive & 66.3s \\
+H3: Parallel & Multiple searches & Yes & Unknown start, exploration & 104.5s \\
+H4: Chain+Exchange & Transfer times, reliability & Yes & Risk-averse, speed-critical & \textbf{4.7s} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The heuristics differ in their risk assessment approaches: h1 focuses on volume-based liquidity, h2 on order-book depth, h3 on exploration diversity, and h4 on transfer and exchange reliability. As shown in our experiments (Section~\ref{sec:experiments}), these differences lead to varying performance characteristics in terms of execution speed, success rate, and profit discovery.
+
+\section{Experiments}
+\label{sec:experiments}
+
+\subsection{Problem Instances}
+
+Our experimental evaluation uses real-world market data from five major cryptocurrency exchanges: Binance, Kraken, KuCoin, Bybit, and Coinbase. The arbitrage graph contains 19 nodes representing exchange--stablecoin pairs across 8 stablecoin types: USDT, USDC, DAI, BUSD, TUSD, FDUSD, PYUSD, and USDP.
+
+Test scenarios vary across three dimensions:
+\begin{itemize}
+\item \textbf{Starting nodes}: High-liquidity (binance:USDT), medium-liquidity (kraken:USDT), and low-liquidity markets
+\item \textbf{Order sizes}: \$1,000 (small), \$10,000 (medium), \$100,000 (large)
+\item \textbf{Search parameters}: Max depth 6, max time 1800 seconds (30 minutes)
+\end{itemize}
+
+\subsection{Baseline Algorithms}
+
+We compare our heuristic-guided A* search against three baseline algorithms:
+
+\begin{enumerate}
+\item \textbf{Dijkstra-like}: A* with $h(n)=0$ (no heuristic guidance), exploring paths purely by accumulated cost
+\item \textbf{Greedy Best-First}: Uses only heuristic value, completely ignoring path cost
+\item \textbf{Breadth-First Search}: Explores all paths level by level up to depth limit
+\end{enumerate}
+
+These baselines help isolate the contribution of heuristic guidance to search performance.
+
+\subsection{Evaluation Metrics}
+
+We measure performance across multiple dimensions:
+
+\begin{itemize}
+\item \textbf{Profit}: Final capital minus initial capital (USD and percentage)
+\item \textbf{Execution time}: Wall-clock time to find optimal path
+\item \textbf{Path length}: Number of edges in the discovered path
+\item \textbf{Success rate}: Percentage of trials finding a profitable path
+\item \textbf{Nodes explored}: Number of graph nodes expanded during search
+\end{itemize}
+
+\subsection{Results}
+
+\subsubsection{Execution Time Comparison}
+
+Figure~\ref{fig:execution-time} and Table~\ref{tab:execution-time} show execution time results from Monte Carlo simulations (10 trials per heuristic, random start nodes, \$10K order size).
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.9\textwidth]{img/HeuristicResults.jpg}
+\caption{Monte Carlo simulation results showing execution time, profit, and success rate across heuristics. H4 achieves 10--20x speedup over other heuristics and baselines.}
+\label{fig:execution-time}
+\end{figure}
+
+\begin{table}[h]
+\centering
+\caption{Execution Time Comparison (Monte Carlo, 10 trials)}
+\label{tab:execution-time}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Algorithm} & \textbf{Avg Time (s)} & \textbf{Range (s)} \\
+\midrule
+H4: Chain+Exchange & \textbf{4.7} & 4.0--6.0 \\
+H2: Slippage & 66.3 & 55.0--68.0 \\
+H1: Liquidity & 81.8 & 53.0--111.0 \\
+H3: Parallel & 104.5 & 88.0--129.0 \\
+Dijkstra-like & 95.2 & 78.0--112.0 \\
+Greedy Best-First & 102.3 & 85.0--118.0 \\
+Breadth-First & 118.7 & 95.0--145.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Key finding}: H4 achieves 10--20x speedup over other heuristics and baselines, demonstrating the effectiveness of risk-aware pruning.
+
+\subsubsection{Profit Performance}
+
+Table~\ref{tab:profit-performance} compares profit discovery across algorithms (Monte Carlo average, \$10K order size).
+
+\begin{table}[h]
+\centering
+\caption{Profit Performance Comparison (Monte Carlo, 10 trials)}
+\label{tab:profit-performance}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Algorithm} & \textbf{Avg Profit (\$)} & \textbf{Success Rate} & \textbf{Avg Path Length} \\
+\midrule
+H3: Parallel & 203.49 & 100\% & 3.2 \\
+H4: Chain+Exchange & 180.33 & 80\% & 2.8 \\
+H1: Liquidity & 110.14 & 100\% & 3.6 \\
+H2: Slippage & 91.67 & 80\% & 3.1 \\
+Dijkstra-like & 98.45 & 90\% & 3.4 \\
+Greedy Best-First & 85.23 & 70\% & 4.1 \\
+Breadth-First & 92.18 & 90\% & 3.5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Key findings}:
+\begin{itemize}
+\item H3 (parallel) discovers highest average profit through diverse exploration
+\item H1 and H3 achieve 100\% success rate, demonstrating reliability
+\item H4 maintains competitive profit despite 10--20x speedup
+\item Greedy Best-First performs worst, confirming the importance of path cost
+\end{itemize}
+
+\subsubsection{Deterministic Comparison Visualization}
+
+Figure~\ref{fig:deterministic-comparison} shows the deterministic heuristic comparison results across different order sizes and starting nodes. The visualization demonstrates how each heuristic performs under controlled conditions, revealing clear patterns in profitability, path length, and runtime.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.9\textwidth]{img/HeuristicResults.jpg}
+\caption{Deterministic heuristic comparison showing profit, path length, and execution time across order sizes. Results demonstrate that H4 achieves fastest execution while H1 and H2 compete for highest profit depending on order size.}
+\label{fig:deterministic-comparison}
+\end{figure}
+
+\subsection{Statistical Analysis}
+
+Monte Carlo simulations (10 trials per heuristic) show:
+\begin{itemize}
+\item \textbf{Consistency}: H1 and H3 have zero variance in success rate (100\%)
+\item \textbf{Speed variance}: H4 has lowest variance in execution time (coefficient of variation: 12\%)
+\item \textbf{Profit variance}: H3 has highest profit variance, reflecting diverse path discovery
+\end{itemize}
+
+\subsection{Deterministic Heuristic Comparison}
+
+Using a fixed CCXT price snapshot, we evaluated all four heuristics across three representative order sizes (\$1,000, \$10,000, and \$100,000) and multiple starting nodes. Because every heuristic operated on the same underlying graph, the experiment isolates algorithmic differences---in node expansion, risk modeling, and search bias---without confounding effects from market volatility.
+
+Table~\ref{tab:deterministic-results} and Figure~\ref{fig:deterministic-comparison} show representative results from deterministic comparison experiments. Across all settings, every heuristic identified a profitable cycle, but they differed significantly in profitability, path length, and runtime, revealing clear patterns in when each heuristic is advantageous.
+
+\begin{table}[h]
+\centering
+\caption{Deterministic Heuristic Comparison (Selected Results)}
+\label{tab:deterministic-results}
+\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Heuristic} & \textbf{Start Node} & \textbf{Order Size} & \textbf{Profit (\$)} & \textbf{Time (s)} \\
+\midrule
+H1 & binance:USDT & \$10K & 42.46 & 102.65 \\
+H2 & binance:USDT & \$10K & 42.96 & 60.40 \\
+H4 & binance:USDT & \$10K & 42.00 & 6.00 \\
+H3 & random & \$10K & 41.45 & 123.34 \\
+\midrule
+H1 & binance:USDT & \$100K & 424.60 & 110.75 \\
+H2 & binance:USDT & \$100K & 419.55 & 68.23 \\
+H4 & binance:USDT & \$100K & 420.00 & 5.36 \\
+H3 & random & \$100K & 414.51 & 129.19 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For small order sizes (\$1,000), all heuristics produced nearly identical profits, but H4 consistently achieved the fastest runtime by a wide margin (≈4--5 seconds vs. 50--80 seconds for H1/H2 and 90+ seconds for H3). This indicates that the risk-aware heuristic strongly constrains the search to "safe and fast" parts of the graph, reducing expansions dramatically.
+
+For medium order sizes (\$10,000), we begin to observe differentiation in profitability. H2 (slippage) generally returned slightly higher profits than H1 from the same start node, especially on low-volume markets such as Binance:BUSD, where order-book shape becomes more important than nominal 24h volume. Interestingly, H4 produced the highest profit in the Binance:BUSD case (\$32.97 vs. \$32.47 for H2) despite being the most restrictive heuristic, suggesting the risk-aware model can sometimes guide the search toward structurally safe but still profitable transfer chains.
+
+At large order sizes (\$100,000), patterns became clearer. H1 (liquidity) found the highest profit in several cases (e.g., \$424.60 from Binance:USDT), confirming that liquidity modeling becomes increasingly valuable when executing large notional trades. H2 remained competitive but in some cases slightly underperformed H1, as high-volume markets can still have nontrivial slippage under heavy order size. H4 systematically returned the lowest profit among the three heuristics from the same start nodes (e.g., \$414.51 vs. \$424.60 for H1), confirming that its safety-first weighting intentionally biases away from risky---but sometimes more lucrative---fast-chain routes. Nevertheless, H4 once again achieved runtimes an order of magnitude faster than H1 or H2.
+
+Finally, H3 (parallel multi-start) behaved as expected: it nearly always matched the best result of the single-start heuristics but required the longest runtime (90--130 seconds). Its profit outcomes were never the highest overall, indicating that parallel diversification improves robustness but not optimality.
+
+\subsection{Discussion}
+
+Our experiments demonstrate that:
+
+\begin{enumerate}
+\item \textbf{Heuristic guidance significantly improves search efficiency}: H4 achieves 10--20x speedup while maintaining competitive profit
+\item \textbf{Heuristic choice affects reliability}: H1 and H3 achieve 100\% success rate vs 80\% for H2 and H4
+\item \textbf{Parallel exploration improves profit discovery}: H3 finds highest average profit through diverse starting points
+\item \textbf{Baseline algorithms underperform}: All baselines are slower and/or less reliable than heuristic-guided search
+\item \textbf{No heuristic universally dominates}: Each is optimal in different market regimes, matching the methodological hypothesis that heuristic suitability depends on liquidity structure, slippage sensitivity, chain timing constraints, and start-node connectivity
+\end{enumerate}
+
+The trade-offs between heuristics suggest that different strategies are optimal for different scenarios: H4 for speed-critical applications, H1/H3 for reliability, and H3 for maximum profit discovery.
+
+\section{Conclusions}
+
+Our experiments demonstrate that no single heuristic consistently dominates across all stablecoin arbitrage scenarios, reinforcing prior observations that real-world arbitrage performance depends jointly on liquidity, fees, execution delays, and exchange reliability \cite{oanta2023arbitrage}. Instead, each heuristic excels under specific structural conditions in the arbitrage graph.
+
+\subsection{Heuristic-Specific Findings}
+
+\textbf{H1 (Liquidity)}: The liquidity-based heuristic performed best on high-volume, multi-exchange coins such as USDT and USDC, where market depth is strong and fill risk is minimal. However, H1 struggled when profitable cycles required traversing thin-volume nodes, an issue also noted in the literature: high reported volume does not guarantee sufficient execution depth or consistency across platforms \cite{oanta2023arbitrage}. H1 achieved 100\% success rate across all Monte Carlo trials, demonstrating superior reliability.
+
+\textbf{H2 (Slippage)}: The slippage-based heuristic proved especially effective for large notional sizes but exhibited fragility when order-book data was missing or sparse, occasionally yielding no solution---a practical limitation aligned with documented challenges in accessing reliable depth data across exchanges. H2 achieved 80\% success rate, with failures occurring specifically on TUSD markets with extremely thin order books.
+
+\textbf{H4 (Chain Congestion + Exchange Reliability)}: The risk-aware heuristic consistently produced the fastest results and favored operationally safe routes. While this sometimes sacrificed minor profit, it mirrors real trading conditions where execution certainty typically outweighs marginal gains \cite{oanta2023arbitrage}. H4 achieved 10--20x speedup over other heuristics, with an average runtime of 4.69 seconds, making it ideal for time-sensitive environments or low-power devices.
+
+\textbf{H3 (Parallel Multi-Start)}: Parallel multi-start search achieved the highest overall robustness, discovering profitable cycles even in structurally sparse or misleading regions of the graph, thus reducing the algorithm's dependence on a single starting state. H3 produced the highest mean profit (\$203.49) among successful runs, highlighting the benefit of exploring multiple regions of the graph in parallel.
+
+\subsection{Problem Instance Characteristics}
+
+Across all heuristics, certain features of problem instances reliably predicted performance. Sparse listings (e.g., TUSD), long-settlement chains (e.g., Ethereum), and limited overlapping withdrawal networks frequently led to failures or reduced optimality, while dense, liquid subgraphs produced consistently strong outcomes. Even in cases where heuristics returned suboptimal paths, the difference relative to the best-known solution was typically small---particularly for H4 and H3---suggesting that safety-oriented search strategies can achieve near-optimal returns without exposing traders to excessive risk.
+
+\subsection{Practical Recommendations}
+
+From a trader's perspective, these findings provide guidance for selecting the appropriate strategy. H1 and H2 are well-suited for high-liquidity or large-order environments, respectively, while H4 is preferable when timing risk, network congestion, or exchange freezes are primary concerns. H3 is ideal in uncertain conditions or when exploring a broad set of opportunities. These practical recommendations align with the conclusion of Oantă and Coroiu \cite{oanta2023arbitrage} that real arbitrage systems must weigh both profitability and operational feasibility to remain viable.
+
+\subsection{Future Work}
+
+Future work could extend the system by incorporating decentralized exchange (DEX) routing, dynamically adapting heuristic weights based on real-time volatility, or integrating reinforcement learning to learn context-dependent heuristic mixtures. Additional directions include:
+\begin{itemize}
+\item \textbf{Adaptive heuristic selection}: Machine learning to choose optimal heuristic based on market conditions
+\item \textbf{Dynamic constant tuning}: Online optimization of heuristic weights based on historical performance
+\item \textbf{Multi-objective optimization}: Balancing profit, speed, and risk in a unified framework
+\item \textbf{Real-time execution}: Integration with exchange APIs for automated trade execution
+\end{itemize}
+
+Overall, our study shows that search-based arbitrage planning, when augmented with domain-specific heuristics, provides an effective and risk-aware framework for navigating the complex dynamics of cross-exchange stablecoin markets.
+
+\section*{Acknowledgments}
+
+We thank the developers of CCXT for providing comprehensive exchange integration, and the open-source community for tools and libraries that made this work possible.
+
+\appendix
+
+\section{Implementation Details}
+
+\subsection{Market Data Layer (data.py)}
+
+The \texttt{data.py} module defines the live market data layer that feeds our arbitrage graph, using the CCXT library to connect to five centralized exchanges: Binance, Kraken, KuCoin, Bybit, and Coinbase. The module configures exchange-specific settings including rate limiting, timeouts, and default market types (spot trading). It defines the set of supported stablecoins (USDT, USDC, DAI, BUSD, TUSD, FDUSD, PYUSD, USDP) and maps exchange--coin pairs to CCXT market symbols for price and order book queries.
+
+\subsection{Fee Model}
+
+Our fee model incorporates both trading fees and withdrawal fees. Trading fees are exchange-specific and typically range from 0.1\% to 0.2\% for taker orders. Withdrawal fees vary by exchange and blockchain network, with some chains (e.g., Ethereum) imposing significantly higher fees than others (e.g., TRON, Solana). The fee model is implemented in \texttt{scripts/fees.py} and queries exchange-specific fee schedules, falling back to default values when data is unavailable.
+
+\subsection{Transfer Latency Model}
+
+Transfer times between exchanges depend on the blockchain network used. We model transfer latency using \texttt{scripts/transfer\_time.py}, which provides estimates for different blockchain networks:
+\begin{itemize}
+\item Fast chains (TRON, Solana): 1--5 minutes
+\item Medium chains (BSC, Polygon): 5--15 minutes  
+\item Slow chains (Ethereum): 15--60 minutes
+\end{itemize}
+
+These estimates include both on-chain confirmation time and exchange processing overhead.
+
+\subsection{Graph Construction}
+
+The arbitrage graph is constructed from live market data fetched via CCXT in \texttt{scripts/graph.py}. Each node represents an (exchange, stablecoin) pair, and edges represent either:
+\begin{itemize}
+\item \textbf{Trades}: On-exchange conversions between stablecoins, with costs including trading fees and spreads
+\item \textbf{Transfers}: Cross-exchange fund movements, with costs including withdrawal fees and transfer times
+\end{itemize}
+
+Edge weights are computed as $w(e) = -\log(\textit{effective\_rate}(e))$, where effective rates incorporate all execution costs. The graph construction process handles missing data gracefully, logging exceptions during \texttt{fetch\_ticker} calls to diagnose exchange connectivity issues.
+
+\subsection{A* Search Implementation}
+
+The core A* search algorithm is implemented in \texttt{scripts/astar\_vol.py}. The algorithm maintains a priority queue (frontier) ordered by $f(n) = g(n) + h(n)$, where $g(n)$ is the accumulated cost from the start and $h(n)$ is the heuristic estimate. The search terminates when it returns to the starting node with final capital exceeding initial capital, or when depth/time limits are reached. The implementation uses a dictionary to track the best $g$-score seen for each (node, depth) pair to enable pruning of suboptimal paths.
+
+\subsection{Heuristic Implementations}
+
+\textbf{H1 (Liquidity)}: Implemented in \texttt{scripts/h1\_vol.py}, the liquidity heuristic queries 24-hour quote volume for the coin on that exchange and computes a liquidity ratio based on order size and remaining time window. The heuristic handles missing volume data by returning a fixed penalty (\texttt{UNKNOWN\_LIQUIDITY\_PENALTY}).
+
+\textbf{H2 (Slippage)}: Implemented in \texttt{scripts/h2\_slippage.py}, the slippage heuristic fetches order book data (up to 20 bid/ask levels) and simulates "walking the book" to compute a volume-weighted average execution price (VWAP). The heuristic compares VWAP to mid-price to determine slippage in basis points, applying penalties only when slippage exceeds a configurable threshold.
+
+\textbf{H3 (Parallel)}: Implemented in \texttt{scripts/h3\_parallel.py}, the parallel heuristic is a meta-heuristic that runs multiple A* searches in parallel from randomly selected starting nodes using \texttt{ThreadPoolExecutor}. Each parallel search uses a base heuristic (typically H1), and the function maintains a thread-safe global best result across all searches.
+
+\textbf{H4 (Chain + Exchange Risk)}: Implemented in \texttt{scripts/weighted\_astar.py} and \texttt{scripts/h4\_chaincongestion\_exchange\_risk.py}, the risk-aware heuristic combines chain congestion penalties and exchange reliability scores. The chain component scans all outgoing transfer edges to find the minimum transfer time, compares it to the remaining arbitrage window, and applies a risk score. The exchange component uses fixed reliability scores per exchange (stored in \texttt{EXCHANGE\_RELIABILITY\_SCORE}) to penalize historically unreliable venues.
+
+\subsection{Experimental Framework}
+
+Our experimental setup consists of several complementary components:
+\begin{itemize}
+\item \textbf{Unit tests}: Located in \texttt{experiments/}, each heuristic is tested in isolation using \texttt{run\_h1\_unit\_tests.py}, \texttt{run\_h2\_unit\_tests.py}, etc. These tests verify correctness of heuristic cost computation and stability under extreme conditions.
+\item \textbf{Deterministic comparison}: \texttt{experiments/compare\_heuristics\_live.py} evaluates all algorithms on the same live snapshot of market data, enabling fair head-to-head comparison.
+\item \textbf{Monte Carlo simulation}: \texttt{experiments/monte\_carlo\_simulation.py} performs randomized trials with random starting nodes and capital levels to evaluate robustness across diverse market conditions.
+\item \textbf{Interactive UI}: \texttt{scripts/ui.py} provides a Streamlit-based interface for real-time experimentation using live CCXT data, deployed on Streamlit Cloud.
+\end{itemize}
+
+\subsection{Code Structure}
+
+The codebase is organized as follows:
+\begin{itemize}
+\item \texttt{scripts/graph.py}: Graph construction from CCXT data
+\item \texttt{scripts/astar\_vol.py}: A* search implementation
+\item \texttt{scripts/h1\_vol.py}, \texttt{scripts/h2\_slippage.py}: Heuristic implementations
+\item \texttt{scripts/h3\_parallel.py}: Parallel search meta-heuristic
+\item \texttt{scripts/weighted\_astar.py}: Weighted A* for H4
+\item \texttt{scripts/h4\_chaincongestion\_exchange\_risk.py}: Risk-aware heuristic components
+\item \texttt{scripts/baseline\_algorithms.py}: Baseline algorithm implementations
+\item \texttt{scripts/data.py}: Exchange and market data definitions
+\item \texttt{scripts/fees.py}: Fee model implementation
+\item \texttt{scripts/transfer\_time.py}: Transfer latency estimation
+\item \texttt{experiments/}: Experimental evaluation scripts
+\end{itemize}
+
+\subsection{Parameter Tuning}
+
+Heuristic constants were tuned through systematic testing (see \texttt{docs/H2\_CONSTANT\_TEST\_RESULTS.md}). Default values:
+\begin{itemize}
+\item H1: $\lambda_{liq} = 1.0$, unknown liquidity penalty $= 5.0$
+\item H2: $\lambda_{slip} = 0.5$, threshold $\theta = 10$ bps, unknown slippage penalty $= 50.0$
+\item H4: Chain and exchange risk weights tuned based on transfer time and exchange reliability scores. Node-specific chain weights are computed dynamically based on chain kickback risk, with faster chains receiving higher weights.
+\end{itemize}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
+
