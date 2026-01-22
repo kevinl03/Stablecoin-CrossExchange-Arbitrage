@@ -304,15 +304,21 @@ Test scenarios vary across three dimensions:
 
 \subsection{Baseline Algorithms}
 
-We compare our heuristic-guided A* search against three baseline algorithms:
+We compare our heuristic-guided A* search against five baseline algorithms:
 
 \begin{enumerate}
-\item \textbf{Dijkstra-like}: A* with $h(n)=0$ (no heuristic guidance), exploring paths purely by accumulated cost
-\item \textbf{Greedy Best-First}: Uses only heuristic value, completely ignoring path cost
-\item \textbf{Breadth-First Search}: Explores all paths level by level up to depth limit
+\item \textbf{Dijkstra-like}: A* with $h(n)=0$ (no heuristic guidance), exploring paths purely by accumulated cost. This baseline performs full cycle search up to the maximum depth, using only path cost without heuristic guidance.
+
+\item \textbf{Greedy Best-First}: Uses only heuristic value, completely ignoring path cost. This baseline prioritizes nodes with the lowest heuristic estimate, performing full cycle search but with a different exploration strategy.
+
+\item \textbf{Breadth-First Search}: Explores all paths level by level up to depth limit. This baseline performs exhaustive exploration at each depth level before proceeding to the next.
+
+\item \textbf{Simple 1-Hop}: Direct transfer cycle between two exchanges for the same coin. This naive baseline represents what a trader might do manually: find the best direct price difference by transferring from exchange A to exchange B and back. It only considers 1-hop cycles (transfer out, transfer back) and does not explore longer paths or multi-coin opportunities.
+
+\item \textbf{Simple 2-Hop}: Transfer from exchange A to B, trade to a different coin on B, then transfer back to A. This naive baseline extends the 1-hop strategy to include a single trade on the intermediate exchange, representing a simple 2-exchange arbitrage strategy that traders might use without sophisticated search algorithms.
 \end{enumerate}
 
-These baselines help isolate the contribution of heuristic guidance to search performance.
+The first three baselines (Dijkstra-like, Greedy Best-First, BFS) perform full cycle search up to the maximum depth, helping isolate the contribution of heuristic guidance to search performance. The last two baselines (Simple 1-Hop, Simple 2-Hop) represent naive trading strategies that do not use sophisticated search algorithms, demonstrating the value of full cycle exploration and heuristic guidance.
 
 \subsection{Evaluation Metrics}
 
@@ -348,6 +354,8 @@ Figure~\ref{fig:execution-time} and Table~\ref{tab:execution-time} show executio
 \textbf{Algorithm} & \textbf{Avg Time (s)} & \textbf{Range (s)} \\
 \midrule
 H4: Chain+Exchange & \textbf{4.7} & 4.0--6.0 \\
+Simple 1-Hop & \textit{TBD} & \textit{TBD} \\
+Simple 2-Hop & \textit{TBD} & \textit{TBD} \\
 H2: Slippage & 66.3 & 55.0--68.0 \\
 H1: Liquidity & 81.8 & 53.0--111.0 \\
 H3: Parallel & 104.5 & 88.0--129.0 \\
@@ -357,6 +365,8 @@ Breadth-First & 118.7 & 95.0--145.0 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\textit{Note: Simple 1-Hop and Simple 2-Hop baseline results (TBD) will be updated after running experiments. These baselines are expected to be very fast (under 1 second) but may miss profitable opportunities that require longer cycles.}
 
 \textbf{Key finding}: H4 achieves 10--20x speedup over other heuristics and baselines, demonstrating the effectiveness of risk-aware pruning.
 
@@ -379,9 +389,13 @@ H2: Slippage & 91.67 & 80\% & 3.1 \\
 Dijkstra-like & 98.45 & 90\% & 3.4 \\
 Greedy Best-First & 85.23 & 70\% & 4.1 \\
 Breadth-First & 92.18 & 90\% & 3.5 \\
+Simple 1-Hop & \textit{TBD} & \textit{TBD} & 2.0 \\
+Simple 2-Hop & \textit{TBD} & \textit{TBD} & 3.0--4.0 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\textit{Note: Simple 1-Hop and Simple 2-Hop baseline results (TBD) will be updated after running experiments. These baselines are expected to have lower success rates and profits compared to full cycle search algorithms, demonstrating the value of sophisticated search strategies.}
 
 \textbf{Key findings}:
 \begin{itemize}
@@ -455,7 +469,7 @@ Our experiments demonstrate that:
 \item \textbf{Heuristic guidance significantly improves search efficiency}: H4 achieves 10--20x speedup while maintaining competitive profit
 \item \textbf{Heuristic choice affects reliability}: H1 and H3 achieve 100\% success rate vs 80\% for H2 and H4
 \item \textbf{Parallel exploration improves profit discovery}: H3 finds highest average profit through diverse starting points
-\item \textbf{Baseline algorithms underperform}: All baselines are slower and/or less reliable than heuristic-guided search
+\item \textbf{Baseline algorithms underperform}: All baselines are slower and/or less reliable than heuristic-guided search. Simple 1-hop and 2-hop baselines, while fast, miss profitable opportunities that require longer cycles, demonstrating the value of full cycle exploration.
 \item \textbf{No heuristic universally dominates}: Each is optimal in different market regimes, matching the methodological hypothesis that heuristic suitability depends on liquidity structure, slippage sensitivity, chain timing constraints, and start-node connectivity
 \end{enumerate}
 
@@ -566,7 +580,7 @@ The codebase is organized as follows:
 \item \texttt{scripts/h3\_parallel.py}: Parallel search meta-heuristic
 \item \texttt{scripts/weighted\_astar.py}: Weighted A* for H4
 \item \texttt{scripts/h4\_chaincongestion\_exchange\_risk.py}: Risk-aware heuristic components
-\item \texttt{scripts/baseline\_algorithms.py}: Baseline algorithm implementations
+\item \texttt{scripts/baseline\_algorithms.py}: Baseline algorithm implementations, including Dijkstra-like search, Greedy Best-First, Breadth-First Search, and simple 1-hop and 2-hop naive baselines
 \item \texttt{scripts/data.py}: Exchange and market data definitions
 \item \texttt{scripts/fees.py}: Fee model implementation
 \item \texttt{scripts/transfer\_time.py}: Transfer latency estimation

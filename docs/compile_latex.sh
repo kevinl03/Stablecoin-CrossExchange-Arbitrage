@@ -40,3 +40,5 @@ pdflatex -interaction=nonstopmode research_report.tex
 
 echo "Compilation complete! Output: research_report.pdf"
 
+
+
