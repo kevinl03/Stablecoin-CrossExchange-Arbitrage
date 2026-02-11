@@ -107,7 +107,8 @@ def weighted_astar_best_path(
     """
 
     # Build graph (nodes: metadata; adj: adjacency list)
-    nodes, adj = build_graph()
+    # Pass portfolio size for accurate fee calculations
+    nodes, adj = build_graph(portfolio_size_usd=liquid_cash_usd)
 
     if start_node not in nodes:
         raise ValueError(f"Start node {start_node} not present in graph.")

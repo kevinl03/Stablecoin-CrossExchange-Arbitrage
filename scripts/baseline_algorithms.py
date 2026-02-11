@@ -66,7 +66,8 @@ def dijkstra_like_search(
     This baseline uses only the actual path cost (g-score) without any
     heuristic guidance, exploring paths in order of accumulated cost.
     """
-    nodes, adj = build_graph()
+    # Pass portfolio size for accurate fee calculations
+    nodes, adj = build_graph(portfolio_size_usd=liquid_cash_usd)
     
     if start_node not in nodes:
         raise ValueError(f"Start node {start_node} not present in graph.")
@@ -164,7 +165,8 @@ def greedy_best_first_search(
     This baseline prioritizes nodes with the lowest heuristic value,
     completely ignoring the actual path cost (g-score).
     """
-    nodes, adj = build_graph()
+    # Pass portfolio size for accurate fee calculations
+    nodes, adj = build_graph(portfolio_size_usd=liquid_cash_usd)
     
     if start_node not in nodes:
         raise ValueError(f"Start node {start_node} not present in graph.")
@@ -281,7 +283,8 @@ def breadth_first_search(
     This baseline explores nodes level by level, finding the first
     profitable path at the shallowest depth.
     """
-    nodes, adj = build_graph()
+    # Pass portfolio size for accurate fee calculations
+    nodes, adj = build_graph(portfolio_size_usd=liquid_cash_usd)
     
     if start_node not in nodes:
         raise ValueError(f"Start node {start_node} not present in graph.")
@@ -367,7 +370,8 @@ def simple_1hop_arbitrage(
     3. Find transfer edge B→A (same coin)
     4. Calculate total cost and return most profitable cycle
     """
-    nodes, adj = build_graph()
+    # Pass portfolio size for accurate fee calculations
+    nodes, adj = build_graph(portfolio_size_usd=liquid_cash_usd)
     
     if start_node not in nodes:
         raise ValueError(f"Start node {start_node} not present in graph.")
@@ -463,7 +467,8 @@ def simple_2hop_arbitrage(
     on exchange B before transferring (making it effectively 3 hops, but still
     a simple strategy).
     """
-    nodes, adj = build_graph()
+    # Pass portfolio size for accurate fee calculations
+    nodes, adj = build_graph(portfolio_size_usd=liquid_cash_usd)
     
     if start_node not in nodes:
         raise ValueError(f"Start node {start_node} not present in graph.")

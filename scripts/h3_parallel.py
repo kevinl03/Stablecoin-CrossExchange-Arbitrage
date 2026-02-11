@@ -51,7 +51,8 @@ def parallel_search_from_random_starts(
         Best PlanResult found across all parallel searches, or None
     """
     # Build graph to get available nodes
-    nodes, adj = build_graph()
+    # Pass portfolio size for accurate fee calculations
+    nodes, adj = build_graph(portfolio_size_usd=liquid_cash_usd)
     if not nodes:
         return None
     

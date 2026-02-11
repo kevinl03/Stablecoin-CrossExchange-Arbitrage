@@ -1,3 +1,4 @@
+from typing import Dict
 
 TRADING_FEES_TAKER = {
     # Binance Spot — Regular user, no BNB discount
@@ -212,6 +213,50 @@ WITHDRAWAL_FEES = {
 
 
 
+# Network gas fees (in USD) - estimated average costs for transfers
+# These are additional costs on top of exchange withdrawal fees
+NETWORK_GAS_FEES = {
+    "ETH": 10.0,      # Ethereum: $10 average (varies with congestion)
+    "ARB": 0.5,       # Arbitrum: $0.50 average
+    "OP": 0.5,        # Optimism: $0.50 average
+    "POLYGON": 0.1,   # Polygon: $0.10 average
+    "BASE": 0.1,      # Base: $0.10 average
+    "SOL": 0.00025,   # Solana: $0.00025 (very cheap)
+    "TRX": 0.0,       # Tron: Free
+    "BNB": 0.1,       # BNB Smart Chain: $0.10
+    "AVAX": 0.1,      # Avalanche: $0.10
+    "APT": 0.1,       # Aptos: $0.10
+    "SUI": 0.1,       # Sui: $0.10
+    "TON": 0.0,       # TON: Free
+    "XDC": 0.0,       # XDC: Free
+    "KCC": 0.1,       # KuCoin Chain: $0.10
+    "MATIC": 0.1,     # Polygon (alias): $0.10
+}
+
+# Minimum portfolio thresholds for profitable arbitrage (in USD)
+# Below these thresholds, flat fees dominate and arbitrage is rarely profitable
+MIN_PORTFOLIO_THRESHOLDS = {
+    "ETH": 5_000.0,   # Ethereum needs larger portfolio due to high gas fees
+    "ARB": 1_000.0,   # Arbitrum: $1,000 minimum
+    "OP": 1_000.0,    # Optimism: $1,000 minimum
+    "POLYGON": 500.0, # Polygon: $500 minimum
+    "BASE": 500.0,    # Base: $500 minimum
+    "SOL": 100.0,     # Solana: $100 minimum (very cheap)
+    "TRX": 100.0,     # Tron: $100 minimum (free)
+    "BNB": 500.0,     # BNB Smart Chain: $500 minimum
+    "AVAX": 500.0,    # Avalanche: $500 minimum
+    "APT": 500.0,     # Aptos: $500 minimum
+    "SUI": 500.0,     # Sui: $500 minimum
+    "TON": 100.0,     # TON: $100 minimum
+    "XDC": 100.0,     # XDC: $100 minimum
+    "KCC": 500.0,     # KuCoin Chain: $500 minimum
+    "MATIC": 500.0,   # Polygon: $500 minimum
+}
+
+# Default minimum if chain not found
+DEFAULT_MIN_PORTFOLIO = 1_000.0
+
+
 def get_taker_fee(exchange: str) -> float | None:
     """Return the taker fee (decimal)."""
     return TRADING_FEES_TAKER.get(exchange)
@@ -219,3 +264,92 @@ def get_taker_fee(exchange: str) -> float | None:
 def get_maker_fee(exchange: str) -> float | None:
     """Return the maker fee (decimal)."""
     return TRADING_FEES_MAKER.get(exchange)
+
+def get_network_gas_fee(chain: str) -> float:
+    """Return the network gas fee in USD for a given chain."""
+    return NETWORK_GAS_FEES.get(chain.upper(), 0.0)
+
+def get_min_portfolio_threshold(chain: str) -> float:
+    """Return the minimum portfolio size (USD) recommended for profitable arbitrage on a chain."""
+    return MIN_PORTFOLIO_THRESHOLDS.get(chain.upper(), DEFAULT_MIN_PORTFOLIO)
+
+def fetch_live_trading_fees(exchange_name: str, exchange_obj) -> Dict[str, float] | None:
+    """
+    Fetch live trading fees from CCXT exchange object.
+    
+    Args:
+        exchange_name: Name of the exchange
+        exchange_obj: CCXT exchange instance
+    
+    Returns:
+        Dict with 'taker' and 'maker' fees (as decimals), or None if unavailable
+    """
+    try:
+        # Try to fetch trading fees
+        if hasattr(exchange_obj, 'fetchTradingFees'):
+            fees = exchange_obj.fetchTradingFees()
+            if fees and isinstance(fees, dict):
+                # Some exchanges return fees per symbol, others return general fees
+                if 'taker' in fees and 'maker' in fees:
+                    return {
+                        'taker': float(fees['taker']),
+                        'maker': float(fees['maker']),
+                    }
+                # If it's per-symbol, try to get a representative fee
+                elif isinstance(fees, dict) and len(fees) > 0:
+                    # Get first symbol's fees as representative
+                    first_symbol = list(fees.keys())[0]
+                    if isinstance(fees[first_symbol], dict):
+                        symbol_fees = fees[first_symbol]
+                        if 'taker' in symbol_fees and 'maker' in symbol_fees:
+                            return {
+                                'taker': float(symbol_fees['taker']),
+                                'maker': float(symbol_fees['maker']),
+                            }
+        
+        # Fallback: try markets structure
+        if hasattr(exchange_obj, 'markets') and exchange_obj.markets:
+            # Look for a common stablecoin pair to get fees
+            for symbol, market in exchange_obj.markets.items():
+                if 'USDT' in symbol or 'USDC' in symbol:
+                    if 'taker' in market and 'maker' in market:
+                        return {
+                            'taker': float(market['taker']),
+                            'maker': float(market['maker']),
+                        }
+    except Exception:
+        # If fetching fails, return None (will use hardcoded fallback)
+        pass
+    
+    return None
+
+def fetch_live_withdrawal_fees(exchange_name: str, exchange_obj, coin: str) -> Dict[str, float] | None:
+    """
+    Fetch live withdrawal fees from CCXT exchange object.
+    
+    Args:
+        exchange_name: Name of the exchange
+        exchange_obj: CCXT exchange instance
+        coin: Coin symbol (e.g., 'USDT', 'USDC')
+    
+    Returns:
+        Dict mapping chain names to withdrawal fees (in coin units), or None if unavailable
+    """
+    try:
+        if hasattr(exchange_obj, 'fetchDepositWithdrawFees'):
+            fees = exchange_obj.fetchDepositWithdrawFees([coin])
+            if fees and coin in fees:
+                coin_fees = fees[coin]
+                if 'withdraw' in coin_fees and 'networks' in coin_fees['withdraw']:
+                    networks = coin_fees['withdraw']['networks']
+                    result = {}
+                    for network_name, network_info in networks.items():
+                        if 'fee' in network_info:
+                            result[network_name.upper()] = float(network_info['fee'])
+                    if result:
+                        return result
+    except Exception:
+        # If fetching fails, return None (will use hardcoded fallback)
+        pass
+    
+    return None
