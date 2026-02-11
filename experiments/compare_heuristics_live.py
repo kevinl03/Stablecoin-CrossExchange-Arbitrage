@@ -411,7 +411,7 @@ def main() -> None:
         
         # Baseline algorithms: run for each start node
         for start in start_nodes:
-            for h in ["dijkstra", "2hop_max", "simple_1hop", "simple_2hop"]:
+            for h in ["dijkstra", "2hop_max", "simple_1hop", "simple_2hop", "bellman_ford"]:
                 tasks.append((h, start, cash))
         
         # h3_parallel: start nodes are chosen inside the function

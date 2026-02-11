@@ -177,7 +177,8 @@ def bellman_ford_arbitrage(
         PlanResult with the most profitable cycle found, or None if no profitable
         cycles exist.
     """
-    nodes, adj = build_graph()
+    # Pass portfolio size for accurate fee calculations
+    nodes, adj = build_graph(portfolio_size_usd=liquid_cash_usd)
     
     if not nodes:
         logger.warning("Bellman-Ford: No nodes in graph")
