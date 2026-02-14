@@ -95,54 +95,125 @@ def build_nx_graph():
 
 
 def make_graph_figure(G: nx.DiGraph):
-    """Create a matplotlib Figure for the given NetworkX graph (no edge labels)."""
-    # Colours by exchange
+    """Create a matplotlib Figure with exchange clusters and proper edge coloring."""
+    import math
+    
+    # Define distinct brand colors for each exchange
+    exchange_colors = {
+        "binance": "#F0B90B",      # Binance yellow
+        "kraken": "#5842A3",       # Kraken purple
+        "kucoin": "#26C6F9",       # KuCoin cyan
+        "bybit": "#F7A600",        # Bybit orange
+        "coinbase": "#0052FF",     # Coinbase blue
+    }
+    
     exchange_names = list(EXCHANGES.keys())
-    exchange_to_idx = {ex: i for i, ex in enumerate(exchange_names)}
-
     node_colors = []
     node_labels = {}
+    node_groups = {ex: [] for ex in exchange_names}
 
+    # Group nodes by exchange
     for node in G.nodes():
         ex = G.nodes[node]["exchange"]
         coin = G.nodes[node]["coin"]
         price = G.nodes[node]["price_usd"]
+        
+        node_labels[node] = f"{ex}:{coin}\n${price:.4f}"
+        node_colors.append(exchange_colors.get(ex, "#808080"))  # Gray for unknown exchanges
+        node_groups[ex].append(node)
 
-        node_labels[node] = f"{ex}:{coin}\n{price:.6f}"
-        node_colors.append(exchange_to_idx.get(ex, 0))
+    # Color edges: same color for intra-exchange, different for inter-exchange
+    edge_colors_list = []
+    for u, v in G.edges():
+        u_ex = G.nodes[u]["exchange"]
+        v_ex = G.nodes[v]["exchange"]
+        edge_kind = G.edges[(u, v)].get("kind", "trade")
+        
+        if u_ex == v_ex:
+            # Intra-exchange edge (trade): use exchange color with transparency
+            edge_color = exchange_colors.get(u_ex, "#808080")
+            edge_colors_list.append(edge_color)
+        else:
+            # Inter-exchange edge (transfer): use green for transfers
+            if edge_kind == "transfer":
+                edge_colors_list.append("#2E7D32")  # Dark green for transfers
+            else:
+                edge_colors_list.append("#1976D2")  # Blue for trades (shouldn't happen but safety)
 
-    edge_colors = [G.edges[e].get("color", "black") for e in G.edges()]
+    # Create circular clusters for each exchange
+    pos = {}
+    num_exchanges = len([ex for ex in exchange_names if node_groups[ex]])
+    
+    if num_exchanges == 0:
+        # Fallback if no nodes
+        pos = nx.spring_layout(G, seed=42, k=2.0)
+    else:
+        # Arrange exchange clusters in a circle
+        cluster_radius = 3.0  # Distance from center to cluster centers
+        node_cluster_radius = 1.2  # Radius within each cluster for nodes
+        
+        for idx, ex in enumerate(exchange_names):
+            if not node_groups[ex]:
+                continue
+            
+            # Calculate cluster center position (arranged in a circle)
+            angle = 2 * math.pi * idx / num_exchanges
+            cluster_center_x = cluster_radius * math.cos(angle)
+            cluster_center_y = cluster_radius * math.sin(angle)
+            
+            # Position nodes in a circle within this cluster
+            nodes_in_exchange = sorted(node_groups[ex], key=lambda n: (G.nodes[n]["coin"], G.nodes[n]["price_usd"]))
+            num_nodes = len(nodes_in_exchange)
+            
+            for node_idx, node in enumerate(nodes_in_exchange):
+                if num_nodes == 1:
+                    # Single node at cluster center
+                    pos[node] = (cluster_center_x, cluster_center_y)
+                else:
+                    # Arrange nodes in a circle within the cluster
+                    node_angle = 2 * math.pi * node_idx / num_nodes
+                    node_x = cluster_center_x + node_cluster_radius * math.cos(node_angle)
+                    node_y = cluster_center_y + node_cluster_radius * math.sin(node_angle)
+                    pos[node] = (node_x, node_y)
 
-    # Position for all nodes — higher k => more spread out
-    pos = nx.spring_layout(G, seed=42, k=1.3)
-
-    fig, ax = plt.subplots(figsize=(10, 7))
+    fig, ax = plt.subplots(figsize=(14, 10))
+    
+    # Draw nodes with exchange brand colors
     nx.draw_networkx_nodes(
         G,
         pos,
-        node_size=650,
+        node_size=800,
         node_color=node_colors,
-        cmap=plt.cm.Set2,
+        edgecolors="black",
+        linewidths=2.0,
         ax=ax,
     )
+    
+    # Draw edges with proper coloring
     nx.draw_networkx_edges(
         G,
         pos,
-        edge_color=edge_colors,
+        edge_color=edge_colors_list,
         arrows=True,
-        width=1.5,
+        arrowsize=18,
+        width=2.5,
         alpha=0.8,
+        arrowstyle="->",
         ax=ax,
     )
+    
+    # Draw labels
     nx.draw_networkx_labels(
         G,
         pos,
         labels=node_labels,
-        font_size=7,
+        font_size=8,
+        font_weight="bold",
         ax=ax,
     )
 
-    ax.set_title("Stablecoin Arbitrage Graph\nNodes = (exchange, coin) with price")
+    ax.set_title("Stablecoin Arbitrage Graph\nNodes clustered by exchange (colored by exchange) | Intra-exchange edges = exchange color, Inter-exchange edges = green", 
+                 fontsize=12, fontweight="bold")
     ax.axis("off")
     fig.tight_layout()
 
@@ -728,7 +799,7 @@ def main():
 ### Overview
 
 This interface helps you **visualize** the stablecoin arbitrage graph,  
-inspect **live prices** and **fees**, and run different **A\*-based searches**  
+inspect **live prices** and **fees**, and run different **A\\*-based searches**  
 to find the most profitable current trade route.
 
 The UI is organized into four tabs:
@@ -749,7 +820,7 @@ The UI is organized into four tabs:
 - **Blue edges** = *trades* on a single exchange (swapping one stablecoin for another).  
 - **Green edges** = *transfers* between exchanges (withdrawal on a specific chain).
 
-This is the graph over which the A\* / Weighted A\* search runs.
+This is the graph over which the A\\* / Weighted A\\* search runs.
 
 **Right side: Controls**
 
