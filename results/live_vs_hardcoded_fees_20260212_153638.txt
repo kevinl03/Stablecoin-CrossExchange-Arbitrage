@@ -1,0 +1,69 @@
+Live vs Hardcoded Fees Comparison Report
+Generated: 2026-02-12 15:36:38
+================================================================================
+
+TRADING FEES:
+  binance:
+    Taker: 0.001000 (hardcoded) vs 0.001000 (live)
+    Maker: 0.001000 (hardcoded) vs 0.001000 (live)
+  kraken:
+    Taker: 0.004000 (hardcoded) vs 0.004000 (live)
+    Maker: 0.002500 (hardcoded) vs 0.002500 (live)
+  kucoin:
+    Taker: 0.001000 (hardcoded) vs 0.001000 (live)
+    Maker: 0.001000 (hardcoded) vs 0.001000 (live)
+  bybit:
+    Taker: 0.001000 (hardcoded) vs 0.001000 (live)
+    Maker: 0.001000 (hardcoded) vs 0.001000 (live)
+
+WITHDRAWAL FEES:
+  USDT:
+    binance:
+      ETH: 0.750000 (hardcoded) vs 0.750000 (live)
+      TRX: 0.800000 (hardcoded) vs 0.800000 (live)
+      SOL: 0.250000 (hardcoded) vs 0.250000 (live)
+      BNB: 0.300000 (hardcoded) vs 0.300000 (live)
+    kraken:
+      ETH: 0.620000 (hardcoded) vs 0.620000 (live)
+      TRX: 4.000000 (hardcoded) vs 4.000000 (live)
+      SOL: 0.840000 (hardcoded) vs 0.840000 (live)
+    kucoin:
+      ETH: 5.500000 (hardcoded) vs 5.500000 (live)
+      TRX: 1.500000 (hardcoded) vs 1.500000 (live)
+      SOL: 1.500000 (hardcoded) vs 1.500000 (live)
+      BNB: 1.000000 (hardcoded) vs 1.000000 (live)
+    bybit:
+      ETH: 6.000000 (hardcoded) vs 6.000000 (live)
+      TRX: 3.500000 (hardcoded) vs 3.500000 (live)
+  USDC:
+    binance:
+      ETH: 0.800000 (hardcoded) vs 0.800000 (live)
+      TRX: 0.800000 (hardcoded) vs 0.800000 (live)
+      SOL: 0.200000 (hardcoded) vs 0.200000 (live)
+      BNB: 0.250000 (hardcoded) vs 0.250000 (live)
+    kraken:
+      ETH: 0.630000 (hardcoded) vs 0.630000 (live)
+      SOL: 0.840000 (hardcoded) vs 0.840000 (live)
+      ARB: 2.000000 (hardcoded) vs 2.000000 (live)
+      BASE: 0.500000 (hardcoded) vs 0.500000 (live)
+    kucoin:
+      ETH: 5.500000 (hardcoded) vs 5.500000 (live)
+      SOL: 1.000000 (hardcoded) vs 1.000000 (live)
+      ARB: 1.000000 (hardcoded) vs 1.000000 (live)
+      BASE: 0.500000 (hardcoded) vs 0.500000 (live)
+    bybit:
+      ETH: 4.990000 (hardcoded) vs 4.990000 (live)
+      SOL: 1.000000 (hardcoded) vs 1.000000 (live)
+      BNB: 0.200000 (hardcoded) vs 0.200000 (live)
+      ARB: 1.000000 (hardcoded) vs 1.000000 (live)
+      BASE: 0.500000 (hardcoded) vs 0.500000 (live)
+  DAI:
+    binance:
+      ETH: 0.800000 (hardcoded) vs 0.800000 (live)
+      BNB: 0.100000 (hardcoded) vs 0.100000 (live)
+    kraken:
+      ETH: 0.520000 (hardcoded) vs 0.520000 (live)
+      ARB: 2.000000 (hardcoded) vs 2.000000 (live)
+    bybit:
+      ETH: 4.000000 (hardcoded) vs 4.000000 (live)
+      BNB: 0.800000 (hardcoded) vs 0.800000 (live)
