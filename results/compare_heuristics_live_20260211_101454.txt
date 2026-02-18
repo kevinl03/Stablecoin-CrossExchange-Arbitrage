@@ -1,0 +1,428 @@
+=== Heuristic Comparison Experiments ===
+Started: 2026-02-11 10:14:54
+
+=== Building graph ===
+Graph has 19 nodes
+
+Using start nodes:
+  - binance:BUSD
+  - binance:USDT
+  - kraken:USDT
+
+Running with 8 parallel workers
+
+
+============================
+Order size: $100.00
+============================
+
+[START] Running h1_liquidity from binance:BUSD (cash=$100.00) ...
+
+[START] Running h1_liquidity from binance:USDT (cash=$100.00) ...
+
+[START] Running h4_chaincongestion_exchange_risk from binance:BUSD (cash=$100.00) ...
+
+[START] Running h2_slippage from binance:BUSD (cash=$100.00) ...
+
+[START] Running h2_slippage from binance:USDT (cash=$100.00) ...
+
+[START] Running h4_chaincongestion_exchange_risk from binance:USDT (cash=$100.00) ...
+
+[START] Running h1_liquidity from kraken:USDT (cash=$100.00) ...
+
+[START] Running h2_slippage from kraken:USDT (cash=$100.00) ...
+[DONE] h4_chaincongestion_exchange_risk from binance:BUSD: SUCCESS 💰 - final=$100.04 (profit=$0.04) | gross=$0.14, fees=$0.10 (trade=$0.10, wd=$0.00, gas=$0.00), net=$0.04, path_len=2, time=0.005s
+  Path details:
+[DONE] h4_chaincongestion_exchange_risk from binance:USDT: SUCCESS 💰 - final=$100.03 (profit=$0.03) | gross=$1.33, fees=$1.30 (trade=$0.10, wd=$1.10, gas=$0.10), net=$0.03, path_len=4, time=0.006s
+  Path details:
+    1. Trade on binance: BUSD → TUSD (fee=$0.10, 0.10%, cash=$100.04)
+    1. Transfer binance → kraken (USDT on TRX): wd=0.8 USDT, gas=$0.00, total=$0.80, cash=$99.99
+
+[START] Running h4_chaincongestion_exchange_risk from kraken:USDT (cash=$100.00) ...
+    2. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$99.99
+[DONE] h4_chaincongestion_exchange_risk from kraken:USDT: SUCCESS 💰 - final=$100.04 (profit=$0.04) | gross=$0.54, fees=$0.50 (trade=$0.10, wd=$0.30, gas=$0.10), net=$0.04, path_len=3, time=0.012s
+    3. Trade on kucoin: USDT → TUSD (fee=$0.10, 0.10%, cash=$100.03)
+  Path details:
+
+[START] Running dijkstra from binance:BUSD (cash=$100.00) ...
+    1. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$100.00
+[DONE] dijkstra from binance:BUSD: SUCCESS 💰 - final=$100.04 (profit=$0.04) | gross=$0.14, fees=$0.10 (trade=$0.10, wd=$0.00, gas=$0.00), net=$0.04, path_len=2, time=0.003s
+  Path details:
+    1. Trade on binance: BUSD → TUSD (fee=$0.10, 0.10%, cash=$100.04)
+
+[START] Running 2hop_max from binance:BUSD (cash=$100.00) ...
+    2. Trade on kucoin: USDT → TUSD (fee=$0.10, 0.10%, cash=$100.04)
+[DONE] 2hop_max from binance:BUSD: SUCCESS 💰 - final=$100.04 (profit=$0.04) | gross=$0.14, fees=$0.10 (trade=$0.10, wd=$0.00, gas=$0.00), net=$0.04, path_len=2, time=0.001s
+  Path details:
+    1. Trade on binance: BUSD → TUSD (fee=$0.10, 0.10%, cash=$100.04)
+
+[START] Running simple_2hop from binance:BUSD (cash=$100.00) ...
+
+[START] Running simple_1hop from binance:BUSD (cash=$100.00) ...
+[DONE] simple_2hop from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+[DONE] simple_1hop from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+
+[START] Running dijkstra from binance:USDT (cash=$100.00) ...
+
+[START] Running 2hop_max from binance:USDT (cash=$100.00) ...
+[DONE] dijkstra from binance:USDT: SUCCESS 💰 - final=$100.04 (profit=$0.04) | gross=$0.39, fees=$0.35 (trade=$0.10, wd=$0.25, gas=$0.00), net=$0.04, path_len=3, time=0.002s
+  Path details:
+[DONE] 2hop_max from binance:USDT: SUCCESS 💰 - final=$100.04 (profit=$0.04) | gross=$0.39, fees=$0.35 (trade=$0.10, wd=$0.25, gas=$0.00), net=$0.04, path_len=3, time=0.000s
+    1. Transfer binance → kucoin (USDT on SOL): wd=0.25 USDT, gas=$0.00, total=$0.25, cash=$100.00
+  Path details:
+    2. Trade on kucoin: USDT → TUSD (fee=$0.10, 0.10%, cash=$100.04)
+    1. Transfer binance → kucoin (USDT on SOL): wd=0.25 USDT, gas=$0.00, total=$0.25, cash=$100.00
+
+[START] Running simple_1hop from binance:USDT (cash=$100.00) ...
+    2. Trade on kucoin: USDT → TUSD (fee=$0.10, 0.10%, cash=$100.04)
+[DONE] simple_1hop from binance:USDT: FAIL - No profitable path found (time=0.000s)
+
+[START] Running simple_2hop from binance:USDT (cash=$100.00) ...
+
+[START] Running dijkstra from kraken:USDT (cash=$100.00) ...
+[DONE] simple_2hop from binance:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] dijkstra from kraken:USDT: SUCCESS 💰 - final=$100.04 (profit=$0.04) | gross=$0.54, fees=$0.50 (trade=$0.10, wd=$0.30, gas=$0.10), net=$0.04, path_len=3, time=0.003s
+
+[START] Running 2hop_max from kraken:USDT (cash=$100.00) ...
+  Path details:
+[DONE] 2hop_max from kraken:USDT: SUCCESS 💰 - final=$100.04 (profit=$0.04) | gross=$0.54, fees=$0.50 (trade=$0.10, wd=$0.30, gas=$0.10), net=$0.04, path_len=3, time=0.001s
+    1. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$100.00
+  Path details:
+    2. Trade on kucoin: USDT → TUSD (fee=$0.10, 0.10%, cash=$100.04)
+    1. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$100.00
+
+[START] Running simple_1hop from kraken:USDT (cash=$100.00) ...
+    2. Trade on kucoin: USDT → TUSD (fee=$0.10, 0.10%, cash=$100.04)
+
+[START] Running simple_2hop from kraken:USDT (cash=$100.00) ...
+[DONE] simple_1hop from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] simple_2hop from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+
+[START] Running h3_parallel from random_parallel (cash=$100.00) ...
+[DONE] h1_liquidity from kraken:USDT: SUCCESS 💰 - final=$100.04 (profit=$0.04) | gross=$0.54, fees=$0.50 (trade=$0.10, wd=$0.30, gas=$0.10), net=$0.04, path_len=3, time=4.566s
+[DONE] h1_liquidity from binance:BUSD: SUCCESS 💰 - final=$100.04 (profit=$0.04) | gross=$0.14, fees=$0.10 (trade=$0.10, wd=$0.00, gas=$0.00), net=$0.04, path_len=2, time=4.601s
+  Path details:
+    1. Trade on binance: BUSD → TUSD (fee=$0.10, 0.10%, cash=$100.04)
+  Path details:
+[DONE] h3_parallel from random_parallel: SUCCESS 💰 - final=$100.04 (profit=$0.04) | gross=$0.39, fees=$0.35 (trade=$0.10, wd=$0.25, gas=$0.00), net=$0.04, path_len=3, time=4.516s
+[DONE] h1_liquidity from binance:USDT: SUCCESS 💰 - final=$100.04 (profit=$0.04) | gross=$0.39, fees=$0.35 (trade=$0.10, wd=$0.25, gas=$0.00), net=$0.04, path_len=3, time=4.604s
+    1. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$100.00
+  Path details:
+  Path details:
+    2. Trade on kucoin: USDT → TUSD (fee=$0.10, 0.10%, cash=$100.04)
+    1. Transfer binance → kucoin (USDT on SOL): wd=0.25 USDT, gas=$0.00, total=$0.25, cash=$100.00
+    1. Transfer binance → kucoin (USDT on SOL): wd=0.25 USDT, gas=$0.00, total=$0.25, cash=$100.00
+    2. Trade on kucoin: USDT → TUSD (fee=$0.10, 0.10%, cash=$100.04)
+    2. Trade on kucoin: USDT → TUSD (fee=$0.10, 0.10%, cash=$100.04)
+[DONE] h2_slippage from binance:USDT: SUCCESS 💰 - final=$100.04 (profit=$0.04) | gross=$0.39, fees=$0.35 (trade=$0.10, wd=$0.25, gas=$0.00), net=$0.04, path_len=3, time=6.208s
+  Path details:
+    1. Transfer binance → kucoin (USDT on SOL): wd=0.25 USDT, gas=$0.00, total=$0.25, cash=$100.00
+    2. Trade on kucoin: USDT → TUSD (fee=$0.10, 0.10%, cash=$100.04)
+[DONE] h2_slippage from kraken:USDT: SUCCESS 💰 - final=$100.04 (profit=$0.04) | gross=$0.54, fees=$0.50 (trade=$0.10, wd=$0.30, gas=$0.10), net=$0.04, path_len=3, time=6.256s
+  Path details:
+    1. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$100.00
+    2. Trade on kucoin: USDT → TUSD (fee=$0.10, 0.10%, cash=$100.04)
+[DONE] h2_slippage from binance:BUSD: SUCCESS 💰 - final=$100.04 (profit=$0.04) | gross=$0.14, fees=$0.10 (trade=$0.10, wd=$0.00, gas=$0.00), net=$0.04, path_len=2, time=6.659s
+  Path details:
+    1. Trade on binance: BUSD → TUSD (fee=$0.10, 0.10%, cash=$100.04)
+
+============================
+Order size: $1,000.00
+============================
+
+[START] Running h1_liquidity from binance:BUSD (cash=$1,000.00) ...
+
+[START] Running h2_slippage from binance:BUSD (cash=$1,000.00) ...
+
+[START] Running h4_chaincongestion_exchange_risk from binance:BUSD (cash=$1,000.00) ...
+
+[START] Running h1_liquidity from binance:USDT (cash=$1,000.00) ...
+[DONE] h1_liquidity from binance:BUSD: SUCCESS 💰 - final=$1000.40 (profit=$0.40) | gross=$1.40, fees=$1.00 (trade=$1.00, wd=$0.00, gas=$0.00), net=$0.40, path_len=2, time=0.003s
+
+[START] Running h2_slippage from binance:USDT (cash=$1,000.00) ...
+
+[START] Running h4_chaincongestion_exchange_risk from binance:USDT (cash=$1,000.00) ...
+[DONE] h2_slippage from binance:BUSD: SUCCESS 💰 - final=$1000.40 (profit=$0.40) | gross=$1.40, fees=$1.00 (trade=$1.00, wd=$0.00, gas=$0.00), net=$0.40, path_len=2, time=0.003s
+
+[START] Running h2_slippage from kraken:USDT (cash=$1,000.00) ...
+
+[START] Running h1_liquidity from kraken:USDT (cash=$1,000.00) ...
+[DONE] h4_chaincongestion_exchange_risk from binance:BUSD: SUCCESS 💰 - final=$1000.40 (profit=$0.40) | gross=$1.40, fees=$1.00 (trade=$1.00, wd=$0.00, gas=$0.00), net=$0.40, path_len=2, time=0.005s
+[DONE] h1_liquidity from binance:USDT: SUCCESS 💰 - final=$1000.38 (profit=$0.38) | gross=$1.63, fees=$1.25 (trade=$1.00, wd=$0.25, gas=$0.00), net=$0.38, path_len=3, time=0.009s
+  Path details:
+[DONE] h2_slippage from binance:USDT: SUCCESS 💰 - final=$1000.38 (profit=$0.38) | gross=$1.63, fees=$1.25 (trade=$1.00, wd=$0.25, gas=$0.00), net=$0.38, path_len=3, time=0.005s
+[DONE] h4_chaincongestion_exchange_risk from binance:USDT: SUCCESS 💰 - final=$1000.28 (profit=$0.28) | gross=$2.48, fees=$2.20 (trade=$1.00, wd=$1.10, gas=$0.10), net=$0.28, path_len=4, time=0.010s
+  Path details:
+[DONE] h2_slippage from kraken:USDT: SUCCESS 💰 - final=$1000.36 (profit=$0.36) | gross=$1.76, fees=$1.40 (trade=$1.00, wd=$0.30, gas=$0.10), net=$0.36, path_len=3, time=0.006s
+[DONE] h1_liquidity from kraken:USDT: SUCCESS 💰 - final=$1000.36 (profit=$0.36) | gross=$1.76, fees=$1.40 (trade=$1.00, wd=$0.30, gas=$0.10), net=$0.36, path_len=3, time=0.008s
+  Path details:
+  Path details:
+    1. Trade on binance: BUSD → TUSD (fee=$1.00, 0.10%, cash=$1000.40)
+  Path details:
+  Path details:
+    1. Trade on binance: BUSD → TUSD (fee=$1.00, 0.10%, cash=$1000.40)
+  Path details:
+  Path details:
+    1. Trade on binance: BUSD → TUSD (fee=$1.00, 0.10%, cash=$1000.40)
+    1. Transfer binance → kucoin (USDT on SOL): wd=0.25 USDT, gas=$0.00, total=$0.25, cash=$999.97
+
+[START] Running h4_chaincongestion_exchange_risk from kraken:USDT (cash=$1,000.00) ...
+    1. Transfer binance → kucoin (USDT on SOL): wd=0.25 USDT, gas=$0.00, total=$0.25, cash=$999.97
+    2. Trade on kucoin: USDT → TUSD (fee=$1.00, 0.10%, cash=$1000.38)
+
+[START] Running dijkstra from binance:BUSD (cash=$1,000.00) ...
+    1. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$999.96
+    1. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$999.96
+
+[START] Running 2hop_max from binance:BUSD (cash=$1,000.00) ...
+    2. Trade on kucoin: USDT → TUSD (fee=$1.00, 0.10%, cash=$1000.38)
+[DONE] h4_chaincongestion_exchange_risk from kraken:USDT: SUCCESS 💰 - final=$1000.36 (profit=$0.36) | gross=$1.76, fees=$1.40 (trade=$1.00, wd=$0.30, gas=$0.10), net=$0.36, path_len=3, time=0.011s
+    1. Transfer binance → kraken (USDT on TRX): wd=0.8 USDT, gas=$0.00, total=$0.80, cash=$999.92
+
+[START] Running simple_1hop from binance:BUSD (cash=$1,000.00) ...
+[DONE] simple_1hop from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+
+[START] Running dijkstra from binance:USDT (cash=$1,000.00) ...
+    2. Trade on kucoin: USDT → TUSD (fee=$1.00, 0.10%, cash=$1000.36)
+[DONE] 2hop_max from binance:BUSD: SUCCESS 💰 - final=$1000.40 (profit=$0.40) | gross=$1.40, fees=$1.00 (trade=$1.00, wd=$0.00, gas=$0.00), net=$0.40, path_len=2, time=0.000s
+
+[START] Running simple_2hop from binance:BUSD (cash=$1,000.00) ...
+  Path details:
+    2. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$999.88
+[DONE] dijkstra from binance:BUSD: SUCCESS 💰 - final=$1000.40 (profit=$0.40) | gross=$1.40, fees=$1.00 (trade=$1.00, wd=$0.00, gas=$0.00), net=$0.40, path_len=2, time=0.002s
+    2. Trade on kucoin: USDT → TUSD (fee=$1.00, 0.10%, cash=$1000.36)
+[DONE] dijkstra from binance:USDT: SUCCESS 💰 - final=$1000.38 (profit=$0.38) | gross=$1.63, fees=$1.25 (trade=$1.00, wd=$0.25, gas=$0.00), net=$0.38, path_len=3, time=0.003s
+
+[START] Running 2hop_max from binance:USDT (cash=$1,000.00) ...
+  Path details:
+    1. Trade on binance: BUSD → TUSD (fee=$1.00, 0.10%, cash=$1000.40)
+    1. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$999.96
+
+[START] Running simple_2hop from binance:USDT (cash=$1,000.00) ...
+[DONE] simple_2hop from binance:USDT: FAIL - No profitable path found (time=0.000s)
+  Path details:
+  Path details:
+[DONE] 2hop_max from binance:USDT: SUCCESS 💰 - final=$1000.38 (profit=$0.38) | gross=$1.63, fees=$1.25 (trade=$1.00, wd=$0.25, gas=$0.00), net=$0.38, path_len=3, time=0.001s
+[DONE] simple_2hop from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+    3. Trade on kucoin: USDT → TUSD (fee=$1.00, 0.10%, cash=$1000.28)
+
+[START] Running simple_1hop from binance:USDT (cash=$1,000.00) ...
+    2. Trade on kucoin: USDT → TUSD (fee=$1.00, 0.10%, cash=$1000.36)
+
+[START] Running dijkstra from kraken:USDT (cash=$1,000.00) ...
+    1. Trade on binance: BUSD → TUSD (fee=$1.00, 0.10%, cash=$1000.40)
+
+[START] Running h3_parallel from random_parallel (cash=$1,000.00) ...
+    1. Transfer binance → kucoin (USDT on SOL): wd=0.25 USDT, gas=$0.00, total=$0.25, cash=$999.97
+
+[START] Running 2hop_max from kraken:USDT (cash=$1,000.00) ...
+
+[START] Running simple_1hop from kraken:USDT (cash=$1,000.00) ...
+[DONE] simple_1hop from binance:USDT: FAIL - No profitable path found (time=0.000s)
+
+[START] Running simple_2hop from kraken:USDT (cash=$1,000.00) ...
+[DONE] dijkstra from kraken:USDT: SUCCESS 💰 - final=$1000.36 (profit=$0.36) | gross=$1.76, fees=$1.40 (trade=$1.00, wd=$0.30, gas=$0.10), net=$0.36, path_len=3, time=0.002s
+  Path details:
+    1. Transfer binance → kucoin (USDT on SOL): wd=0.25 USDT, gas=$0.00, total=$0.25, cash=$999.97
+[DONE] h3_parallel from random_parallel: SUCCESS 💰 - final=$1000.38 (profit=$0.38) | gross=$1.63, fees=$1.25 (trade=$1.00, wd=$0.25, gas=$0.00), net=$0.38, path_len=3, time=0.012s
+[DONE] 2hop_max from kraken:USDT: SUCCESS 💰 - final=$1000.36 (profit=$0.36) | gross=$1.76, fees=$1.40 (trade=$1.00, wd=$0.30, gas=$0.10), net=$0.36, path_len=3, time=0.000s
+[DONE] simple_1hop from kraken:USDT: FAIL - No profitable path found (time=0.001s)
+[DONE] simple_2hop from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+  Path details:
+    1. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$999.96
+    2. Trade on kucoin: USDT → TUSD (fee=$1.00, 0.10%, cash=$1000.36)
+  Path details:
+  Path details:
+    2. Trade on kucoin: USDT → TUSD (fee=$1.00, 0.10%, cash=$1000.38)
+    2. Trade on kucoin: USDT → TUSD (fee=$1.00, 0.10%, cash=$1000.38)
+    1. Transfer binance → kucoin (USDT on SOL): wd=0.25 USDT, gas=$0.00, total=$0.25, cash=$999.97
+    1. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$999.96
+    2. Trade on kucoin: USDT → TUSD (fee=$1.00, 0.10%, cash=$1000.38)
+    2. Trade on kucoin: USDT → TUSD (fee=$1.00, 0.10%, cash=$1000.36)
+
+============================
+Order size: $10,000.00
+============================
+
+[START] Running h1_liquidity from binance:BUSD (cash=$10,000.00) ...
+
+[START] Running h2_slippage from binance:BUSD (cash=$10,000.00) ...
+
+[START] Running h4_chaincongestion_exchange_risk from binance:BUSD (cash=$10,000.00) ...
+[DONE] h1_liquidity from binance:BUSD: SUCCESS 💰 - final=$10004.00 (profit=$4.00) | gross=$14.00, fees=$10.00 (trade=$10.00, wd=$0.00, gas=$0.00), net=$4.00, path_len=2, time=0.003s
+
+[START] Running h1_liquidity from binance:USDT (cash=$10,000.00) ...
+
+[START] Running h1_liquidity from kraken:USDT (cash=$10,000.00) ...
+
+[START] Running h4_chaincongestion_exchange_risk from binance:USDT (cash=$10,000.00) ...
+[DONE] h2_slippage from binance:BUSD: SUCCESS 💰 - final=$10004.00 (profit=$4.00) | gross=$14.00, fees=$10.00 (trade=$10.00, wd=$0.00, gas=$0.00), net=$4.00, path_len=2, time=0.007s
+
+[START] Running h2_slippage from kraken:USDT (cash=$10,000.00) ...
+[DONE] h4_chaincongestion_exchange_risk from binance:BUSD: SUCCESS 💰 - final=$10004.00 (profit=$4.00) | gross=$14.00, fees=$10.00 (trade=$10.00, wd=$0.00, gas=$0.00), net=$4.00, path_len=2, time=0.002s
+
+[START] Running h2_slippage from binance:USDT (cash=$10,000.00) ...
+  Path details:
+[DONE] h1_liquidity from binance:USDT: SUCCESS 💰 - final=$10003.76 (profit=$3.76) | gross=$14.01, fees=$10.25 (trade=$10.00, wd=$0.25, gas=$0.00), net=$3.76, path_len=3, time=0.004s
+[DONE] h1_liquidity from kraken:USDT: SUCCESS 💰 - final=$10003.61 (profit=$3.61) | gross=$14.01, fees=$10.40 (trade=$10.00, wd=$0.30, gas=$0.10), net=$3.61, path_len=3, time=0.004s
+[DONE] h4_chaincongestion_exchange_risk from binance:USDT: SUCCESS 💰 - final=$10002.81 (profit=$2.81) | gross=$14.00, fees=$11.20 (trade=$10.00, wd=$1.10, gas=$0.10), net=$2.81, path_len=4, time=0.005s
+  Path details:
+[DONE] h2_slippage from kraken:USDT: SUCCESS 💰 - final=$10003.61 (profit=$3.61) | gross=$14.01, fees=$10.40 (trade=$10.00, wd=$0.30, gas=$0.10), net=$3.61, path_len=3, time=0.003s
+  Path details:
+[DONE] h2_slippage from binance:USDT: SUCCESS 💰 - final=$10003.76 (profit=$3.76) | gross=$14.01, fees=$10.25 (trade=$10.00, wd=$0.25, gas=$0.00), net=$3.76, path_len=3, time=0.004s
+    1. Trade on binance: BUSD → TUSD (fee=$10.00, 0.10%, cash=$10004.00)
+  Path details:
+  Path details:
+  Path details:
+    1. Trade on binance: BUSD → TUSD (fee=$10.00, 0.10%, cash=$10004.00)
+  Path details:
+    1. Trade on binance: BUSD → TUSD (fee=$10.00, 0.10%, cash=$10004.00)
+  Path details:
+
+[START] Running h4_chaincongestion_exchange_risk from kraken:USDT (cash=$10,000.00) ...
+    1. Transfer binance → kucoin (USDT on SOL): wd=0.25 USDT, gas=$0.00, total=$0.25, cash=$9999.75
+    1. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$9999.60
+    1. Transfer binance → kraken (USDT on TRX): wd=0.8 USDT, gas=$0.00, total=$0.80, cash=$9999.20
+
+[START] Running dijkstra from binance:BUSD (cash=$10,000.00) ...
+    1. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$9999.60
+
+[START] Running 2hop_max from binance:BUSD (cash=$10,000.00) ...
+    1. Transfer binance → kucoin (USDT on SOL): wd=0.25 USDT, gas=$0.00, total=$0.25, cash=$9999.75
+[DONE] h4_chaincongestion_exchange_risk from kraken:USDT: SUCCESS 💰 - final=$10003.61 (profit=$3.61) | gross=$14.01, fees=$10.40 (trade=$10.00, wd=$0.30, gas=$0.10), net=$3.61, path_len=3, time=0.009s
+    2. Trade on kucoin: USDT → TUSD (fee=$10.00, 0.10%, cash=$10003.76)
+    2. Trade on kucoin: USDT → TUSD (fee=$10.00, 0.10%, cash=$10003.61)
+    2. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$9998.80
+[DONE] dijkstra from binance:BUSD: SUCCESS 💰 - final=$10004.00 (profit=$4.00) | gross=$14.00, fees=$10.00 (trade=$10.00, wd=$0.00, gas=$0.00), net=$4.00, path_len=2, time=0.002s
+    2. Trade on kucoin: USDT → TUSD (fee=$10.00, 0.10%, cash=$10003.61)
+[DONE] 2hop_max from binance:BUSD: SUCCESS 💰 - final=$10004.00 (profit=$4.00) | gross=$14.00, fees=$10.00 (trade=$10.00, wd=$0.00, gas=$0.00), net=$4.00, path_len=2, time=0.000s
+  Path details:
+  Path details:
+
+[START] Running simple_1hop from binance:BUSD (cash=$10,000.00) ...
+
+[START] Running simple_2hop from binance:BUSD (cash=$10,000.00) ...
+    3. Trade on kucoin: USDT → TUSD (fee=$10.00, 0.10%, cash=$10002.81)
+  Path details:
+
+[START] Running dijkstra from binance:USDT (cash=$10,000.00) ...
+    2. Trade on kucoin: USDT → TUSD (fee=$10.00, 0.10%, cash=$10003.76)
+    1. Trade on binance: BUSD → TUSD (fee=$10.00, 0.10%, cash=$10004.00)
+    1. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$9999.60
+[DONE] simple_1hop from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+[DONE] simple_2hop from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+
+[START] Running 2hop_max from binance:USDT (cash=$10,000.00) ...
+    1. Trade on binance: BUSD → TUSD (fee=$10.00, 0.10%, cash=$10004.00)
+[DONE] dijkstra from binance:USDT: SUCCESS 💰 - final=$10003.76 (profit=$3.76) | gross=$14.01, fees=$10.25 (trade=$10.00, wd=$0.25, gas=$0.00), net=$3.76, path_len=3, time=0.004s
+
+[START] Running simple_1hop from binance:USDT (cash=$10,000.00) ...
+
+[START] Running simple_2hop from binance:USDT (cash=$10,000.00) ...
+    2. Trade on kucoin: USDT → TUSD (fee=$10.00, 0.10%, cash=$10003.61)
+
+[START] Running dijkstra from kraken:USDT (cash=$10,000.00) ...
+
+[START] Running 2hop_max from kraken:USDT (cash=$10,000.00) ...
+[DONE] 2hop_max from binance:USDT: SUCCESS 💰 - final=$10003.76 (profit=$3.76) | gross=$14.01, fees=$10.25 (trade=$10.00, wd=$0.25, gas=$0.00), net=$3.76, path_len=3, time=0.000s
+
+[START] Running simple_1hop from kraken:USDT (cash=$10,000.00) ...
+  Path details:
+[DONE] simple_1hop from binance:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] simple_2hop from binance:USDT: FAIL - No profitable path found (time=0.000s)
+
+[START] Running simple_2hop from kraken:USDT (cash=$10,000.00) ...
+[DONE] dijkstra from kraken:USDT: SUCCESS 💰 - final=$10003.61 (profit=$3.61) | gross=$14.01, fees=$10.40 (trade=$10.00, wd=$0.30, gas=$0.10), net=$3.61, path_len=3, time=0.004s
+[DONE] 2hop_max from kraken:USDT: SUCCESS 💰 - final=$10003.61 (profit=$3.61) | gross=$14.01, fees=$10.40 (trade=$10.00, wd=$0.30, gas=$0.10), net=$3.61, path_len=3, time=0.001s
+  Path details:
+[DONE] simple_1hop from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+    1. Transfer binance → kucoin (USDT on SOL): wd=0.25 USDT, gas=$0.00, total=$0.25, cash=$9999.75
+
+[START] Running h3_parallel from random_parallel (cash=$10,000.00) ...
+[DONE] simple_2hop from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+  Path details:
+  Path details:
+    1. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$9999.60
+    2. Trade on kucoin: USDT → TUSD (fee=$10.00, 0.10%, cash=$10003.76)
+[DONE] h3_parallel from random_parallel: SUCCESS 💰 - final=$10003.76 (profit=$3.76) | gross=$14.01, fees=$10.25 (trade=$10.00, wd=$0.25, gas=$0.00), net=$3.76, path_len=3, time=0.010s
+    1. Transfer kraken → kucoin (USDT on APT): wd=0.3 USDT, gas=$0.10, total=$0.40, cash=$9999.60
+    2. Trade on kucoin: USDT → TUSD (fee=$10.00, 0.10%, cash=$10003.61)
+    2. Trade on kucoin: USDT → TUSD (fee=$10.00, 0.10%, cash=$10003.61)
+  Path details:
+    1. Transfer binance → kucoin (USDT on SOL): wd=0.25 USDT, gas=$0.00, total=$0.25, cash=$9999.75
+    2. Trade on kucoin: USDT → TUSD (fee=$10.00, 0.10%, cash=$10003.76)
+    1. Transfer binance → kucoin (USDT on SOL): wd=0.25 USDT, gas=$0.00, total=$0.25, cash=$9999.75
+    2. Trade on kucoin: USDT → TUSD (fee=$10.00, 0.10%, cash=$10003.76)
+
+
+================ SUMMARY ================
+[OK] 💰 h=2hop_max                       start=binance:BUSD       cash=$   100.00 final=$100.04    profit=$0.04      len=  2 | gross=$0.14, fees=$0.10 (trade=$0.10, wd=$0.00, gas=$0.00), net=$0.04 time= 0.001s
+[OK] 💰 h=2hop_max                       start=binance:USDT       cash=$   100.00 final=$100.04    profit=$0.04      len=  3 | gross=$0.39, fees=$0.35 (trade=$0.10, wd=$0.25, gas=$0.00), net=$0.04 time= 0.000s
+[OK] 💰 h=2hop_max                       start=kraken:USDT        cash=$   100.00 final=$100.04    profit=$0.04      len=  3 | gross=$0.54, fees=$0.50 (trade=$0.10, wd=$0.30, gas=$0.10), net=$0.04 time= 0.001s
+[OK] 💰 h=dijkstra                       start=binance:BUSD       cash=$   100.00 final=$100.04    profit=$0.04      len=  2 | gross=$0.14, fees=$0.10 (trade=$0.10, wd=$0.00, gas=$0.00), net=$0.04 time= 0.003s
+[OK] 💰 h=dijkstra                       start=binance:USDT       cash=$   100.00 final=$100.04    profit=$0.04      len=  3 | gross=$0.39, fees=$0.35 (trade=$0.10, wd=$0.25, gas=$0.00), net=$0.04 time= 0.002s
+[OK] 💰 h=dijkstra                       start=kraken:USDT        cash=$   100.00 final=$100.04    profit=$0.04      len=  3 | gross=$0.54, fees=$0.50 (trade=$0.10, wd=$0.30, gas=$0.10), net=$0.04 time= 0.003s
+[OK] 💰 h=h1_liquidity                   start=binance:BUSD       cash=$   100.00 final=$100.04    profit=$0.04      len=  2 | gross=$0.14, fees=$0.10 (trade=$0.10, wd=$0.00, gas=$0.00), net=$0.04 time= 4.601s
+[OK] 💰 h=h1_liquidity                   start=binance:USDT       cash=$   100.00 final=$100.04    profit=$0.04      len=  3 | gross=$0.39, fees=$0.35 (trade=$0.10, wd=$0.25, gas=$0.00), net=$0.04 time= 4.604s
+[OK] 💰 h=h1_liquidity                   start=kraken:USDT        cash=$   100.00 final=$100.04    profit=$0.04      len=  3 | gross=$0.54, fees=$0.50 (trade=$0.10, wd=$0.30, gas=$0.10), net=$0.04 time= 4.566s
+[OK] 💰 h=h2_slippage                    start=binance:BUSD       cash=$   100.00 final=$100.04    profit=$0.04      len=  2 | gross=$0.14, fees=$0.10 (trade=$0.10, wd=$0.00, gas=$0.00), net=$0.04 time= 6.659s
+[OK] 💰 h=h2_slippage                    start=binance:USDT       cash=$   100.00 final=$100.04    profit=$0.04      len=  3 | gross=$0.39, fees=$0.35 (trade=$0.10, wd=$0.25, gas=$0.00), net=$0.04 time= 6.208s
+[OK] 💰 h=h2_slippage                    start=kraken:USDT        cash=$   100.00 final=$100.04    profit=$0.04      len=  3 | gross=$0.54, fees=$0.50 (trade=$0.10, wd=$0.30, gas=$0.10), net=$0.04 time= 6.256s
+[OK] 💰 h=h3_parallel                    start=random_parallel    cash=$   100.00 final=$100.04    profit=$0.04      len=  3 | gross=$0.39, fees=$0.35 (trade=$0.10, wd=$0.25, gas=$0.00), net=$0.04 time= 4.516s
+[OK] 💰 h=h4_chaincongestion_exchange_risk start=binance:BUSD       cash=$   100.00 final=$100.04    profit=$0.04      len=  2 | gross=$0.14, fees=$0.10 (trade=$0.10, wd=$0.00, gas=$0.00), net=$0.04 time= 0.005s
+[OK] 💰 h=h4_chaincongestion_exchange_risk start=binance:USDT       cash=$   100.00 final=$100.03    profit=$0.03      len=  4 | gross=$1.33, fees=$1.30 (trade=$0.10, wd=$1.10, gas=$0.10), net=$0.03 time= 0.006s
+[OK] 💰 h=h4_chaincongestion_exchange_risk start=kraken:USDT        cash=$   100.00 final=$100.04    profit=$0.04      len=  3 | gross=$0.54, fees=$0.50 (trade=$0.10, wd=$0.30, gas=$0.10), net=$0.04 time= 0.012s
+[FAIL]  h=simple_1hop                    start=binance:BUSD       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_1hop                    start=binance:USDT       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_1hop                    start=kraken:USDT        cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=binance:BUSD       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=binance:USDT       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=kraken:USDT        cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[OK] 💰 h=2hop_max                       start=binance:BUSD       cash=$ 1,000.00 final=$1000.40   profit=$0.40      len=  2 | gross=$1.40, fees=$1.00 (trade=$1.00, wd=$0.00, gas=$0.00), net=$0.40 time= 0.000s
+[OK] 💰 h=2hop_max                       start=binance:USDT       cash=$ 1,000.00 final=$1000.38   profit=$0.38      len=  3 | gross=$1.63, fees=$1.25 (trade=$1.00, wd=$0.25, gas=$0.00), net=$0.38 time= 0.001s
+[OK] 💰 h=2hop_max                       start=kraken:USDT        cash=$ 1,000.00 final=$1000.36   profit=$0.36      len=  3 | gross=$1.76, fees=$1.40 (trade=$1.00, wd=$0.30, gas=$0.10), net=$0.36 time= 0.000s
+[OK] 💰 h=dijkstra                       start=binance:BUSD       cash=$ 1,000.00 final=$1000.40   profit=$0.40      len=  2 | gross=$1.40, fees=$1.00 (trade=$1.00, wd=$0.00, gas=$0.00), net=$0.40 time= 0.002s
+[OK] 💰 h=dijkstra                       start=binance:USDT       cash=$ 1,000.00 final=$1000.38   profit=$0.38      len=  3 | gross=$1.63, fees=$1.25 (trade=$1.00, wd=$0.25, gas=$0.00), net=$0.38 time= 0.003s
+[OK] 💰 h=dijkstra                       start=kraken:USDT        cash=$ 1,000.00 final=$1000.36   profit=$0.36      len=  3 | gross=$1.76, fees=$1.40 (trade=$1.00, wd=$0.30, gas=$0.10), net=$0.36 time= 0.002s
+[OK] 💰 h=h1_liquidity                   start=binance:BUSD       cash=$ 1,000.00 final=$1000.40   profit=$0.40      len=  2 | gross=$1.40, fees=$1.00 (trade=$1.00, wd=$0.00, gas=$0.00), net=$0.40 time= 0.003s
+[OK] 💰 h=h1_liquidity                   start=binance:USDT       cash=$ 1,000.00 final=$1000.38   profit=$0.38      len=  3 | gross=$1.63, fees=$1.25 (trade=$1.00, wd=$0.25, gas=$0.00), net=$0.38 time= 0.009s
+[OK] 💰 h=h1_liquidity                   start=kraken:USDT        cash=$ 1,000.00 final=$1000.36   profit=$0.36      len=  3 | gross=$1.76, fees=$1.40 (trade=$1.00, wd=$0.30, gas=$0.10), net=$0.36 time= 0.008s
+[OK] 💰 h=h2_slippage                    start=binance:BUSD       cash=$ 1,000.00 final=$1000.40   profit=$0.40      len=  2 | gross=$1.40, fees=$1.00 (trade=$1.00, wd=$0.00, gas=$0.00), net=$0.40 time= 0.003s
+[OK] 💰 h=h2_slippage                    start=binance:USDT       cash=$ 1,000.00 final=$1000.38   profit=$0.38      len=  3 | gross=$1.63, fees=$1.25 (trade=$1.00, wd=$0.25, gas=$0.00), net=$0.38 time= 0.005s
+[OK] 💰 h=h2_slippage                    start=kraken:USDT        cash=$ 1,000.00 final=$1000.36   profit=$0.36      len=  3 | gross=$1.76, fees=$1.40 (trade=$1.00, wd=$0.30, gas=$0.10), net=$0.36 time= 0.006s
+[OK] 💰 h=h3_parallel                    start=random_parallel    cash=$ 1,000.00 final=$1000.38   profit=$0.38      len=  3 | gross=$1.63, fees=$1.25 (trade=$1.00, wd=$0.25, gas=$0.00), net=$0.38 time= 0.012s
+[OK] 💰 h=h4_chaincongestion_exchange_risk start=binance:BUSD       cash=$ 1,000.00 final=$1000.40   profit=$0.40      len=  2 | gross=$1.40, fees=$1.00 (trade=$1.00, wd=$0.00, gas=$0.00), net=$0.40 time= 0.005s
+[OK] 💰 h=h4_chaincongestion_exchange_risk start=binance:USDT       cash=$ 1,000.00 final=$1000.28   profit=$0.28      len=  4 | gross=$2.48, fees=$2.20 (trade=$1.00, wd=$1.10, gas=$0.10), net=$0.28 time= 0.010s
+[OK] 💰 h=h4_chaincongestion_exchange_risk start=kraken:USDT        cash=$ 1,000.00 final=$1000.36   profit=$0.36      len=  3 | gross=$1.76, fees=$1.40 (trade=$1.00, wd=$0.30, gas=$0.10), net=$0.36 time= 0.011s
+[FAIL]  h=simple_1hop                    start=binance:BUSD       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_1hop                    start=binance:USDT       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_1hop                    start=kraken:USDT        cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.001s
+[FAIL]  h=simple_2hop                    start=binance:BUSD       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=binance:USDT       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=kraken:USDT        cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[OK] 💰 h=2hop_max                       start=binance:BUSD       cash=$10,000.00 final=$10004.00  profit=$4.00      len=  2 | gross=$14.00, fees=$10.00 (trade=$10.00, wd=$0.00, gas=$0.00), net=$4.00 time= 0.000s
+[OK] 💰 h=2hop_max                       start=binance:USDT       cash=$10,000.00 final=$10003.76  profit=$3.76      len=  3 | gross=$14.01, fees=$10.25 (trade=$10.00, wd=$0.25, gas=$0.00), net=$3.76 time= 0.000s
+[OK] 💰 h=2hop_max                       start=kraken:USDT        cash=$10,000.00 final=$10003.61  profit=$3.61      len=  3 | gross=$14.01, fees=$10.40 (trade=$10.00, wd=$0.30, gas=$0.10), net=$3.61 time= 0.001s
+[OK] 💰 h=dijkstra                       start=binance:BUSD       cash=$10,000.00 final=$10004.00  profit=$4.00      len=  2 | gross=$14.00, fees=$10.00 (trade=$10.00, wd=$0.00, gas=$0.00), net=$4.00 time= 0.002s
+[OK] 💰 h=dijkstra                       start=binance:USDT       cash=$10,000.00 final=$10003.76  profit=$3.76      len=  3 | gross=$14.01, fees=$10.25 (trade=$10.00, wd=$0.25, gas=$0.00), net=$3.76 time= 0.004s
+[OK] 💰 h=dijkstra                       start=kraken:USDT        cash=$10,000.00 final=$10003.61  profit=$3.61      len=  3 | gross=$14.01, fees=$10.40 (trade=$10.00, wd=$0.30, gas=$0.10), net=$3.61 time= 0.004s
+[OK] 💰 h=h1_liquidity                   start=binance:BUSD       cash=$10,000.00 final=$10004.00  profit=$4.00      len=  2 | gross=$14.00, fees=$10.00 (trade=$10.00, wd=$0.00, gas=$0.00), net=$4.00 time= 0.003s
+[OK] 💰 h=h1_liquidity                   start=binance:USDT       cash=$10,000.00 final=$10003.76  profit=$3.76      len=  3 | gross=$14.01, fees=$10.25 (trade=$10.00, wd=$0.25, gas=$0.00), net=$3.76 time= 0.004s
+[OK] 💰 h=h1_liquidity                   start=kraken:USDT        cash=$10,000.00 final=$10003.61  profit=$3.61      len=  3 | gross=$14.01, fees=$10.40 (trade=$10.00, wd=$0.30, gas=$0.10), net=$3.61 time= 0.004s
+[OK] 💰 h=h2_slippage                    start=binance:BUSD       cash=$10,000.00 final=$10004.00  profit=$4.00      len=  2 | gross=$14.00, fees=$10.00 (trade=$10.00, wd=$0.00, gas=$0.00), net=$4.00 time= 0.007s
+[OK] 💰 h=h2_slippage                    start=binance:USDT       cash=$10,000.00 final=$10003.76  profit=$3.76      len=  3 | gross=$14.01, fees=$10.25 (trade=$10.00, wd=$0.25, gas=$0.00), net=$3.76 time= 0.004s
+[OK] 💰 h=h2_slippage                    start=kraken:USDT        cash=$10,000.00 final=$10003.61  profit=$3.61      len=  3 | gross=$14.01, fees=$10.40 (trade=$10.00, wd=$0.30, gas=$0.10), net=$3.61 time= 0.003s
+[OK] 💰 h=h3_parallel                    start=random_parallel    cash=$10,000.00 final=$10003.76  profit=$3.76      len=  3 | gross=$14.01, fees=$10.25 (trade=$10.00, wd=$0.25, gas=$0.00), net=$3.76 time= 0.010s
+[OK] 💰 h=h4_chaincongestion_exchange_risk start=binance:BUSD       cash=$10,000.00 final=$10004.00  profit=$4.00      len=  2 | gross=$14.00, fees=$10.00 (trade=$10.00, wd=$0.00, gas=$0.00), net=$4.00 time= 0.002s
+[OK] 💰 h=h4_chaincongestion_exchange_risk start=binance:USDT       cash=$10,000.00 final=$10002.81  profit=$2.81      len=  4 | gross=$14.00, fees=$11.20 (trade=$10.00, wd=$1.10, gas=$0.10), net=$2.81 time= 0.005s
+[OK] 💰 h=h4_chaincongestion_exchange_risk start=kraken:USDT        cash=$10,000.00 final=$10003.61  profit=$3.61      len=  3 | gross=$14.01, fees=$10.40 (trade=$10.00, wd=$0.30, gas=$0.10), net=$3.61 time= 0.009s
+[FAIL]  h=simple_1hop                    start=binance:BUSD       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_1hop                    start=binance:USDT       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_1hop                    start=kraken:USDT        cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=binance:BUSD       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=binance:USDT       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=kraken:USDT        cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+
+Completed: 2026-02-11 10:15:01
+
+Saved experiment log to: /Users/user/Desktop/CMPT417/Stablecoin-CrossExchange-Arbitrage/results/compare_heuristics_live_20260211_101454.txt

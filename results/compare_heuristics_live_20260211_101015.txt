@@ -1,0 +1,296 @@
+=== Heuristic Comparison Experiments ===
+Started: 2026-02-11 10:10:15
+
+=== Building graph ===
+Graph has 19 nodes
+
+Using start nodes:
+  - binance:BUSD
+  - binance:USDT
+  - kraken:USDT
+
+Running with 8 parallel workers
+
+
+============================
+Order size: $100.00
+============================
+
+[START] Running h1_liquidity from binance:BUSD (cash=$100.00) ...
+
+[START] Running h2_slippage from binance:BUSD (cash=$100.00) ...
+
+[START] Running h2_slippage from binance:USDT (cash=$100.00) ...
+
+[START] Running h4_chaincongestion_exchange_risk from binance:USDT (cash=$100.00) ...
+
+[START] Running h4_chaincongestion_exchange_risk from binance:BUSD (cash=$100.00) ...
+
+[START] Running h1_liquidity from binance:USDT (cash=$100.00) ...
+
+[START] Running h2_slippage from kraken:USDT (cash=$100.00) ...
+
+[START] Running h1_liquidity from kraken:USDT (cash=$100.00) ...
+[DONE] h4_chaincongestion_exchange_risk from binance:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] h4_chaincongestion_exchange_risk from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+
+[START] Running h4_chaincongestion_exchange_risk from kraken:USDT (cash=$100.00) ...
+
+[START] Running dijkstra from binance:BUSD (cash=$100.00) ...
+[DONE] h4_chaincongestion_exchange_risk from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] dijkstra from binance:BUSD: FAIL - Not profitable: profit=$0.04 but fees=$0.10 (time=0.002s)
+
+[START] Running 2hop_max from binance:BUSD (cash=$100.00) ...
+
+[START] Running simple_1hop from binance:BUSD (cash=$100.00) ...
+[DONE] 2hop_max from binance:BUSD: FAIL - Not profitable: profit=$0.04 but fees=$0.10 (time=0.000s)
+[DONE] simple_1hop from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+
+[START] Running simple_2hop from binance:BUSD (cash=$100.00) ...
+
+[START] Running dijkstra from binance:USDT (cash=$100.00) ...
+[DONE] simple_2hop from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+[DONE] dijkstra from binance:USDT: FAIL - Not profitable: profit=$0.04 but fees=$0.35 (time=0.002s)
+
+[START] Running 2hop_max from binance:USDT (cash=$100.00) ...
+
+[START] Running simple_1hop from binance:USDT (cash=$100.00) ...
+[DONE] 2hop_max from binance:USDT: FAIL - Not profitable: profit=$0.04 but fees=$0.35 (time=0.000s)
+[DONE] simple_1hop from binance:USDT: FAIL - No profitable path found (time=0.000s)
+
+[START] Running simple_2hop from binance:USDT (cash=$100.00) ...
+
+[START] Running dijkstra from kraken:USDT (cash=$100.00) ...
+[DONE] simple_2hop from binance:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] dijkstra from kraken:USDT: FAIL - Not profitable: profit=$0.04 but fees=$0.50 (time=0.003s)
+
+[START] Running 2hop_max from kraken:USDT (cash=$100.00) ...
+
+[START] Running simple_1hop from kraken:USDT (cash=$100.00) ...
+[DONE] 2hop_max from kraken:USDT: FAIL - Not profitable: profit=$0.04 but fees=$0.50 (time=0.001s)
+[DONE] simple_1hop from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+
+[START] Running simple_2hop from kraken:USDT (cash=$100.00) ...
+
+[START] Running h3_parallel from random_parallel (cash=$100.00) ...
+[DONE] simple_2hop from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] h1_liquidity from binance:BUSD: FAIL - No profitable path found (time=0.500s)
+[DONE] h2_slippage from binance:BUSD: FAIL - No profitable path found (time=0.600s)
+[DONE] h2_slippage from binance:USDT: FAIL - No profitable path found (time=1.001s)
+[DONE] h1_liquidity from binance:USDT: FAIL - No profitable path found (time=1.306s)
+[DONE] h3_parallel from random_parallel: FAIL - No profitable path found (time=1.523s)
+[DONE] h2_slippage from kraken:USDT: FAIL - No profitable path found (time=4.031s)
+[DONE] h1_liquidity from kraken:USDT: FAIL - No profitable path found (time=5.040s)
+
+============================
+Order size: $1,000.00
+============================
+
+[START] Running h1_liquidity from binance:BUSD (cash=$1,000.00) ...
+
+[START] Running h2_slippage from binance:BUSD (cash=$1,000.00) ...
+
+[START] Running h4_chaincongestion_exchange_risk from binance:BUSD (cash=$1,000.00) ...
+[DONE] h1_liquidity from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+
+[START] Running h1_liquidity from binance:USDT (cash=$1,000.00) ...
+
+[START] Running h2_slippage from binance:USDT (cash=$1,000.00) ...
+
+[START] Running h4_chaincongestion_exchange_risk from binance:USDT (cash=$1,000.00) ...
+
+[START] Running h1_liquidity from kraken:USDT (cash=$1,000.00) ...
+[DONE] h2_slippage from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+
+[START] Running h2_slippage from kraken:USDT (cash=$1,000.00) ...
+[DONE] h4_chaincongestion_exchange_risk from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+
+[START] Running h4_chaincongestion_exchange_risk from kraken:USDT (cash=$1,000.00) ...
+[DONE] h1_liquidity from binance:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] h2_slippage from binance:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] h4_chaincongestion_exchange_risk from binance:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] h1_liquidity from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+
+[START] Running dijkstra from binance:BUSD (cash=$1,000.00) ...
+[DONE] h2_slippage from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+
+[START] Running 2hop_max from binance:BUSD (cash=$1,000.00) ...
+[DONE] h4_chaincongestion_exchange_risk from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+
+[START] Running simple_1hop from binance:BUSD (cash=$1,000.00) ...
+
+[START] Running simple_2hop from binance:BUSD (cash=$1,000.00) ...
+
+[START] Running dijkstra from binance:USDT (cash=$1,000.00) ...
+
+[START] Running 2hop_max from binance:USDT (cash=$1,000.00) ...
+[DONE] dijkstra from binance:BUSD: FAIL - Not profitable: profit=$0.40 but fees=$1.00 (time=0.003s)
+
+[START] Running dijkstra from kraken:USDT (cash=$1,000.00) ...
+[DONE] 2hop_max from binance:BUSD: FAIL - Not profitable: profit=$0.40 but fees=$1.00 (time=0.001s)
+
+[START] Running simple_2hop from binance:USDT (cash=$1,000.00) ...
+[DONE] simple_1hop from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+[DONE] simple_2hop from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+[DONE] dijkstra from binance:USDT: FAIL - Not profitable: profit=$0.38 but fees=$1.25 (time=0.002s)
+[DONE] 2hop_max from binance:USDT: FAIL - Not profitable: profit=$0.38 but fees=$1.25 (time=0.026s)
+
+[START] Running simple_1hop from binance:USDT (cash=$1,000.00) ...
+[DONE] dijkstra from kraken:USDT: FAIL - Not profitable: profit=$0.36 but fees=$1.40 (time=0.004s)
+
+[START] Running 2hop_max from kraken:USDT (cash=$1,000.00) ...
+[DONE] simple_2hop from binance:USDT: FAIL - No profitable path found (time=0.000s)
+
+[START] Running simple_1hop from kraken:USDT (cash=$1,000.00) ...
+
+[START] Running simple_2hop from kraken:USDT (cash=$1,000.00) ...
+
+[START] Running h3_parallel from random_parallel (cash=$1,000.00) ...
+[DONE] simple_1hop from binance:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] 2hop_max from kraken:USDT: FAIL - Not profitable: profit=$0.36 but fees=$1.40 (time=0.001s)
+[DONE] simple_1hop from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] simple_2hop from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] h3_parallel from random_parallel: FAIL - No profitable path found (time=0.001s)
+
+============================
+Order size: $10,000.00
+============================
+
+[START] Running h1_liquidity from binance:BUSD (cash=$10,000.00) ...
+
+[START] Running h2_slippage from binance:BUSD (cash=$10,000.00) ...
+
+[START] Running h4_chaincongestion_exchange_risk from binance:BUSD (cash=$10,000.00) ...
+
+[START] Running h1_liquidity from binance:USDT (cash=$10,000.00) ...
+
+[START] Running h1_liquidity from kraken:USDT (cash=$10,000.00) ...
+
+[START] Running h2_slippage from binance:USDT (cash=$10,000.00) ...
+
+[START] Running h2_slippage from kraken:USDT (cash=$10,000.00) ...
+[DONE] h1_liquidity from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+
+[START] Running h4_chaincongestion_exchange_risk from binance:USDT (cash=$10,000.00) ...
+[DONE] h2_slippage from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+[DONE] h4_chaincongestion_exchange_risk from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+[DONE] h1_liquidity from binance:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] h1_liquidity from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] h2_slippage from binance:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] h2_slippage from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+
+[START] Running h4_chaincongestion_exchange_risk from kraken:USDT (cash=$10,000.00) ...
+[DONE] h4_chaincongestion_exchange_risk from binance:USDT: FAIL - No profitable path found (time=0.000s)
+
+[START] Running dijkstra from binance:BUSD (cash=$10,000.00) ...
+
+[START] Running 2hop_max from binance:BUSD (cash=$10,000.00) ...
+
+[START] Running simple_1hop from binance:BUSD (cash=$10,000.00) ...
+
+[START] Running simple_2hop from binance:BUSD (cash=$10,000.00) ...
+
+[START] Running dijkstra from binance:USDT (cash=$10,000.00) ...
+
+[START] Running 2hop_max from binance:USDT (cash=$10,000.00) ...
+[DONE] h4_chaincongestion_exchange_risk from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+
+[START] Running simple_1hop from binance:USDT (cash=$10,000.00) ...
+[DONE] dijkstra from binance:BUSD: FAIL - Not profitable: profit=$4.00 but fees=$10.00 (time=0.002s)
+[DONE] 2hop_max from binance:BUSD: FAIL - Not profitable: profit=$4.00 but fees=$10.00 (time=0.000s)
+[DONE] simple_1hop from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+[DONE] simple_2hop from binance:BUSD: FAIL - No profitable path found (time=0.000s)
+[DONE] dijkstra from binance:USDT: FAIL - Not profitable: profit=$3.76 but fees=$10.25 (time=0.004s)
+[DONE] 2hop_max from binance:USDT: FAIL - Not profitable: profit=$3.76 but fees=$10.25 (time=0.001s)
+
+[START] Running simple_2hop from binance:USDT (cash=$10,000.00) ...
+[DONE] simple_1hop from binance:USDT: FAIL - No profitable path found (time=0.000s)
+
+[START] Running dijkstra from kraken:USDT (cash=$10,000.00) ...
+
+[START] Running 2hop_max from kraken:USDT (cash=$10,000.00) ...
+
+[START] Running simple_1hop from kraken:USDT (cash=$10,000.00) ...
+
+[START] Running simple_2hop from kraken:USDT (cash=$10,000.00) ...
+
+[START] Running h3_parallel from random_parallel (cash=$10,000.00) ...
+[DONE] simple_2hop from binance:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] dijkstra from kraken:USDT: FAIL - Not profitable: profit=$3.61 but fees=$10.40 (time=0.002s)
+[DONE] 2hop_max from kraken:USDT: FAIL - Not profitable: profit=$3.61 but fees=$10.40 (time=0.001s)
+[DONE] simple_1hop from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] simple_2hop from kraken:USDT: FAIL - No profitable path found (time=0.000s)
+[DONE] h3_parallel from random_parallel: FAIL - No profitable path found (time=0.001s)
+
+
+================ SUMMARY ================
+[FAIL]  h=2hop_max                       start=binance:BUSD       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=2hop_max                       start=binance:USDT       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=2hop_max                       start=kraken:USDT        cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.001s
+[FAIL]  h=dijkstra                       start=binance:BUSD       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.002s
+[FAIL]  h=dijkstra                       start=binance:USDT       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.002s
+[FAIL]  h=dijkstra                       start=kraken:USDT        cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.003s
+[FAIL]  h=h1_liquidity                   start=binance:BUSD       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.500s
+[FAIL]  h=h1_liquidity                   start=binance:USDT       cash=$   100.00 final=N/A        profit=N/A        len=None time= 1.306s
+[FAIL]  h=h1_liquidity                   start=kraken:USDT        cash=$   100.00 final=N/A        profit=N/A        len=None time= 5.040s
+[FAIL]  h=h2_slippage                    start=binance:BUSD       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.600s
+[FAIL]  h=h2_slippage                    start=binance:USDT       cash=$   100.00 final=N/A        profit=N/A        len=None time= 1.001s
+[FAIL]  h=h2_slippage                    start=kraken:USDT        cash=$   100.00 final=N/A        profit=N/A        len=None time= 4.031s
+[FAIL]  h=h3_parallel                    start=random_parallel    cash=$   100.00 final=N/A        profit=N/A        len=None time= 1.523s
+[FAIL]  h=h4_chaincongestion_exchange_risk start=binance:BUSD       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h4_chaincongestion_exchange_risk start=binance:USDT       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h4_chaincongestion_exchange_risk start=kraken:USDT        cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_1hop                    start=binance:BUSD       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_1hop                    start=binance:USDT       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_1hop                    start=kraken:USDT        cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=binance:BUSD       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=binance:USDT       cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=kraken:USDT        cash=$   100.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=2hop_max                       start=binance:BUSD       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.001s
+[FAIL]  h=2hop_max                       start=binance:USDT       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.026s
+[FAIL]  h=2hop_max                       start=kraken:USDT        cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.001s
+[FAIL]  h=dijkstra                       start=binance:BUSD       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.003s
+[FAIL]  h=dijkstra                       start=binance:USDT       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.002s
+[FAIL]  h=dijkstra                       start=kraken:USDT        cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.004s
+[FAIL]  h=h1_liquidity                   start=binance:BUSD       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h1_liquidity                   start=binance:USDT       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h1_liquidity                   start=kraken:USDT        cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h2_slippage                    start=binance:BUSD       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h2_slippage                    start=binance:USDT       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h2_slippage                    start=kraken:USDT        cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h3_parallel                    start=random_parallel    cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.001s
+[FAIL]  h=h4_chaincongestion_exchange_risk start=binance:BUSD       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h4_chaincongestion_exchange_risk start=binance:USDT       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h4_chaincongestion_exchange_risk start=kraken:USDT        cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_1hop                    start=binance:BUSD       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_1hop                    start=binance:USDT       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_1hop                    start=kraken:USDT        cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=binance:BUSD       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=binance:USDT       cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=kraken:USDT        cash=$ 1,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=2hop_max                       start=binance:BUSD       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=2hop_max                       start=binance:USDT       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.001s
+[FAIL]  h=2hop_max                       start=kraken:USDT        cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.001s
+[FAIL]  h=dijkstra                       start=binance:BUSD       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.002s
+[FAIL]  h=dijkstra                       start=binance:USDT       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.004s
+[FAIL]  h=dijkstra                       start=kraken:USDT        cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.002s
+[FAIL]  h=h1_liquidity                   start=binance:BUSD       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h1_liquidity                   start=binance:USDT       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h1_liquidity                   start=kraken:USDT        cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h2_slippage                    start=binance:BUSD       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h2_slippage                    start=binance:USDT       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h2_slippage                    start=kraken:USDT        cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h3_parallel                    start=random_parallel    cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.001s
+[FAIL]  h=h4_chaincongestion_exchange_risk start=binance:BUSD       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h4_chaincongestion_exchange_risk start=binance:USDT       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=h4_chaincongestion_exchange_risk start=kraken:USDT        cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_1hop                    start=binance:BUSD       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_1hop                    start=binance:USDT       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_1hop                    start=kraken:USDT        cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=binance:BUSD       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=binance:USDT       cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+[FAIL]  h=simple_2hop                    start=kraken:USDT        cash=$10,000.00 final=N/A        profit=N/A        len=None time= 0.000s
+
+Completed: 2026-02-11 10:10:20
+
+Saved experiment log to: /Users/user/Desktop/CMPT417/Stablecoin-CrossExchange-Arbitrage/results/compare_heuristics_live_20260211_101015.txt
