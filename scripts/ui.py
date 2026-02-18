@@ -8,7 +8,8 @@ import sys
 import logging
 import io
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, List, Any
+from collections import defaultdict
 
 # Add project root (folder that CONTAINS "scripts") to path
 project_root = Path(__file__).resolve().parent.parent
@@ -20,9 +21,12 @@ import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx            # type: ignore
 import pandas as pd              # type: ignore
 
-from scripts.graph import build_graph
+from scripts.graph import build_graph, _fetch_actual_trading_pair_rate
 from scripts.data import EXCHANGES
 from scripts.astar_vol import astar_best_path_with_liquidity, PlanResult, NodeId
+
+# Type alias for adjacency list
+Adjacency = Dict[NodeId, List[Dict[str, Any]]]
 from scripts.weighted_astar import weighted_astar_best_path
 from scripts.h1_vol import (
     volume_heuristic_cost,
@@ -54,9 +58,17 @@ logging.basicConfig(
 # Small helper: build a NetworkX graph and matplotlib figure
 # --------------------------------------------------------------
 
-def build_nx_graph():
-    """Use build_graph() and convert to a NetworkX DiGraph."""
-    nodes, adj = build_graph()
+def build_nx_graph(show_all: bool = False):
+    """
+    Use build_graph() and convert to a NetworkX DiGraph.
+    
+    Args:
+        show_all: If True, build an unfiltered graph with all possible nodes/edges
+    """
+    if show_all:
+        nodes, adj = build_graph_unfiltered()
+    else:
+        nodes, adj = build_graph()
 
     G = nx.DiGraph()
 
@@ -92,6 +104,191 @@ def build_nx_graph():
             )
 
     return G
+
+
+def build_graph_unfiltered():
+    """
+    Build a graph with ALL possible nodes and edges, bypassing filters.
+    This includes nodes with prices outside tolerance, edges without actual trading pairs, etc.
+    """
+    from scripts.data import EXCHANGES, STABLE_COINS, COIN_MARKETS, normalize_price_to_usd
+    from scripts.fees import WITHDRAWAL_FEES, get_taker_fee, get_network_gas_fee
+    from scripts.transfer_time import get_chain_time_seconds
+    import math
+    import time
+    from collections import defaultdict
+    
+    # Fetch prices without tolerance filter
+    prices: Dict[NodeId, float] = {}
+    snapshot_ts = time.time()
+    
+    for coin in STABLE_COINS:
+        for ex_name, ex in EXCHANGES.items():
+            market = COIN_MARKETS.get(coin, {}).get(ex_name)
+            if not market:
+                continue
+            
+            try:
+                ticker = ex.fetch_ticker(market)
+            except Exception:
+                continue
+            
+            bid = ticker.get("bid")
+            ask = ticker.get("ask")
+            last = ticker.get("last")
+            
+            if isinstance(bid, (int, float)) and isinstance(ask, (int, float)):
+                conservative_price = bid
+            elif isinstance(last, (int, float)):
+                conservative_price = float(last)
+            else:
+                continue
+            
+            price_usd = normalize_price_to_usd(coin, market, conservative_price)
+            if price_usd is None:
+                continue
+            
+            # NO TOLERANCE FILTER - include all prices
+            prices[(ex_name, coin)] = price_usd
+    
+    # Build nodes
+    nodes: Dict[NodeId, Dict[str, Any]] = {
+        (ex, coin): {
+            "exchange": ex,
+            "coin": coin,
+            "price_usd": price_usd,
+            "snapshot_ts": snapshot_ts,
+        }
+        for (ex, coin), price_usd in prices.items()
+    }
+    
+    # Build ALL trade edges (even without actual trading pairs)
+    adj: Adjacency = defaultdict(list)
+    
+    for ex_name in EXCHANGES.keys():
+        coins_here = [c for c in STABLE_COINS if (ex_name, c) in prices]
+        if len(coins_here) < 2:
+            continue
+        
+        taker_fee = get_taker_fee(ex_name) or 0.0
+        
+        for i in range(len(coins_here)):
+            for j in range(len(coins_here)):
+                if i == j:
+                    continue
+                
+                c_from = coins_here[i]
+                c_to = coins_here[j]
+                
+                # Try actual trading pair first
+                actual_rate = _fetch_actual_trading_pair_rate(ex_name, c_from, c_to)
+                
+                if actual_rate is not None:
+                    raw_rate = actual_rate
+                else:
+                    # Use normalized price fallback (what was removed before)
+                    price_from = prices[(ex_name, c_from)]
+                    price_to = prices[(ex_name, c_to)]
+                    raw_rate = price_from / price_to
+                
+                effective_rate = raw_rate * (1.0 - taker_fee)
+                if effective_rate <= 0:
+                    continue
+                
+                cost = -math.log(effective_rate)
+                
+                from_node: NodeId = (ex_name, c_from)
+                to_node: NodeId = (ex_name, c_to)
+                
+                adj[from_node].append({
+                    "from": from_node,
+                    "to": to_node,
+                    "kind": "trade",
+                    "exchange": ex_name,
+                    "coin_from": c_from,
+                    "coin_to": c_to,
+                    "rate": effective_rate,
+                    "cost": cost,
+                    "taker_fee": taker_fee,
+                    "withdrawal_fee_units": None,
+                    "chain": None,
+                    "transfer_time_sec": 0.0,
+                })
+    
+    # Build ALL transfer edges (bypass portfolio size checks)
+    coin_exchanges: Dict[str, List[str]] = {
+        coin: [ex for (ex, c) in prices.keys() if c == coin]
+        for coin in STABLE_COINS
+    }
+    
+    for coin in STABLE_COINS:
+        ex_list = coin_exchanges.get(coin, [])
+        if len(ex_list) < 2:
+            continue
+        
+        for ex_from in ex_list:
+            ex_withdraw_cfg = WITHDRAWAL_FEES.get(ex_from, {}).get(coin)
+            if not ex_withdraw_cfg:
+                continue
+            
+            price_from_usd = prices[(ex_from, coin)]
+            
+            for ex_to in ex_list:
+                if ex_to == ex_from:
+                    continue
+                
+                chains_from = ex_withdraw_cfg
+                chains_to = WITHDRAWAL_FEES.get(ex_to, {}).get(coin, {})
+                
+                if chains_to:
+                    common_chains = set(chains_from.keys()) & set(chains_to.keys())
+                else:
+                    common_chains = set(chains_from.keys())
+                
+                if not common_chains:
+                    continue
+                
+                for chain in common_chains:
+                    fee_units = chains_from[chain]
+                    gas_fee_usd = get_network_gas_fee(chain)
+                    
+                    # NO PORTFOLIO SIZE CHECK - include all edges
+                    withdrawal_fee_usd = fee_units * price_from_usd
+                    total_fee_usd = withdrawal_fee_usd + gas_fee_usd
+                    
+                    # Use a reference portfolio size for rate calculation
+                    ref_portfolio = 10000.0
+                    if total_fee_usd >= ref_portfolio:
+                        continue
+                    
+                    rate = 1.0 - (total_fee_usd / ref_portfolio)
+                    if rate <= 0:
+                        continue
+                    
+                    cost = -math.log(rate)
+                    t_sec = get_chain_time_seconds(chain) or 0.0
+                    
+                    from_node: NodeId = (ex_from, coin)
+                    to_node: NodeId = (ex_to, coin)
+                    
+                    adj[from_node].append({
+                        "from": from_node,
+                        "to": to_node,
+                        "kind": "transfer",
+                        "exchange": ex_from,
+                        "target_exchange": ex_to,
+                        "coin": coin,
+                        "rate": rate,
+                        "cost": cost,
+                        "taker_fee": None,
+                        "withdrawal_fee_units": fee_units,
+                        "gas_fee_usd": gas_fee_usd,
+                        "total_fee_usd": total_fee_usd,
+                        "chain": chain,
+                        "transfer_time_sec": t_sec,
+                    })
+    
+    return nodes, adj
 
 
 def make_graph_figure(G: nx.DiGraph):
@@ -562,9 +759,11 @@ def main():
 
     # Session state: store the current NetworkX graph and search result text
     if "graph" not in st.session_state:
-        st.session_state["graph"] = build_nx_graph()
+        st.session_state["graph"] = build_nx_graph(show_all=False)
     if "best_trade_text" not in st.session_state:
         st.session_state["best_trade_text"] = "Click **Run search** to compute a path."
+    if "show_all" not in st.session_state:
+        st.session_state["show_all"] = False
 
     G: nx.DiGraph = st.session_state["graph"]
 
@@ -587,9 +786,26 @@ def main():
         with col_controls:
             st.subheader("Controls")
 
+            # Toggle for showing all nodes/edges (unfiltered)
+            show_all = st.checkbox(
+                "Show all nodes & edges (unfiltered)",
+                value=st.session_state.get("show_all", False),
+                help="If enabled, shows all nodes and edges including those filtered out by price tolerance, portfolio size checks, etc."
+            )
+            
+            # Rebuild graph if checkbox state changed
+            if show_all != st.session_state.get("show_all", False):
+                st.session_state["show_all"] = show_all
+                st.session_state["graph"] = build_nx_graph(show_all=show_all)
+                G = st.session_state["graph"]
+                # Refresh start wallet options in case node set changed
+                start_wallet_options[:] = sorted(
+                    f"{ex}:{coin}" for (ex, coin) in G.nodes()
+                )
+
             # Update prices -> rebuild the graph
             if st.button("Update price"):
-                st.session_state["graph"] = build_nx_graph()
+                st.session_state["graph"] = build_nx_graph(show_all=show_all)
                 G = st.session_state["graph"]
                 st.success("Prices updated and graph rebuilt.")
 
@@ -685,7 +901,7 @@ def main():
 
         # Optional: allow refresh here as well
         if st.button("Refresh prices", key="refresh_prices_tab"):
-            st.session_state["graph"] = build_nx_graph()
+            st.session_state["graph"] = build_nx_graph(show_all=st.session_state.get("show_all", False))
             G = st.session_state["graph"]
             st.success("Prices refreshed.")
 
@@ -835,8 +1051,8 @@ This is the graph over which the A\\* / Weighted A\\* search runs.
 3. **Heuristic**  
    - `h1_liquidity` – prefers routes with high trading volume / good liquidity.  
    - `h2_slippage` – penalizes routes where large orders would move the price a lot.  
-   - `h3_parallel` – runs several A\* searches in parallel from random starting nodes.  
-   - `h4_chain_congestion` – Weighted A\* that also penalizes fast / risky chains and less reliable exchanges.
+   - `h3_parallel` – runs several A\\* searches in parallel from random starting nodes.  
+   - `h4_chain_congestion` – Weighted A\\* that also penalizes fast / risky chains and less reliable exchanges.
 
 4. **Starting wallet (exchange:coin)**  
    - Where your funds are assumed to live **before** you start the route.  
