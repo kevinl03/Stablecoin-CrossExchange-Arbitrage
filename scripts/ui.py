@@ -291,23 +291,532 @@ def build_graph_unfiltered():
     return nodes, adj
 
 
-def make_graph_figure(G: nx.DiGraph):
-    """Create a matplotlib Figure with exchange clusters and proper edge coloring."""
+def make_paper_ready_figure(
+    G: nx.DiGraph,
+    highlight_cycle: Optional[List[NodeId]] = None,
+    show_cycle_label: bool = True,
+) -> plt.Figure:
+    """
+    Create a conference-ready figure with structured block layout.
+    
+    Design principles:
+    - Structured 2x2 grid layout for exchanges
+    - White background, clean styling
+    - Nodes: white fill, colored borders, asset names only
+    - Intra-exchange edges: thin, low opacity, exchange color
+    - Inter-exchange edges: thick, dark green, full opacity
+    - Optional highlighted arbitrage cycle in red
+    
+    Args:
+        G: NetworkX directed graph
+        highlight_cycle: Optional list of nodes forming a cycle to highlight
+        show_cycle_label: If True, add "Cycle P" label to highlighted cycle
+    """
+    import math
+    from matplotlib.patches import Rectangle, FancyBboxPatch
+    from matplotlib.patches import FancyArrowPatch
+    import matplotlib.patches as mpatches
+    
+    # Define distinct colors for each exchange
+    exchange_colors = {
+        "binance": "#FFD700",      # Bright gold
+        "kraken": "#9C27B0",       # Deep purple
+        "kucoin": "#00BCD4",       # Bright cyan
+        "bybit": "#E91E63",        # Bright pink/magenta
+        "coinbase": "#2196F3",     # Bright blue
+    }
+    
+    # Group nodes by exchange
+    exchange_names = list(EXCHANGES.keys())
+    node_groups = {ex: [] for ex in exchange_names}
+    
+    for node in G.nodes():
+        ex = G.nodes[node]["exchange"]
+        node_groups[ex].append(node)
+    
+    # Filter to only exchanges that have nodes
+    active_exchanges = [ex for ex in exchange_names if node_groups[ex]]
+    if not active_exchanges:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.text(0.5, 0.5, "No nodes to display", ha="center", va="center", transform=ax.transAxes)
+        ax.axis("off")
+        return fig
+    
+    # Create figure with white background
+    fig, ax = plt.subplots(figsize=(10, 10), facecolor="white")
+    ax.set_facecolor("white")
+    
+    # Structured 2x2 grid layout
+    # Calculate grid dimensions (try to make it as square as possible)
+    num_exchanges = len(active_exchanges)
+    if num_exchanges <= 2:
+        cols = num_exchanges
+        rows = 1
+    elif num_exchanges <= 4:
+        cols = 2
+        rows = 2
+    else:
+        cols = 3
+        rows = (num_exchanges + 2) // 3
+    
+    # Block dimensions
+    block_width = 3.0
+    block_height = 3.0
+    block_spacing = 4.0
+    
+    # Calculate positions for each exchange block
+    exchange_positions = {}
+    exchange_blocks = {}  # Store block boundaries for drawing
+    
+    for idx, ex in enumerate(active_exchanges):
+        row = idx // cols
+        col = idx % cols
+        
+        # Center the grid
+        total_width = cols * block_width + (cols - 1) * block_spacing
+        total_height = rows * block_height + (rows - 1) * block_spacing
+        start_x = -total_width / 2
+        start_y = total_height / 2
+        
+        block_center_x = start_x + col * (block_width + block_spacing) + block_width / 2
+        block_center_y = start_y - row * (block_height + block_spacing) - block_height / 2
+        
+        exchange_positions[ex] = (block_center_x, block_center_y)
+        exchange_blocks[ex] = {
+            "center": (block_center_x, block_center_y),
+            "width": block_width,
+            "height": block_height,
+        }
+    
+    # Position nodes within each block
+    pos = {}
+    node_size = 300
+    
+    for ex in active_exchanges:
+        nodes_in_exchange = sorted(node_groups[ex], key=lambda n: G.nodes[n]["coin"])
+        num_nodes = len(nodes_in_exchange)
+        block_center_x, block_center_y = exchange_positions[ex]
+        
+        # Arrange nodes in a grid or circle within the block
+        if num_nodes == 1:
+            pos[nodes_in_exchange[0]] = (block_center_x, block_center_y)
+        elif num_nodes <= 4:
+            # 2x2 grid
+            grid_size = 2
+            node_spacing = 0.8
+            for i, node in enumerate(nodes_in_exchange):
+                row = i // grid_size
+                col = i % grid_size
+                x = block_center_x - node_spacing / 2 + col * node_spacing
+                y = block_center_y + node_spacing / 2 - row * node_spacing
+                pos[node] = (x, y)
+        else:
+            # Circular arrangement
+            radius = min(block_width, block_height) * 0.35
+            for i, node in enumerate(nodes_in_exchange):
+                angle = 2 * math.pi * i / num_nodes
+                x = block_center_x + radius * math.cos(angle)
+                y = block_center_y + radius * math.sin(angle)
+                pos[node] = (x, y)
+    
+    # Draw exchange block boundaries (subtle)
+    for ex, block_info in exchange_blocks.items():
+        center_x, center_y = block_info["center"]
+        width = block_info["width"]
+        height = block_info["height"]
+        color = exchange_colors.get(ex, "#808080")
+        
+        # Draw subtle rectangle border
+        rect = Rectangle(
+            (center_x - width/2, center_y - height/2),
+            width,
+            height,
+            linewidth=2,
+            edgecolor=color,
+            facecolor="none",
+            alpha=0.3,
+            linestyle="--",
+        )
+        ax.add_patch(rect)
+        
+        # Add exchange name label above block
+        ax.text(
+            center_x,
+            center_y + height/2 + 0.3,
+            ex.capitalize(),
+            ha="center",
+            va="bottom",
+            fontsize=12,
+            fontweight="bold",
+            color=color,
+        )
+        
+        # Add node count (optional, subtle)
+        num_nodes = len(node_groups[ex])
+        ax.text(
+            center_x,
+            center_y + height/2 + 0.1,
+            f"|V| = {num_nodes}",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+            color="gray",
+            style="italic",
+        )
+    
+    # Separate edges into intra-exchange and inter-exchange
+    intra_edges = []
+    inter_edges = []
+    highlight_edges = set()
+    
+    if highlight_cycle and len(highlight_cycle) > 1:
+        # Create set of edges in the cycle
+        cycle_edges = set()
+        for i in range(len(highlight_cycle)):
+            u = highlight_cycle[i]
+            v = highlight_cycle[(i + 1) % len(highlight_cycle)]
+            cycle_edges.add((u, v))
+        highlight_edges = cycle_edges
+    
+    for u, v in G.edges():
+        u_ex = G.nodes[u]["exchange"]
+        v_ex = G.nodes[v]["exchange"]
+        edge_kind = G.edges[(u, v)].get("kind", "trade")
+        
+        if (u, v) in highlight_edges:
+            # Will be drawn separately
+            continue
+        elif u_ex == v_ex:
+            intra_edges.append((u, v))
+        else:
+            inter_edges.append((u, v))
+    
+    # Draw intra-exchange edges (thin, low opacity, exchange color)
+    for u, v in intra_edges:
+        u_ex = G.nodes[u]["exchange"]
+        edge_color = exchange_colors.get(u_ex, "#808080")
+        
+        nx.draw_networkx_edges(
+            G,
+            pos,
+            edgelist=[(u, v)],
+            edge_color=edge_color,
+            width=0.5,
+            alpha=0.3,
+            arrows=True,
+            arrowsize=8,
+            arrowstyle="->",
+            ax=ax,
+        )
+    
+    # Draw inter-exchange edges (thick, dark green, full opacity)
+    if inter_edges:
+        nx.draw_networkx_edges(
+            G,
+            pos,
+            edgelist=inter_edges,
+            edge_color="#2E7D32",  # Dark green
+            width=2.0,
+            alpha=1.0,
+            arrows=True,
+            arrowsize=12,
+            arrowstyle="->",
+            ax=ax,
+        )
+    
+    # Draw highlighted cycle edges (bold red)
+    if highlight_cycle and len(highlight_cycle) > 1:
+        cycle_edge_list = []
+        for i in range(len(highlight_cycle)):
+            u = highlight_cycle[i]
+            v = highlight_cycle[(i + 1) % len(highlight_cycle)]
+            if G.has_edge(u, v):
+                cycle_edge_list.append((u, v))
+        
+        if cycle_edge_list:
+            nx.draw_networkx_edges(
+                G,
+                pos,
+                edgelist=cycle_edge_list,
+                edge_color="#D32F2F",  # Bright red
+                width=3.5,
+                alpha=1.0,
+                arrows=True,
+                arrowsize=15,
+                arrowstyle="->",
+                ax=ax,
+            )
+            
+            # Add "Cycle P" label if requested
+            if show_cycle_label and cycle_edge_list:
+                # Find midpoint of first edge for label
+                u, v = cycle_edge_list[0]
+                x1, y1 = pos[u]
+                x2, y2 = pos[v]
+                label_x = (x1 + x2) / 2
+                label_y = (y1 + y2) / 2 + 0.3
+                ax.text(
+                    label_x,
+                    label_y,
+                    "Cycle P",
+                    ha="center",
+                    va="bottom",
+                    fontsize=10,
+                    fontweight="bold",
+                    color="#D32F2F",
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="#D32F2F", linewidth=1.5),
+                )
+    
+    # Draw nodes (white fill, colored border, asset name only)
+    for ex in active_exchanges:
+        nodes_in_exchange = node_groups[ex]
+        node_color = exchange_colors.get(ex, "#808080")
+        
+        nx.draw_networkx_nodes(
+            G,
+            pos,
+            nodelist=nodes_in_exchange,
+            node_size=node_size,
+            node_color="white",
+            edgecolors=node_color,
+            linewidths=2.5,
+            ax=ax,
+        )
+        
+        # Add labels (asset names only, no prices)
+        labels = {node: G.nodes[node]["coin"] for node in nodes_in_exchange}
+        nx.draw_networkx_labels(
+            G,
+            pos,
+            labels=labels,
+            font_size=9,
+            font_weight="bold",
+            ax=ax,
+        )
+    
+    # Set axis limits with padding
+    all_x = [p[0] for p in pos.values()]
+    all_y = [p[1] for p in pos.values()]
+    x_margin = 1.0
+    y_margin = 1.0
+    ax.set_xlim(min(all_x) - x_margin, max(all_x) + x_margin)
+    ax.set_ylim(min(all_y) - y_margin, max(all_y) + y_margin)
+    
+    ax.axis("off")
+    ax.set_aspect("equal")
+    fig.tight_layout()
+    
+    return fig
+
+
+def make_path_only_figure(
+    G: nx.DiGraph,
+    highlight_path: List[NodeId],
+    highlight_edges: Optional[List[Dict[str, Any]]] = None,
+) -> plt.Figure:
+    """
+    Create a simplified graph showing ONLY the successful path.
+    Removes all other nodes and edges for clarity.
+    """
     import math
     
-    # Define distinct brand colors for each exchange
+    if not highlight_path or len(highlight_path) < 2:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.text(0.5, 0.5, "No path to display", ha="center", va="center", transform=ax.transAxes)
+        ax.axis("off")
+        return fig
+    
+    # Create subgraph with only path nodes
+    path_nodes = set(highlight_path)
+    path_edges = []
+    
+    # Build edge list from path
+    for i in range(len(highlight_path) - 1):
+        u, v = highlight_path[i], highlight_path[i + 1]
+        if G.has_edge(u, v):
+            path_edges.append((u, v))
+    
+    # Create subgraph
+    subgraph = G.subgraph(path_nodes).copy()
+    
+    # Define distinct colors for each exchange
     exchange_colors = {
-        "binance": "#F0B90B",      # Binance yellow
-        "kraken": "#5842A3",       # Kraken purple
-        "kucoin": "#26C6F9",       # KuCoin cyan
-        "bybit": "#F7A600",        # Bybit orange
-        "coinbase": "#0052FF",     # Coinbase blue
+        "binance": "#FFD700",      # Bright gold
+        "kraken": "#9C27B0",       # Deep purple
+        "kucoin": "#00BCD4",       # Bright cyan
+        "bybit": "#E91E63",        # Bright pink/magenta
+        "coinbase": "#2196F3",     # Bright blue
+    }
+    
+    # Create layout - use a curved 2D path for better visualization
+    pos = {}
+    is_cycle = len(highlight_path) > 2 and highlight_path[0] == highlight_path[-1]
+    num_nodes = len(highlight_path) - 1 if is_cycle else len(highlight_path)
+    
+    if num_nodes <= 2:
+        # Simple two-node layout with some vertical offset
+        pos[highlight_path[0]] = (0, 0)
+        if len(highlight_path) > 1:
+            pos[highlight_path[1]] = (3, 0.5)
+    elif is_cycle:
+        # Circular layout for cycles
+        radius = 3.0
+        for i, node in enumerate(highlight_path[:-1]):  # Exclude duplicate last node
+            angle = 2 * math.pi * i / (len(highlight_path) - 1) - math.pi / 2  # Start at top
+            pos[node] = (radius * math.cos(angle), radius * math.sin(angle))
+    else:
+            # Curved path layout (S-curve or arc) for better 2D visualization
+            # Use a smooth curve that goes up and down
+            for i, node in enumerate(highlight_path):
+                x = i * 3.0
+                # Create a wave/curve pattern
+                y = 1.5 * math.sin(i * math.pi / (num_nodes - 1) if num_nodes > 1 else 0)
+                pos[node] = (x, y)
+    
+    # Adjust figure size based on path length
+    if num_nodes <= 3:
+        fig, ax = plt.subplots(figsize=(10, 6))
+    elif num_nodes <= 5:
+        fig, ax = plt.subplots(figsize=(14, 8))
+    else:
+        fig, ax = plt.subplots(figsize=(16, 10))
+    
+    # Draw nodes
+    node_colors = []
+    node_labels = {}
+    for node in highlight_path:
+        ex = subgraph.nodes[node]["exchange"]
+        coin = subgraph.nodes[node]["coin"]
+        price = subgraph.nodes[node]["price_usd"]
+        
+        node_colors.append(exchange_colors.get(ex, "#808080"))
+        node_labels[node] = f"{ex}:{coin}\n${price:.4f}"
+    
+    nx.draw_networkx_nodes(
+        subgraph,
+        pos,
+        node_size=1500,
+        node_color=node_colors,
+        edgecolors="black",
+        linewidths=3.0,
+        ax=ax,
+    )
+    
+    # Draw edges (all are part of the path, so make them bold)
+    nx.draw_networkx_edges(
+        subgraph,
+        pos,
+        edgelist=path_edges,
+        edge_color="#D32F2F",  # Bold red
+        arrows=True,
+        arrowsize=25,
+        width=4.0,
+        alpha=1.0,
+        arrowstyle="->",
+        ax=ax,
+    )
+    
+    # Add edge labels with rates/prices
+    if highlight_edges and len(highlight_edges) == len(path_edges):
+        edge_labels = {}
+        for i, (u, v) in enumerate(path_edges):
+            if i < len(highlight_edges):
+                edge_data = highlight_edges[i]
+                rate = edge_data.get("rate", 0.0)
+                kind = edge_data.get("kind", "trade")
+                
+                if kind == "trade":
+                    label = f"{rate:.4f}"
+                else:
+                    total_fee = edge_data.get("total_fee_usd", 0.0)
+                    label = f"${total_fee:.2f}" if total_fee > 0 else f"{rate:.4f}"
+                
+                edge_labels[(u, v)] = label
+        
+        if edge_labels:
+            nx.draw_networkx_edge_labels(
+                subgraph,
+                pos,
+                edge_labels=edge_labels,
+                font_size=10,
+                font_weight="bold",
+                bbox=dict(boxstyle="round,pad=0.5", facecolor="white", edgecolor="#D32F2F", linewidth=2),
+                ax=ax,
+            )
+    
+    # Draw node labels
+    nx.draw_networkx_labels(
+        subgraph,
+        pos,
+        labels=node_labels,
+        font_size=10,
+        font_weight="bold",
+        ax=ax,
+    )
+    
+    # Add step numbers with better positioning
+    for i, node in enumerate(highlight_path):
+        if node in pos:
+            x, y = pos[node]
+            # Position step number below node, adjusting for layout
+            offset_y = -0.8 if not is_cycle else -0.6
+            ax.text(x, y + offset_y, f"Step {i+1}", ha="center", va="top", 
+                   fontsize=9, style="italic", color="gray", fontweight="bold")
+    
+    ax.set_title("Arbitrage Path (Simplified View)\nShowing only the successful path", 
+                 fontsize=14, fontweight="bold")
+    ax.axis("off")
+    ax.set_aspect("equal")
+    fig.tight_layout()
+    
+    return fig
+
+
+def make_graph_figure(
+    G: nx.DiGraph,
+    highlight_path: Optional[List[NodeId]] = None,
+    highlight_edges: Optional[List[Dict[str, Any]]] = None,
+):
+    """
+    Create a matplotlib Figure with exchange clusters and proper edge coloring.
+    
+    Args:
+        G: NetworkX directed graph
+        highlight_path: Optional list of nodes in the path to highlight
+        highlight_edges: Optional list of edge dicts from the path to highlight
+    """
+    import math
+    
+    # Define distinct colors for each exchange (maximally different for easy distinction)
+    exchange_colors = {
+        "binance": "#FFD700",      # Bright gold/yellow (distinct from orange)
+        "kraken": "#9C27B0",       # Deep purple
+        "kucoin": "#00BCD4",       # Bright cyan
+        "bybit": "#E91E63",        # Bright pink/magenta (very distinct from yellow/orange)
+        "coinbase": "#2196F3",     # Bright blue
     }
     
     exchange_names = list(EXCHANGES.keys())
     node_colors = []
     node_labels = {}
     node_groups = {ex: [] for ex in exchange_names}
+    
+    # Create set of highlighted nodes for faster lookup
+    highlight_nodes_set = set(highlight_path) if highlight_path else set()
+    
+    # Create set of highlighted edges (u, v) tuples
+    highlight_edges_set = set()
+    if highlight_path and len(highlight_path) > 1:
+        for i in range(len(highlight_path) - 1):
+            u, v = highlight_path[i], highlight_path[i + 1]
+            # Only add edge if both nodes exist in graph and edge exists
+            if u in G.nodes() and v in G.nodes() and G.has_edge(u, v):
+                highlight_edges_set.add((u, v))
+        # If it's a cycle, also add the closing edge
+        if len(highlight_path) > 2 and highlight_path[0] == highlight_path[-1]:
+            u, v = highlight_path[-1], highlight_path[0]
+            if u in G.nodes() and v in G.nodes() and G.has_edge(u, v):
+                highlight_edges_set.add((u, v))
 
     # Group nodes by exchange
     for node in G.nodes():
@@ -316,26 +825,46 @@ def make_graph_figure(G: nx.DiGraph):
         price = G.nodes[node]["price_usd"]
         
         node_labels[node] = f"{ex}:{coin}\n${price:.4f}"
-        node_colors.append(exchange_colors.get(ex, "#808080"))  # Gray for unknown exchanges
+        
+        # Highlight nodes in the path with a different color/border
+        if node in highlight_nodes_set:
+            node_colors.append("#FF6B6B")  # Light red for highlighted nodes
+        else:
+            node_colors.append(exchange_colors.get(ex, "#808080"))  # Gray for unknown exchanges
+        
         node_groups[ex].append(node)
 
-    # Color edges: same color for intra-exchange, different for inter-exchange
-    edge_colors_list = []
+    # Separate edges into regular and highlighted, build color/width maps
+    regular_edges = []
+    highlighted_edges = []
+    edge_color_map = {}  # Map (u, v) -> color
+    edge_width_map = {}  # Map (u, v) -> width
+    
     for u, v in G.edges():
         u_ex = G.nodes[u]["exchange"]
         v_ex = G.nodes[v]["exchange"]
         edge_kind = G.edges[(u, v)].get("kind", "trade")
         
-        if u_ex == v_ex:
-            # Intra-exchange edge (trade): use exchange color with transparency
-            edge_color = exchange_colors.get(u_ex, "#808080")
-            edge_colors_list.append(edge_color)
+        is_highlighted = (u, v) in highlight_edges_set
+        
+        if is_highlighted:
+            highlighted_edges.append((u, v))
+            # Bold red for highlighted path
+            edge_color_map[(u, v)] = "#D32F2F"  # Bright red
+            edge_width_map[(u, v)] = 4.0  # Thicker
         else:
-            # Inter-exchange edge (transfer): use green for transfers
-            if edge_kind == "transfer":
-                edge_colors_list.append("#2E7D32")  # Dark green for transfers
+            regular_edges.append((u, v))
+            if u_ex == v_ex:
+                # Intra-exchange edge (trade): use exchange color with transparency
+                edge_color = exchange_colors.get(u_ex, "#808080")
+                edge_color_map[(u, v)] = edge_color
             else:
-                edge_colors_list.append("#1976D2")  # Blue for trades (shouldn't happen but safety)
+                # Inter-exchange edge (transfer): use green for transfers
+                if edge_kind == "transfer":
+                    edge_color_map[(u, v)] = "#2E7D32"  # Dark green for transfers
+                else:
+                    edge_color_map[(u, v)] = "#1976D2"  # Blue for trades (shouldn't happen but safety)
+            edge_width_map[(u, v)] = 2.5  # Normal width
 
     # Create circular clusters for each exchange
     pos = {}
@@ -375,29 +904,69 @@ def make_graph_figure(G: nx.DiGraph):
 
     fig, ax = plt.subplots(figsize=(14, 10))
     
-    # Draw nodes with exchange brand colors
-    nx.draw_networkx_nodes(
-        G,
-        pos,
-        node_size=800,
-        node_color=node_colors,
-        edgecolors="black",
-        linewidths=2.0,
-        ax=ax,
-    )
+    # Draw regular edges first (so highlighted ones appear on top)
+    if regular_edges:
+        regular_colors = [edge_color_map.get((u, v), "#808080") for u, v in regular_edges]
+        regular_widths = [edge_width_map.get((u, v), 2.5) for u, v in regular_edges]
+        nx.draw_networkx_edges(
+            G,
+            pos,
+            edgelist=regular_edges,
+            edge_color=regular_colors,
+            arrows=True,
+            arrowsize=18,
+            width=regular_widths,
+            alpha=0.8,
+            arrowstyle="->",
+            ax=ax,
+        )
     
-    # Draw edges with proper coloring
-    nx.draw_networkx_edges(
-        G,
-        pos,
-        edge_color=edge_colors_list,
-        arrows=True,
-        arrowsize=18,
-        width=2.5,
-        alpha=0.8,
-        arrowstyle="->",
-        ax=ax,
-    )
+    # Draw highlighted edges on top (bold red)
+    if highlighted_edges:
+        highlight_colors = [edge_color_map.get((u, v), "#D32F2F") for u, v in highlighted_edges]
+        highlight_widths = [edge_width_map.get((u, v), 4.0) for u, v in highlighted_edges]
+        nx.draw_networkx_edges(
+            G,
+            pos,
+            edgelist=highlighted_edges,
+            edge_color=highlight_colors,
+            arrows=True,
+            arrowsize=22,
+            width=highlight_widths,
+            alpha=1.0,
+            arrowstyle="->",
+            ax=ax,
+        )
+    
+    # Draw nodes with exchange brand colors (highlighted nodes get special treatment)
+    regular_nodes = [n for n in G.nodes() if n not in highlight_nodes_set]
+    highlighted_nodes = [n for n in G.nodes() if n in highlight_nodes_set]
+    
+    if regular_nodes:
+        regular_node_colors = [node_colors[list(G.nodes()).index(n)] for n in regular_nodes]
+        nx.draw_networkx_nodes(
+            G,
+            pos,
+            nodelist=regular_nodes,
+            node_size=800,
+            node_color=regular_node_colors,
+            edgecolors="black",
+            linewidths=2.0,
+            ax=ax,
+        )
+    
+    if highlighted_nodes:
+        # Highlighted nodes: larger, red border, white fill
+        nx.draw_networkx_nodes(
+            G,
+            pos,
+            nodelist=highlighted_nodes,
+            node_size=1200,  # Larger
+            node_color="#FFE0E0",  # Light red fill
+            edgecolors="#D32F2F",  # Red border
+            linewidths=3.5,  # Thicker border
+            ax=ax,
+        )
     
     # Draw labels
     nx.draw_networkx_labels(
@@ -408,9 +977,51 @@ def make_graph_figure(G: nx.DiGraph):
         font_weight="bold",
         ax=ax,
     )
+    
+    # Add edge labels for highlighted path (showing rates/prices)
+    if highlighted_edges and highlight_edges:
+        edge_labels = {}
+        for i, (u, v) in enumerate(highlighted_edges):
+            if i < len(highlight_edges):
+                edge_data = highlight_edges[i]
+                rate = edge_data.get("rate", 0.0)
+                cost = edge_data.get("cost", 0.0)
+                kind = edge_data.get("kind", "trade")
+                
+                # Format label based on edge type
+                if kind == "trade":
+                    # Show rate (multiplicative factor)
+                    label = f"{rate:.4f}"
+                else:
+                    # Transfer: show cost or fee info
+                    total_fee = edge_data.get("total_fee_usd", 0.0)
+                    if total_fee > 0:
+                        label = f"${total_fee:.2f}"
+                    else:
+                        label = f"{cost:.4f}"
+                
+                edge_labels[(u, v)] = label
+        
+        if edge_labels:
+            # Draw edge labels for highlighted path
+            nx.draw_networkx_edge_labels(
+                G,
+                pos,
+                edge_labels=edge_labels,
+                font_size=7,
+                font_weight="bold",
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="#D32F2F", linewidth=1.5),
+                ax=ax,
+            )
 
     ax.set_title("Stablecoin Arbitrage Graph\nNodes clustered by exchange (colored by exchange) | Intra-exchange edges = exchange color, Inter-exchange edges = green", 
                  fontsize=12, fontweight="bold")
+    if highlight_path:
+        ax.set_title(
+            "Stablecoin Arbitrage Graph (Highlighted Path in Red)\n"
+            "Nodes clustered by exchange (colored by exchange) | Intra-exchange edges = exchange color, Inter-exchange edges = green",
+            fontsize=12, fontweight="bold"
+        )
     ax.axis("off")
     fig.tight_layout()
 
@@ -426,7 +1037,7 @@ def run_search_and_format(
     liquid_cash: float,
     heuristic_name: str,
     status_container=None,  # Streamlit container for real-time log updates
-) -> str:
+) -> tuple[str, Optional[PlanResult]]:
     """
     Run A* / Weighted A* from the selected start node and return a human-readable report.
 
@@ -435,7 +1046,7 @@ def run_search_and_format(
     try:
         ex, coin = start_wallet.split(":")
     except ValueError:
-        return "Invalid start wallet selection (expected 'exchange:coin')."
+        return "Invalid start wallet selection (expected 'exchange:coin').", None
 
     start_node: NodeId = (ex, coin)
 
@@ -556,18 +1167,20 @@ def run_search_and_format(
                 lg.removeHandler(streamlit_handler)
         for lg in (astar_logger, h3_parallel_logger, weighted_logger):
             lg.removeHandler(handler)
-        return f"Error while running search: {e}"
+        return f"Error while running search: {e}", None
 
     if result is None:
         if heuristic_name == "h3_parallel":
             return (
                 "No profitable path found from any of the 3 random starting points "
-                f"with {liquid_cash:.2f} USD using parallel search."
+                f"with {liquid_cash:.2f} USD using parallel search.",
+                None
             )
         else:
             return (
                 f"No profitable path found from {start_wallet} with "
-                f"{liquid_cash:.2f} USD using heuristic {heuristic_name}."
+                f"{liquid_cash:.2f} USD using heuristic {heuristic_name}.",
+                None
             )
 
     profit_pct = (
@@ -741,7 +1354,7 @@ def run_search_and_format(
                 f"{i}. Transfer {coin}: {ex_from} → {ex_to} via {chain}{detail_str}"
             )
 
-    return "\n".join(lines)
+    return "\n".join(lines), result
 
 
 # --------------------------------------------------------------
@@ -764,6 +1377,8 @@ def main():
         st.session_state["best_trade_text"] = "Click **Run search** to compute a path."
     if "show_all" not in st.session_state:
         st.session_state["show_all"] = False
+    if "last_search_result" not in st.session_state:
+        st.session_state["last_search_result"] = None
 
     G: nx.DiGraph = st.session_state["graph"]
 
@@ -863,20 +1478,62 @@ def main():
                     log_display = st.empty()
 
                     # Run search with real-time logging
-                    result_text = run_search_and_format(
+                    result_text, search_result = run_search_and_format(
                         start_wallet, liquid_cash, heuristic, status_container=log_display
                     )
 
                     # Update status when done
                     status.update(label="Search completed!", state="complete")
                     st.session_state["best_trade_text"] = result_text
+                    # Store the result object for graph highlighting
+                    st.session_state["last_search_result"] = search_result
 
         # Display the last result (or the initial message)
         st.text(st.session_state["best_trade_text"])
 
     with col_graph:
         st.subheader("Arbitrage Graph")
-        fig = make_graph_figure(G)
+        
+        # Toggle for paper-ready visualization
+        paper_mode = st.checkbox(
+            "Paper-ready visualization",
+            value=False,
+            help="Structured block layout suitable for conference papers (CAIAC/CVPR style)"
+        )
+        
+        # Get the last search result for highlighting
+        last_result = st.session_state.get("last_search_result")
+        highlight_path = None
+        highlight_edges = None
+        if last_result:
+            # Filter path to only include nodes that exist in current graph
+            # (in case graph was rebuilt after search)
+            highlight_path = [node for node in last_result.path if node in G.nodes()]
+            highlight_edges = last_result.edges
+            
+            # Debug: show if path was filtered
+            if len(highlight_path) != len(last_result.path):
+                st.caption(f"⚠️ Path filtered: {len(last_result.path)} → {len(highlight_path)} nodes (graph may have been rebuilt)")
+            elif highlight_path:
+                st.caption(f"✓ Highlighting path with {len(highlight_path)} nodes")
+        
+        # Toggle for simplified path-only view
+        show_path_only = st.checkbox(
+            "Show path only (simplified)",
+            value=False,
+            help="Show only the successful path, hiding all other nodes and edges"
+        )
+        
+        # For paper mode, use the search result if available
+        highlight_cycle = highlight_path if paper_mode else None
+        
+        if show_path_only and highlight_path:
+            # Show simplified path-only graph
+            fig = make_path_only_figure(G, highlight_path=highlight_path, highlight_edges=highlight_edges)
+        elif paper_mode:
+            fig = make_paper_ready_figure(G, highlight_cycle=highlight_cycle, show_cycle_label=True)
+        else:
+            fig = make_graph_figure(G, highlight_path=highlight_path, highlight_edges=highlight_edges)
         st.pyplot(fig, use_container_width=True)
 
         st.markdown(
