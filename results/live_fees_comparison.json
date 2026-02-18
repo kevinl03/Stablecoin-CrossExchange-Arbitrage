@@ -1,0 +1,80 @@
+{
+  "binance": {
+    "trading": {
+      "maker": 0.001,
+      "taker": 0.001
+    },
+    "withdrawal": {
+      "DAI": {},
+      "USDC": {},
+      "USDT": {}
+    }
+  },
+  "bybit": {
+    "trading": {
+      "maker": 0.001,
+      "taker": 0.001
+    },
+    "withdrawal": {
+      "DAI": {},
+      "USDC": {},
+      "USDT": {}
+    }
+  },
+  "kraken": {
+    "trading": {
+      "maker": 0.0025,
+      "taker": 0.004
+    },
+    "withdrawal": {
+      "DAI": {},
+      "USDC": {},
+      "USDT": {}
+    }
+  },
+  "kucoin": {
+    "trading": {
+      "maker": 0.001,
+      "taker": 0.001
+    },
+    "withdrawal": {
+      "DAI": {
+        "ETH": 1.0
+      },
+      "USDC": {
+        "ALGO": 1.0,
+        "ARB": 1.0,
+        "AVAX": 1.0,
+        "BASE": 0.5,
+        "ETH": 5.5,
+        "HBAR": 35.0,
+        "KCC": 0.5,
+        "MONAD": 0.1,
+        "NEAR": 0.5,
+        "NOBLE": 1.0,
+        "OP": 1.0,
+        "POLYGON": 1.0,
+        "SOL": 1.0,
+        "SONIC": 0.21,
+        "SUI": 0.5,
+        "XDC": 0.0
+      },
+      "USDT": {
+        "APT": 0.5,
+        "ARB": 1.0,
+        "AVAX": 1.0,
+        "BNB": 1.0,
+        "ETH": 5.5,
+        "KCC": 0.5,
+        "NEAR": 0.5,
+        "OP": 1.0,
+        "PLASMA": 0.4,
+        "POLYGON": 0.8,
+        "SOL": 1.5,
+        "TON": 0.5,
+        "TRX": 1.5,
+        "XTZ": 1.0
+      }
+    }
+  }
+}

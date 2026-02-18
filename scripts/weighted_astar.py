@@ -41,6 +41,78 @@ class PlanResult:
 # Helper: log-cost → final cash
 # ------------------------------------------------------
 
+def _calculate_cost_breakdown(
+    edges: List[Dict[str, Any]],
+    initial_cash_usd: float,
+) -> Dict[str, Any]:
+    """
+    Calculate detailed cost breakdown from path edges.
+    
+    Returns:
+        Dictionary with cost breakdown information.
+    """
+    num_trades = 0
+    num_transfers = 0
+    total_trading_fees = 0.0
+    total_withdrawal_fees = 0.0
+    total_gas_fees = 0.0
+    current_cash = initial_cash_usd
+    
+    for edge in edges:
+        edge_kind = edge.get("kind")
+        
+        if edge_kind == "trade":
+            num_trades += 1
+            taker_fee = edge.get("taker_fee", 0.0)
+            if taker_fee:
+                trading_fee = current_cash * taker_fee
+                total_trading_fees += trading_fee
+                rate = edge.get("rate", 1.0)
+                current_cash = current_cash * rate
+        
+        elif edge_kind == "transfer":
+            num_transfers += 1
+            total_fee_usd = edge.get("total_fee_usd")
+            withdrawal_fee_units = edge.get("withdrawal_fee_units")
+            gas_fee_usd = edge.get("gas_fee_usd", 0.0)
+            
+            if total_fee_usd is not None:
+                if withdrawal_fee_units is not None and gas_fee_usd > 0:
+                    withdrawal_fee_usd = withdrawal_fee_units * 1.0
+                    total_withdrawal_fees += withdrawal_fee_usd
+                    total_gas_fees += gas_fee_usd
+                elif gas_fee_usd > 0:
+                    total_gas_fees += gas_fee_usd
+                    total_withdrawal_fees += (total_fee_usd - gas_fee_usd)
+                elif withdrawal_fee_units is not None:
+                    withdrawal_fee_usd = withdrawal_fee_units * 1.0
+                    total_withdrawal_fees += withdrawal_fee_usd
+                else:
+                    total_withdrawal_fees += total_fee_usd
+                
+                rate = edge.get("rate", 1.0)
+                current_cash = current_cash * rate
+            else:
+                if withdrawal_fee_units is not None:
+                    withdrawal_fee_usd = withdrawal_fee_units * 1.0
+                    total_withdrawal_fees += withdrawal_fee_usd
+                    current_cash -= withdrawal_fee_usd
+                if gas_fee_usd:
+                    total_gas_fees += gas_fee_usd
+                    current_cash -= gas_fee_usd
+    
+    total_costs = total_trading_fees + total_withdrawal_fees + total_gas_fees
+    
+    return {
+        "num_trades": num_trades,
+        "num_transfers": num_transfers,
+        "total_trading_fees": total_trading_fees,
+        "total_withdrawal_fees": total_withdrawal_fees,
+        "total_gas_fees": total_gas_fees,
+        "total_costs": total_costs,
+    }
+
+
 def _final_cash_from_log_cost(
     initial_cash_usd: float,
     total_log_cost: float,
@@ -107,7 +179,8 @@ def weighted_astar_best_path(
     """
 
     # Build graph (nodes: metadata; adj: adjacency list)
-    nodes, adj = build_graph()
+    # Pass portfolio size for accurate fee calculations
+    nodes, adj = build_graph(portfolio_size_usd=liquid_cash_usd)
 
     if start_node not in nodes:
         raise ValueError(f"Start node {start_node} not present in graph.")
@@ -175,6 +248,9 @@ def weighted_astar_best_path(
             final_cash = current_cash
             profit = final_cash - liquid_cash_usd
 
+            # NOTE: final_cash already has fees deducted (they're baked into edge rates)
+            # So profit is already NET profit - no need to compare to fees
+
             if final_cash > liquid_cash_usd and profit >= min_profit_usd:
                 if best_result is None or final_cash > best_result.final_cash_usd:
                     best_result = PlanResult(
@@ -185,9 +261,21 @@ def weighted_astar_best_path(
                     )
                     found_profit = True
                     iterations_since_profit = 0  # Reset counter when we find a better path
+                    
+                    # Calculate cost breakdown
+                    cost_breakdown = _calculate_cost_breakdown(path_edges, liquid_cash_usd)
+                    cost_info = (
+                        f" | fees: trade=${cost_breakdown['total_trading_fees']:.2f} "
+                        f"({cost_breakdown['num_trades']}x), "
+                        f"wd=${cost_breakdown['total_withdrawal_fees']:.2f} "
+                        f"({cost_breakdown['num_transfers']}x), "
+                        f"gas=${cost_breakdown['total_gas_fees']:.2f}, "
+                        f"total=${cost_breakdown['total_costs']:.2f}"
+                    )
+                    
                     logger.info(
                         "New best path found (Weighted A* h4+h5): "
-                        f"profit=${profit:.2f}, path_length={len(path_nodes)}, "
+                        f"profit=${profit:.2f}, path_length={len(path_nodes)}{cost_info}, "
                         f"path={' -> '.join(f'{ex}:{c}' for (ex, c) in path_nodes)}"
                     )
                 else:
@@ -275,10 +363,21 @@ def weighted_astar_best_path(
         logger.info("Weighted A* (h4+h5) completed: No profitable path found")
         return None
 
+    # Calculate final cost breakdown
+    cost_breakdown = _calculate_cost_breakdown(best_result.edges, liquid_cash_usd)
+    cost_info = (
+        f" | fees: trade=${cost_breakdown['total_trading_fees']:.2f} "
+        f"({cost_breakdown['num_trades']}x), "
+        f"wd=${cost_breakdown['total_withdrawal_fees']:.2f} "
+        f"({cost_breakdown['num_transfers']}x), "
+        f"gas=${cost_breakdown['total_gas_fees']:.2f}, "
+        f"total=${cost_breakdown['total_costs']:.2f}"
+    )
+    
     logger.info(
         "Weighted A* (h4+h5) completed: "
         f"Final profit=${best_result.profit_usd:.2f}, "
-        f"path_length={len(best_result.path)}, "
+        f"path_length={len(best_result.path)}{cost_info}, "
         f"path={' -> '.join(f'{ex}:{c}' for ex, c in best_result.path)}"
     )
     return best_result

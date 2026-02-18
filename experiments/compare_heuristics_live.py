@@ -65,6 +65,7 @@ class ExperimentResult:
     duration_sec: float
     success: bool
     error: Optional[str]
+    edges: Optional[List[Dict[str, Any]]] = None  # Store edges for cost breakdown
 
 
 def run_single_search(
@@ -210,9 +211,14 @@ def run_single_search(
             duration_sec=duration,
             success=False,
             error=error or "No profitable path found",
+            edges=None,
         )
 
     profit = result.final_cash_usd - cash_usd
+    
+    # NOTE: final_cash already has fees deducted (they're baked into edge rates)
+    # So profit = final_cash - initial_cash is already NET profit
+    # The cost_breakdown is just for display - it shows what fees were deducted
 
     return ExperimentResult(
         heuristic=heuristic,
@@ -224,7 +230,102 @@ def run_single_search(
         duration_sec=duration,
         success=True,
         error=None,
+        edges=getattr(result, 'edges', None),  # Get edges if available
     )
+
+
+def calculate_cost_breakdown(
+    edges: List[Dict[str, Any]],
+    initial_cash_usd: float,
+) -> Dict[str, Any]:
+    """
+    Calculate detailed cost breakdown from path edges.
+    
+    Returns:
+        Dictionary with:
+        - num_trades: Number of trade edges
+        - num_transfers: Number of transfer edges
+        - total_trading_fees: Total trading fees in USD (estimated)
+        - total_withdrawal_fees: Total withdrawal fees in USD
+        - total_gas_fees: Total gas fees in USD
+        - total_costs: Total of all costs
+    """
+    num_trades = 0
+    num_transfers = 0
+    total_trading_fees = 0.0
+    total_withdrawal_fees = 0.0
+    total_gas_fees = 0.0
+    
+    # Track cash as we go through edges to calculate fees accurately
+    current_cash = initial_cash_usd
+    
+    for edge in edges:
+        edge_kind = edge.get("kind")
+        
+        if edge_kind == "trade":
+            num_trades += 1
+            taker_fee = edge.get("taker_fee", 0.0)
+            if taker_fee:
+                # Trading fee is percentage of current cash (before the trade)
+                # Note: For multi-hop paths, fees accumulate correctly:
+                # - Each trade charges a fee on the current cash amount
+                # - The rate already includes the fee deduction
+                trading_fee = current_cash * taker_fee
+                total_trading_fees += trading_fee
+                # Update cash: rate already accounts for fee (rate = raw_rate * (1 - taker_fee))
+                rate = edge.get("rate", 1.0)
+                current_cash = current_cash * rate
+        
+        elif edge_kind == "transfer":
+            num_transfers += 1
+            # Use total_fee_usd if available (most accurate)
+            total_fee_usd = edge.get("total_fee_usd")
+            withdrawal_fee_units = edge.get("withdrawal_fee_units")
+            gas_fee_usd = edge.get("gas_fee_usd", 0.0)
+            
+            if total_fee_usd is not None:
+                # Split total_fee into withdrawal and gas if we have both components
+                if withdrawal_fee_units is not None and gas_fee_usd > 0:
+                    # Both present: use actual values
+                    withdrawal_fee_usd = withdrawal_fee_units * 1.0  # ~$1 per stablecoin unit
+                    total_withdrawal_fees += withdrawal_fee_usd
+                    total_gas_fees += gas_fee_usd
+                elif gas_fee_usd > 0:
+                    # Only gas fee
+                    total_gas_fees += gas_fee_usd
+                    total_withdrawal_fees += (total_fee_usd - gas_fee_usd)
+                elif withdrawal_fee_units is not None:
+                    # Only withdrawal fee
+                    withdrawal_fee_usd = withdrawal_fee_units * 1.0
+                    total_withdrawal_fees += withdrawal_fee_usd
+                else:
+                    # Fallback: assume it's all withdrawal fee
+                    total_withdrawal_fees += total_fee_usd
+                
+                # Update cash after transfer
+                rate = edge.get("rate", 1.0)
+                current_cash = current_cash * rate
+            else:
+                # Fallback: calculate from individual components
+                if withdrawal_fee_units is not None:
+                    withdrawal_fee_usd = withdrawal_fee_units * 1.0
+                    total_withdrawal_fees += withdrawal_fee_usd
+                    current_cash -= withdrawal_fee_usd
+                
+                if gas_fee_usd:
+                    total_gas_fees += gas_fee_usd
+                    current_cash -= gas_fee_usd
+    
+    total_costs = total_trading_fees + total_withdrawal_fees + total_gas_fees
+    
+    return {
+        "num_trades": num_trades,
+        "num_transfers": num_transfers,
+        "total_trading_fees": total_trading_fees,
+        "total_withdrawal_fees": total_withdrawal_fees,
+        "total_gas_fees": total_gas_fees,
+        "total_costs": total_costs,
+    }
 
 
 def pick_start_nodes(nodes: Dict[NodeId, dict]) -> List[NodeId]:
@@ -310,7 +411,7 @@ def main() -> None:
         
         # Baseline algorithms: run for each start node
         for start in start_nodes:
-            for h in ["dijkstra", "2hop_max", "simple_1hop", "simple_2hop"]:
+            for h in ["dijkstra", "2hop_max", "simple_1hop", "simple_2hop", "bellman_ford"]:
                 tasks.append((h, start, cash))
         
         # h3_parallel: start nodes are chosen inside the function
@@ -336,16 +437,81 @@ def main() -> None:
             with results_lock:
                 all_results.append(res)
             
-            # Log result immediately
+            # Log result immediately with cost breakdown
             if res.success:
+                # Calculate cost breakdown from edges
+                cost_breakdown = calculate_cost_breakdown(res.edges, res.cash_usd) if res.edges else None
+                
+                # Calculate gross and net profit
+                net_profit = res.profit_usd if res.profit_usd else 0.0
+                total_fees = cost_breakdown['total_costs'] if cost_breakdown else 0.0
+                gross_profit = net_profit + total_fees  # Gross = Net + Fees
+                
+                # Build detailed profit breakdown string
+                profit_str = ""
+                if cost_breakdown:
+                    profit_str = (
+                        f" | gross=${gross_profit:.2f}, "
+                        f"fees=${total_fees:.2f} "
+                        f"(trade=${cost_breakdown['total_trading_fees']:.2f}, "
+                        f"wd=${cost_breakdown['total_withdrawal_fees']:.2f}, "
+                        f"gas=${cost_breakdown['total_gas_fees']:.2f}), "
+                        f"net=${net_profit:.2f}"
+                    )
+                else:
+                    profit_str = f" | net=${net_profit:.2f}"
+                
+                # Add profit emoji if net profitable
+                # NOTE: profit_usd is already NET (fees are baked into final_cash via edge rates)
+                profit_emoji = "💰" if res.profit_usd and res.profit_usd > 0 else ""
+                
                 log_and_write(
-                    f"[DONE] {heuristic} from {start_str}: SUCCESS - "
+                    f"[DONE] {heuristic} from {start_str}: SUCCESS {profit_emoji} - "
                     f"final=${res.final_cash_usd:.2f} "
-                    f"(profit=${res.profit_usd:.2f}), "
+                    f"(profit=${res.profit_usd:.2f}){profit_str}, "
                     f"path_len={res.path_len}, "
                     f"time={res.duration_sec:.3f}s",
                     flush=True
                 )
+                
+                # Add detailed path breakdown if edges are available
+                if res.edges and len(res.edges) > 0:
+                    log_and_write(f"  Path details:", flush=True)
+                    current_cash = res.cash_usd
+                    for i, edge in enumerate(res.edges, 1):
+                        edge_kind = edge.get("kind")
+                        if edge_kind == "trade":
+                            exchange = edge.get("exchange")
+                            coin_from = edge.get("coin_from")
+                            coin_to = edge.get("coin_to")
+                            taker_fee = edge.get("taker_fee", 0.0)
+                            rate = edge.get("rate", 1.0)
+                            fee_amount = current_cash * taker_fee if taker_fee else 0.0
+                            current_cash = current_cash * rate
+                            log_and_write(
+                                f"    {i}. Trade on {exchange}: {coin_from} → {coin_to} "
+                                f"(fee=${fee_amount:.2f}, {taker_fee*100:.2f}%, "
+                                f"cash=${current_cash:.2f})",
+                                flush=True
+                            )
+                        elif edge_kind == "transfer":
+                            exchange_from = edge.get("exchange")
+                            exchange_to = edge.get("target_exchange")
+                            coin = edge.get("coin")
+                            chain = edge.get("chain", "unknown")
+                            withdrawal_fee = edge.get("withdrawal_fee_units")
+                            gas_fee = edge.get("gas_fee_usd", 0.0)
+                            total_fee = edge.get("total_fee_usd", 0.0)
+                            rate = edge.get("rate", 1.0)
+                            current_cash = current_cash * rate
+                            wd_str = f"{withdrawal_fee} {coin}" if withdrawal_fee else "N/A"
+                            log_and_write(
+                                f"    {i}. Transfer {exchange_from} → {exchange_to} "
+                                f"({coin} on {chain}): "
+                                f"wd={wd_str}, gas=${gas_fee:.2f}, "
+                                f"total=${total_fee:.2f}, cash=${current_cash:.2f}",
+                                flush=True
+                            )
             else:
                 log_and_write(
                     f"[DONE] {heuristic} from {start_str}: FAIL - {res.error} "
@@ -392,13 +558,34 @@ def main() -> None:
             if res.profit_usd is not None
             else "N/A"
         )
+        
+        # Add detailed profit breakdown to summary
+        profit_breakdown_str = ""
+        if res.success and res.edges:
+            breakdown = calculate_cost_breakdown(res.edges, res.cash_usd)
+            net_profit = res.profit_usd if res.profit_usd else 0.0
+            total_fees = breakdown['total_costs']
+            gross_profit = net_profit + total_fees
+            
+            profit_breakdown_str = (
+                f" | gross=${gross_profit:.2f}, "
+                f"fees=${total_fees:.2f} "
+                f"(trade=${breakdown['total_trading_fees']:.2f}, "
+                f"wd=${breakdown['total_withdrawal_fees']:.2f}, "
+                f"gas=${breakdown['total_gas_fees']:.2f}), "
+                f"net=${net_profit:.2f}"
+            )
+        
+        # Add profit emoji if net profitable after fees
+        profit_emoji = "💰" if res.success and res.profit_usd and res.profit_usd > 0 else ""
+        
         log_and_write(
-            f"[{status}] h={res.heuristic:30s} "
+            f"[{status}] {profit_emoji} h={res.heuristic:30s} "
             f"start={start_str:18s} "
             f"cash=${res.cash_usd:9,.2f} "
             f"final={final_str:10s} "
             f"profit={profit_str:10s} "
-            f"len={str(res.path_len):>3s} "
+            f"len={str(res.path_len):>3s}{profit_breakdown_str} "
             f"time={res.duration_sec:6.3f}s"
         )
     
