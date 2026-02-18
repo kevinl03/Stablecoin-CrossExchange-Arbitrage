@@ -1,0 +1,20 @@
+\subsection{Experimental Framework}
+
+Our experimental framework constructs a real-time, execution-aware graph representation of stablecoin arbitrage opportunities (see Figure~\ref{fig:cover_graph}). The graph structure consists of nodes representing $(\text{exchange}, \text{coin})$ pairs and directed edges representing trades and transfers.
+
+\subsubsection{Market Data Layer}
+
+We gather live market data from five major exchanges (Binance, Kraken, KuCoin, Bybit, Coinbase) to construct price snapshots for each $(\text{exchange}, \text{coin})$ pair. Prices are normalized to USD using conservative bid/ask execution estimates. We apply a price tolerance filter to exclude depegged assets, ensuring only true stablecoins are included.
+
+\subsubsection{Fee Model}
+
+The fee model captures three cost categories: trading fees as percentage-based taker fees, withdrawal fees as exchange-specific flat fees varying by blockchain network, and network gas fees estimated from historical averages. The model is portfolio-size-aware, enforcing minimum notional thresholds per network to filter unprofitable edges at small scales.
+
+\subsubsection{Transfer Latency Model}
+
+We model end-to-end transfer time as blockchain confirmation time plus user execution overhead. Transfer latency is integrated into edge costs, enabling time-aware heuristics to assess feasibility against remaining arbitrage windows.
+
+\subsubsection{Graph Construction}
+
+The graph construction process creates nodes for $(\text{exchange}, \text{coin})$ pairs where the asset is listed and price data satisfies stability criteria. \textbf{Trade edges} connect coin pairs within exchanges, while \textbf{transfer edges} connect the same asset across exchanges via common blockchain networks, encoding withdrawal fees, gas costs, and transfer times. All edge costs use logarithmic formulation, ensuring additive shortest-path search corresponds to multiplicative return optimization.
+
