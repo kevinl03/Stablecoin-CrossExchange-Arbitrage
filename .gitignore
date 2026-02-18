@@ -91,3 +91,5 @@ results/h2_constant_tests/*.json
 results/h2_constant_tests/*.txt
 *.mov
 *.mp4
+
+cfg.json
