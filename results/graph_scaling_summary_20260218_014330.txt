@@ -1,0 +1,38 @@
+GRAPH SCALING EXPERIMENT SUMMARY
+================================================================================
+ Exchanges  Nodes  Edges         dijkstra     h1_liquidity  h4_chaincongest        3hop_enum
+--------------------------------------------------------------------------------------------
+         4     19    161              341              407              600              365
+         6     28    368              378              758             1100              662
+         8     35    619              387              479              618              378
+        10     39    760              404              577              706              490
+        12     41    864              395              768              910               67
+
+================================================================================
+EXPANSION REDUCTION vs DIJKSTRA by Graph Size
+================================================================================
+
+4 exchanges (19 nodes, 161 edges) — Dijkstra: 341 expansions
+  h1_liquidity                                407 expansions  reduction= -19.4%
+  h4_chaincongestion_exchange_risk            600 expansions  reduction= -76.2%
+  3hop_enum                                   365 expansions  reduction=  -7.0%
+
+6 exchanges (28 nodes, 368 edges) — Dijkstra: 378 expansions
+  h1_liquidity                                758 expansions  reduction=-100.4%
+  h4_chaincongestion_exchange_risk           1100 expansions  reduction=-190.6%
+  3hop_enum                                   662 expansions  reduction= -75.1%
+
+8 exchanges (35 nodes, 619 edges) — Dijkstra: 387 expansions
+  h1_liquidity                                479 expansions  reduction= -23.6%
+  h4_chaincongestion_exchange_risk            618 expansions  reduction= -59.5%
+  3hop_enum                                   378 expansions  reduction=  +2.5%
+
+10 exchanges (39 nodes, 760 edges) — Dijkstra: 404 expansions
+  h1_liquidity                                577 expansions  reduction= -42.8%
+  h4_chaincongestion_exchange_risk            706 expansions  reduction= -74.8%
+  3hop_enum                                   490 expansions  reduction= -21.2%
+
+12 exchanges (41 nodes, 864 edges) — Dijkstra: 395 expansions
+  h1_liquidity                                768 expansions  reduction= -94.3%
+  h4_chaincongestion_exchange_risk            910 expansions  reduction=-130.2%
+  3hop_enum                                    67 expansions  reduction= +83.0%
