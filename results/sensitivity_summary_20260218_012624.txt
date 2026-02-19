@@ -1,0 +1,12 @@
+SENSITIVITY SWEEP SUMMARY
+Total experiments: 270
+Graph: 41 nodes
+
+
+h1_lambda: 100/125 successful
+
+h2_lambda_threshold: 80/100 successful
+
+order_size: 20/25 successful
+
+max_depth: 16/20 successful

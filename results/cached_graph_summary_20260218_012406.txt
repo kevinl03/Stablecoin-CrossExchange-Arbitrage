@@ -1,0 +1,56 @@
+CACHED GRAPH EXPERIMENT SUMMARY
+======================================================================
+Graph: 41 nodes, 864 edges
+I/O time: 23.323s
+Start nodes: 30
+
+
+Cash: $1,000.00
+Heuristic                                Success%  AvgProfit  AvgExpand     AvgGen    AvgTime  MedianExp
+----------------------------------------------------------------------------------------------------
+dijkstra                                    56.7% $   1.0007      367.8      367.8   0.00980s        367
+h1_liquidity                                56.7% $   0.6719      328.7      382.1   0.17018s        336
+h2_slippage                                 56.7% $   0.9906      256.4      345.6   0.20008s        220
+h4_chaincongestion_exchange_risk            56.7% $   0.7058      667.9      799.2   0.01895s        607
+3hop_enum                                   30.0% $   0.5293      346.2      346.2   0.00032s        328
+
+Cash: $10,000.00
+Heuristic                                Success%  AvgProfit  AvgExpand     AvgGen    AvgTime  MedianExp
+----------------------------------------------------------------------------------------------------
+dijkstra                                    56.7% $  10.0072      367.8      367.8   0.00892s        367
+h1_liquidity                                56.7% $   6.7195      607.5      818.1   0.01525s        580
+h2_slippage                                 56.7% $   9.9058      256.4      345.6   0.00985s        220
+h4_chaincongestion_exchange_risk            56.7% $   7.0576      667.9      799.2   0.01890s        607
+3hop_enum                                   30.0% $   5.2928      346.2      346.2   0.00032s        328
+
+Cash: $100,000.00
+Heuristic                                Success%  AvgProfit  AvgExpand     AvgGen    AvgTime  MedianExp
+----------------------------------------------------------------------------------------------------
+dijkstra                                    56.7% $ 100.0716      367.8      367.8   0.00887s        367
+h1_liquidity                                56.7% $  63.1089      725.2     1073.6   0.01957s        750
+h2_slippage                                 56.7% $ 100.0716      252.5      341.5   0.01020s        211
+h4_chaincongestion_exchange_risk            56.7% $  70.5763      667.9      799.2   0.01873s        607
+3hop_enum                                   30.0% $  52.9279      346.2      346.2   0.00031s        328
+
+
+======================================================================
+EXPANSION REDUCTION vs DIJKSTRA
+======================================================================
+
+Cash $1,000.00 — Dijkstra avg expansions: 367.8
+  h1_liquidity                             avg=328.7  reduction=+10.6%
+  h2_slippage                              avg=256.4  reduction=+30.3%
+  h4_chaincongestion_exchange_risk         avg=667.9  reduction=-81.6%
+  3hop_enum                                avg=346.2  reduction=+5.9%
+
+Cash $10,000.00 — Dijkstra avg expansions: 367.8
+  h1_liquidity                             avg=607.5  reduction=-65.2%
+  h2_slippage                              avg=256.4  reduction=+30.3%
+  h4_chaincongestion_exchange_risk         avg=667.9  reduction=-81.6%
+  3hop_enum                                avg=346.2  reduction=+5.9%
+
+Cash $100,000.00 — Dijkstra avg expansions: 367.8
+  h1_liquidity                             avg=725.2  reduction=-97.2%
+  h2_slippage                              avg=252.5  reduction=+31.4%
+  h4_chaincongestion_exchange_risk         avg=667.9  reduction=-81.6%
+  3hop_enum                                avg=346.2  reduction=+5.9%
