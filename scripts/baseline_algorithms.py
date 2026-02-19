@@ -46,6 +46,8 @@ class PlanResult:
     edges: List[Dict[str, Any]]
     final_cash_usd: float
     profit_usd: float
+    nodes_expanded: int = 0
+    nodes_generated: int = 0
 
 
 def _calculate_cost_breakdown(
@@ -159,10 +161,13 @@ def dijkstra_like_search(
     
     best_g_seen: Dict[Tuple[NodeId, int], float] = {(start_node, 0): start_g}
     best_result: Optional[PlanResult] = None
+    nodes_expanded = 0
+    nodes_generated = 1  # start node
     
     while frontier:
         f_score, g_score, _, state, path_nodes, path_edges = heapq.heappop(frontier)
         current_node = state.node
+        nodes_expanded += 1
         current_cash = _final_cash_from_log_cost(liquid_cash_usd, g_score)
         
         if state.depth > 0:
@@ -210,10 +215,17 @@ def dijkstra_like_search(
                 (f, new_g, counter, new_state, new_path_nodes, new_path_edges),
             )
             counter += 1
+            nodes_generated += 1
     
     if best_result is None:
-        logger.info("Dijkstra-like search: No profitable path found")
+        logger.info(
+            f"Dijkstra-like search: No profitable path found "
+            f"(expanded={nodes_expanded}, generated={nodes_generated})"
+        )
         return None
+    
+    best_result.nodes_expanded = nodes_expanded
+    best_result.nodes_generated = nodes_generated
     
     # Calculate final cost breakdown
     cost_breakdown = _calculate_cost_breakdown(best_result.edges, liquid_cash_usd)

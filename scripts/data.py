@@ -1,12 +1,22 @@
 import ccxt
 from math import isnan  # not strictly needed now, but harmless to keep
 
-# 1. Exchanges (added Bybit)
+# 1. Exchanges — expanded to 12 for larger graph coverage
+#    CCXT Pro (async websocket) features are available via ccxt.pro;
+#    here we use the synchronous REST API for snapshot-based experiments.
 EXCHANGES = {
     "binance": ccxt.binance(),
     "kraken": ccxt.kraken(),
     "kucoin": ccxt.kucoin(),
     "bybit": ccxt.bybit(),
+    "okx": ccxt.okx(),
+    "gateio": ccxt.gateio(),
+    "bitget": ccxt.bitget(),
+    "mexc": ccxt.mexc(),
+    "htx": ccxt.htx(),           # formerly Huobi
+    "coinbase": ccxt.coinbase(),
+    "cryptocom": ccxt.cryptocom(),
+    "phemex": ccxt.phemex(),
 }
 
 # 2. Top 10 common stablecoins we’ll track
@@ -24,67 +34,148 @@ STABLE_COINS = [
 ]
 
 # 3. For each coin+exchange, specify which market symbol to use.
-#    Some markets may not exist; we’ll skip those gracefully.
+#    Some markets may not exist; we'll skip those gracefully.
+#    Expanded to cover all 12 exchanges.
 COIN_MARKETS = {
     "USDT": {
-        "binance": "USDC/USDT",   # USDC priced in USDT (invert to get USDT in USD)
-        "kraken":  "USDT/USD",    # direct
-        "kucoin":  "USDT/USDC",   # USDT priced in USDC
-        "bybit":   "USDC/USDT",   # same trick as binance (invert)
+        "binance":   "USDC/USDT",   # USDC priced in USDT (invert to get USDT in USD)
+        "kraken":    "USDT/USD",    # direct
+        "kucoin":    "USDT/USDC",   # USDT priced in USDC
+        "bybit":     "USDC/USDT",   # same trick as binance (invert)
+        "okx":       "USDC/USDT",   # invert
+        "gateio":    "USDC/USDT",   # invert
+        "bitget":    "USDC/USDT",   # invert
+        "mexc":      "USDC/USDT",   # invert
+        "htx":       "USDC/USDT",   # invert
+        "coinbase":  None,          # no direct USDT market on Coinbase
+        "cryptocom": "USDC/USDT",   # invert
+        "phemex":    "USDC/USDT",   # invert
     },
     "USDC": {
-        "binance": "USDC/USDT",
-        "kraken":  "USDC/USD",
-        "kucoin":  "USDC/USDT",
-        "bybit":   "USDC/USDT",
+        "binance":   "USDC/USDT",
+        "kraken":    "USDC/USD",
+        "kucoin":    "USDC/USDT",
+        "bybit":     "USDC/USDT",
+        "okx":       "USDC/USDT",
+        "gateio":    "USDC/USDT",
+        "bitget":    "USDC/USDT",
+        "mexc":      "USDC/USDT",
+        "htx":       "USDC/USDT",
+        "coinbase":  "USDC/USD",
+        "cryptocom": "USDC/USDT",
+        "phemex":    "USDC/USDT",
     },
     "DAI": {
-        "binance": "DAI/USDT",
-        "kraken":  "DAI/USD",
-        "kucoin":  "USDT/DAI",    # USDT priced in DAI -> invert to get DAI in USD
-        "bybit":   "DAI/USDT",
+        "binance":   "DAI/USDT",
+        "kraken":    "DAI/USD",
+        "kucoin":    "USDT/DAI",    # USDT priced in DAI -> invert to get DAI in USD
+        "bybit":     "DAI/USDT",
+        "okx":       "DAI/USDT",
+        "gateio":    "DAI/USDT",
+        "bitget":    None,
+        "mexc":      "DAI/USDT",
+        "htx":       "DAI/USDT",
+        "coinbase":  None,
+        "cryptocom": "DAI/USDT",
+        "phemex":    None,
     },
     "TUSD": {
-        "binance": "TUSD/USDT",
-        "kraken":  None,             # likely not listed
-        "kucoin":  "TUSD/USDT",
-        "bybit":   "TUSD/USDT",
+        "binance":   "TUSD/USDT",
+        "kraken":    None,
+        "kucoin":    "TUSD/USDT",
+        "bybit":     "TUSD/USDT",
+        "okx":       "TUSD/USDT",
+        "gateio":    "TUSD/USDT",
+        "bitget":    None,
+        "mexc":      "TUSD/USDT",
+        "htx":       "TUSD/USDT",
+        "coinbase":  None,
+        "cryptocom": None,
+        "phemex":    None,
     },
     "FDUSD": {
-        "binance": "FDUSD/USDT",
-        "kraken":  None,
-        "kucoin":  None,             # if missing, we’ll just skip
-        "bybit":   "FDUSD/USDT",
+        "binance":   "FDUSD/USDT",
+        "kraken":    None,
+        "kucoin":    None,
+        "bybit":     "FDUSD/USDT",
+        "okx":       "FDUSD/USDT",
+        "gateio":    "FDUSD/USDT",
+        "bitget":    None,
+        "mexc":      None,
+        "htx":       None,
+        "coinbase":  None,
+        "cryptocom": None,
+        "phemex":    None,
     },
     "BUSD": {
-        "binance": "BUSD/USDT",      # legacy but still sometimes listed
-        "kraken":  "BUSD/USD",
-        "kucoin":  "BUSD/USDT",
-        "bybit":   None,             # probably not listed
+        "binance":   "BUSD/USDT",      # legacy but still sometimes listed
+        "kraken":    "BUSD/USD",
+        "kucoin":    "BUSD/USDT",
+        "bybit":     None,
+        "okx":       None,
+        "gateio":    "BUSD/USDT",
+        "bitget":    None,
+        "mexc":      "BUSD/USDT",
+        "htx":       None,
+        "coinbase":  None,
+        "cryptocom": None,
+        "phemex":    None,
     },
     "PYUSD": {
-        "binance": None,
-        "kraken":  "PYUSD/USD",
-        "kucoin":  None,
-        "bybit":   None,
+        "binance":   None,
+        "kraken":    "PYUSD/USD",
+        "kucoin":    None,
+        "bybit":     None,
+        "okx":       None,
+        "gateio":    None,
+        "bitget":    None,
+        "mexc":      None,
+        "htx":       None,
+        "coinbase":  None,
+        "cryptocom": None,
+        "phemex":    None,
     },
     "USDP": {
-        "binance": "USDP/USDT",
-        "kraken":  None,
-        "kucoin":  "USDP/USDT",
-        "bybit":   "USDP/USDT",      # may or may not exist; errors are handled
+        "binance":   "USDP/USDT",
+        "kraken":    None,
+        "kucoin":    "USDP/USDT",
+        "bybit":     "USDP/USDT",
+        "okx":       None,
+        "gateio":    "USDP/USDT",
+        "bitget":    None,
+        "mexc":      "USDP/USDT",
+        "htx":       None,
+        "coinbase":  None,
+        "cryptocom": None,
+        "phemex":    None,
     },
     "GUSD": {
-        "binance": "GUSD/USDT",
-        "kraken":  "GUSD/USD",
-        "kucoin":  None,
-        "bybit":   None,
+        "binance":   "GUSD/USDT",
+        "kraken":    "GUSD/USD",
+        "kucoin":    None,
+        "bybit":     None,
+        "okx":       None,
+        "gateio":    None,
+        "bitget":    None,
+        "mexc":      None,
+        "htx":       None,
+        "coinbase":  None,
+        "cryptocom": None,
+        "phemex":    None,
     },
     "FRAX": {
-        "binance": "FRAX/USDT",
-        "kraken":  "FRAX/USD",       # if not listed, we’ll see an error and skip
-        "kucoin":  "FRAX/USDT",
-        "bybit":   "FRAX/USDT",
+        "binance":   "FRAX/USDT",
+        "kraken":    "FRAX/USD",
+        "kucoin":    "FRAX/USDT",
+        "bybit":     "FRAX/USDT",
+        "okx":       None,
+        "gateio":    "FRAX/USDT",
+        "bitget":    None,
+        "mexc":      "FRAX/USDT",
+        "htx":       None,
+        "coinbase":  None,
+        "cryptocom": None,
+        "phemex":    None,
     },
 }
 
