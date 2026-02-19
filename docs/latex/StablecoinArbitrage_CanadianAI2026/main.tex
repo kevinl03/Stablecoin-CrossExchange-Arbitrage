@@ -1,0 +1,113 @@
+% CVPR 2026 Paper Template; see https://github.com/cvpr-org/author-kit
+
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+%%%%%%%%% PAPER TYPE  - PLEASE UPDATE FOR FINAL VERSION
+\usepackage{cvpr}      % Camera-ready style (no line numbers)
+% \usepackage[review]{cvpr}      % Review style (line numbers)
+% \usepackage[pagenumbers]{cvpr} % Page numbers only, e.g. arXiv
+
+% Import additional packages in the preamble file, before hyperref
+\input{preamble}
+
+% It is strongly recommended to use hyperref, especially for the review version.
+\definecolor{cvprblue}{rgb}{0.21,0.49,0.74}
+\usepackage[pagebackref,breaklinks,colorlinks,allcolors=cvprblue]{hyperref}
+
+%%%%%%%%% PAPER ID  - PLEASE UPDATE
+\def\paperID{*****} % (keep if you don’t have an ID yet)
+\def\confName{Canadian AI}
+\def\confYear{2026}
+
+
+%%%%%%%%% TITLE - PLEASE UPDATE
+\title{Execution-Aware A* Search for Cross-Exchange Stablecoin Arbitrage}
+
+
+%%%%%%%%% AUTHORS - PLEASE UPDATE
+\author{Kevin Litvin \and Hang Ma\\
+Simon Fraser University\\
+{\tt\small (emails omitted for review)}
+}
+
+
+
+\begin{document}
+\maketitle
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figures/CoverPageGraphPaper.png}
+    \caption{
+    Overview of the cross-exchange arbitrage graph used in our experiments.
+    Nodes represent (exchange, asset) pairs. Intra-exchange edges denote trading pairs,
+    while inter-exchange edges represent asset transfers.
+    }
+    \label{fig:cover_graph}
+\end{figure*}
+
+
+
+% ---------------- Abstract ----------------
+\input{sec/0_abstract}
+% ---------------- 1. Introduction ----------------
+\section{Introduction}
+\input{sec/1_intro}
+
+
+% ---------------- 2. Related Work ----------------
+\section{Related Work}
+\input{sec/2_related_work}
+
+
+% ---------------- 3. Problem Formulation ----------------
+\section{Problem Formulation}
+\input{sec/3_problem_formulation}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figures/SuccesfulPathProfit}
+    \caption{
+    Visualization of a successful arbitrage path identified by our search algorithm.
+    The path shows a sequence of trades and transfers across multiple exchanges,
+    starting from the initial node and following the highlighted edges to complete
+    a profitable cycle. Each node represents an (exchange, asset) pair, with node
+    colors indicating the exchange. The bold red edges trace the optimal route,
+    with edge labels showing the exchange rates for trades and transfer fees for
+    cross-exchange movements. This simplified view isolates the profitable path
+    from the full graph structure, demonstrating how the algorithm navigates
+    through the arbitrage opportunity space.
+    }
+    \label{fig:successful_path}
+\end{figure*}
+
+
+
+
+% ---------------- 4. Novel Heuristics ----------------
+\section{Novel Heuristics for Arbitrage Search}
+\input{sec/4_Novel_Heuristics}
+
+% ---------------- 5. Experiments ----------------
+\section{Experiments and Evaluation}
+\input{sec/5_Expiremental_Framework}
+\input{sec/5.2_baseline}
+\input{sec/5.3_Proposed_Methods}
+\input{sec/5.4_Evaluation_Methodoloy}
+\input{sec/5.5_Results}
+\input{sec/5.6_Ethics}
+
+% ---------------- 6. Conclusions ----------------
+\section{Conclusions}
+\input{sec/6_Conclusion}
+
+% ---------------- Bibliography ----------------
+
+\input{sec/Bibliography}
+
+% ---------------- Appendix ----------------
+\appendix
+\section{Appendix: Interactive Visualization System}
+\input{sec/Appendix}
+
+\end{document}

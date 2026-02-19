@@ -1,0 +1,98 @@
+% 1.1 Mathematical Formulation
+$G = (V,E)$
+
+$v \in V$
+
+$v = (\text{exchange}, \text{coin})$
+
+$e \in E$
+
+\begin{equation}
+    w(e) = -\log (\text{effective\_rate}(e))
+\end{equation}
+
+$P = (v_0, v_1, \dots, v_k)$
+
+$C_0$
+
+\begin{equation}
+    C_k = C_0 \times \prod_{e \in P}r(e)
+\end{equation}
+
+\begin{equation}
+    C_k - C_0 \geq \text{min\_profit}
+\end{equation}
+
+\begin{equation}
+    \sum_{e \in P} - \log(r(e)) \leq -\log(1+ \frac{\text{min\_profit}}{C_0}
+\end{equation}
+
+% A* search 
+\begin{equation}
+    g(n) = \sum_{e \in \text{path}} - \log(r(e))
+\end{equation}
+
+\begin{equation}
+    f(n) = g(n) + h(n)
+\end{equation}
+
+$v_0$
+
+$C_n > C_0$
+
+% heuristics
+%% h1 - liquiditi 
+$h_1$
+
+\begin{equation}
+    \text{vol\_per\_sec} = \frac{\text{24h\_quote\_volume}}{24\times3600}, \text{liquidity\_ratio} =\frac{\text{vol\_per\_sec}\times T_{\text{remain}}}{\text{order\_size\_usd}}
+\end{equation}
+
+\begin{equation}
+    \text{score}_\text{liq} = \text{clamp}(\frac{\log_{10}(\text{liquidity\_ratio)+1}}{2},0, 1)
+\end{equation}
+
+\begin{equation}
+    h_1(n) = \lambda_{\text{liq}}(1-\text{scoreliq}(n))
+\end{equation}
+
+% h2 slippage 
+$h_2$
+
+$P_{mid}$
+
+$VWAP(Q)$
+
+\begin{equation}
+    \text{slippage}_{bps} = \frac{VWAP(Q) -p_{mid}}{p_{mid}}\times 10^4
+\end{equation}
+
+\begin{equation}
+    h_2(n) = \lambda_{slip} \times \max\{0, \text{slippage}_{bps}-\theta \}
+\end{equation}
+
+%h3 
+$h_3$
+
+%h4
+$h_4$
+
+$t_{\min}$
+
+$t_{\text{remain}}$
+
+\begin{equation}
+    \text{score}_{\text{chain}} = 1 - \frac{t_{\min}}{t_{\text{remain}}}
+\end{equation}
+
+\begin{equation}
+    h_{\text{chain}}(n) = \lambda_{chain} \times (1- \text{score}_{\text{chain}})
+\end{equation}
+
+\begin{equation}
+    h_{\text{exchange}}(n) = \lambda_{exchange} \times (1- s(n))
+\end{equation}
+
+\begin{equation}
+    h_4(n) = h_{change}(n) + h_{exchange}(n)
+\end{equation}

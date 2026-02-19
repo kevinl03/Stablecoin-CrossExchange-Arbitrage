@@ -1,0 +1,37 @@
+\subsection{Results}
+
+\subsubsection{Deterministic Heuristic Comparison}
+
+We evaluate our three node-level heuristics ($h_1$, $h_2$, $h_4$) and multi-start search strategy ($h_3$) on fixed starting nodes across multiple order sizes to assess deterministic performance. Experiments are conducted on a graph constructed from 12 exchanges and 10 stablecoins, yielding 50--100+ nodes representing stablecoin--exchange pairs. We use three fixed start nodes and test order sizes of \$100, \$1,000, and \$10,000 to evaluate scalability. Execution times are reported with 5~decimal places (10\,$\mu$s precision) using \texttt{time.perf\_counter()} to isolate search computation time.
+
+All successful heuristics converge to identical or near-identical optimal paths for each starting node, demonstrating that heuristic choice primarily affects search efficiency rather than final path quality. For example, from \texttt{binance:USDT} with \$10,000, all heuristics find a 3-hop path yielding approximately 0.04\% net return.
+
+Execution time varies across heuristics. $h_4$ (Weighted A* with chain/exchange risk) achieves the fastest execution times, typically completing in 0.003--0.006\,s. $h_1$ and $h_2$ require 0.002--5.140\,s depending on start node and order-book API latency. We note that $h_1$ and $h_2$ timings include live API calls (ticker fetches and order-book walks respectively), while $h_4$ relies on pre-computed chain transfer times and static exchange reliability scores. To fairly compare \emph{search computation time} versus \emph{data acquisition overhead}, we recommend running experiments on cached/frozen graph snapshots (see Section~\ref{sec:mc_experiments}).
+
+A key observation is start node sensitivity: certain start nodes consistently fail to find profitable paths across all heuristics and order sizes, while others consistently succeed. This pattern is stable across graph snapshots and reflects structural properties of the fee/rate landscape rather than heuristic performance.
+
+Path length analysis reveals that successful paths are consistently 3 hops (one transfer, one trade, one transfer—or one trade, one transfer, one trade), indicating that the optimal arbitrage structure in stablecoin markets is inherently short. Longer paths (4--6 hops) are occasionally found but yield similar or lower profits due to fee accumulation.
+
+\subsubsection{Comparison Against Baselines}
+
+We compare our heuristic-guided A* methods against five baseline algorithms: Dijkstra's algorithm (A* with $h(n) = 0$), brute-force 3-hop enumeration, Bellman--Ford negative cycle detection, simple 1-hop arbitrage, and simple 2-hop arbitrage with maximum depth constraint (2hop\_max).
+
+\paragraph{3-hop enumeration baseline.}
+Since observed optimal paths are consistently 3 hops, we implement a brute-force baseline that exhaustively enumerates all 3-hop paths of the form transfer$\to$trade$\to$transfer and trade$\to$transfer$\to$trade from each start node. On our 12-exchange graph, this baseline evaluates thousands of candidate paths per start node. Its execution time scales as $O(|V| \cdot d^3)$ where $d$ is the maximum out-degree, making it feasible for graphs with $\leq$100 nodes but prohibitive for larger graphs.
+
+The 3-hop baseline finds the \emph{same} optimal paths as our A* heuristics when profitable 3-hop paths exist, confirming that A* does not sacrifice path quality. Because 3-hop enumeration grows as $O(|V| \cdot d^3)$, its node evaluations increase rapidly with graph size, while heuristic-guided A* prunes the majority of candidate paths. Our graph scaling experiments (Section~\ref{sec:mc_experiments}) quantify this divergence: as the number of exchanges increases from 4 to 12, the enumeration baseline evaluates an increasingly larger fraction of the search space compared to heuristic-guided search.
+
+\paragraph{Other baselines.}
+Simple 1-hop and 2-hop arbitrage algorithms fail to find profitable paths across all starting nodes and order sizes. This confirms that profitable stablecoin arbitrage requires at least 3 hops.
+
+Bellman--Ford negative cycle detection fails to find profitable cycles in all tested scenarios. This is expected, as our graph construction uses conservative pricing (bid/ask spreads) and includes all execution costs, which eliminates theoretical negative cycles that would exist under idealized pricing assumptions. The failure of Bellman--Ford validates our execution-aware approach.
+
+Dijkstra and 2hop\_max achieve sub-millisecond execution times when they succeed, faster than our heuristic-guided methods. However, this speed advantage is due to the lack of heuristic computation, and the discovered paths do not account for execution risks (liquidity, slippage, chain congestion) that may cause them to fail under real-world conditions.
+
+\subsubsection{Monte Carlo Backtesting}
+\label{sec:mc_experiments}
+
+To assess robustness beyond single-snapshot deterministic experiments, we conduct Monte Carlo backtesting with 500 trials per heuristic across five order sizes (\$100, \$1,000, \$10,000, \$50,000, \$100,000). Each trial randomly selects a start node and order size, building a fresh graph snapshot for each run. This captures temporal variation in market conditions and provides distributional statistics on heuristic performance.
+
+The Monte Carlo framework reports: success rate (fraction of trials finding a profitable path), conditional average profit (mean profit among successful trials), average runtime per trial (with 5-decimal precision), and path-length distribution. The 3-hop enumeration baseline is included in the Monte Carlo evaluation, enabling direct comparison of exhaustive enumeration against A*-guided search across hundreds of independent market snapshots.
+
