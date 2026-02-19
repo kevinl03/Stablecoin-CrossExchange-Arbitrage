@@ -1,12 +1,54 @@
 Our experimental framework constructs a real-time, execution-aware graph representation of stablecoin arbitrage opportunities (see Figure~\ref{fig:cover_graph}). The graph structure consists of nodes representing $(\text{exchange}, \text{coin})$ pairs and directed edges representing trades and transfers.
 
-We gather live market data from five major exchanges (Binance, Kraken, KuCoin, Bybit, Coinbase) to construct price snapshots for each $(\text{exchange}, \text{coin})$ pair. Prices are normalized to USD using conservative bid/ask execution estimates. We apply a price tolerance filter to exclude depegged assets, ensuring only true stablecoins are included.
+\subsection{Data Sources and Graph Construction}
 
-The fee model captures three cost categories: trading fees as percentage-based taker fees, withdrawal fees as exchange-specific flat fees varying by blockchain network, and network gas fees estimated from historical averages. The model is portfolio-size-aware, enforcing minimum notional thresholds per network to filter unprofitable edges at small scales.
+We gather live market data from twelve major exchanges (Binance, Kraken, KuCoin, Bybit, OKX, Gate.io, Bitget, MEXC, HTX, Coinbase, Crypto.com, Phemex) via the CCXT library~\cite{ccxt2024} to construct price snapshots for each $(\text{exchange}, \text{coin})$ pair. The expanded exchange set increases the node count from approximately 19 (in our initial 4-exchange configuration) to 50--100+ nodes, creating a meaningfully larger graph that stresses the search algorithms. Prices are normalized to USD using conservative bid/ask execution estimates. We apply a price tolerance filter ($\pm 2\%$ from \$1.00) to exclude depegged assets, ensuring only true stablecoins are included.
 
-We model end-to-end transfer time as blockchain confirmation time plus user execution overhead. Transfer latency is integrated into edge costs, enabling time-aware heuristics to assess feasibility against remaining arbitrage windows.
+The fee model captures three cost categories: trading fees as percentage-based taker fees (ranging from 0.05\% on MEXC to 0.60\% on Coinbase), withdrawal fees as exchange-specific flat fees varying by blockchain network, and network gas fees estimated from historical averages. The model is portfolio-size-aware, enforcing minimum notional thresholds per network to filter unprofitable edges at small scales.
 
-The graph construction process creates nodes for $(\text{exchange}, \text{coin})$ pairs where the asset is listed and price data satisfies stability criteria. \textbf{Trade edges} connect coin pairs within exchanges, while \textbf{transfer edges} connect the same asset across exchanges via common blockchain networks, encoding withdrawal fees, gas costs, and transfer times. All edge costs use logarithmic formulation, ensuring additive shortest-path search corresponds to multiplicative return optimization.
+We model end-to-end transfer time as blockchain confirmation time plus a fixed user execution overhead of 45 seconds. Transfer latency is integrated into edge costs, enabling time-aware heuristics to assess feasibility against remaining arbitrage windows.
+
+The graph construction process creates nodes for $(\text{exchange}, \text{coin})$ pairs where the asset is listed and price data satisfies stability criteria. \textbf{Trade edges} connect coin pairs within exchanges, while \textbf{transfer edges} connect the same asset across exchanges via common blockchain networks, encoding withdrawal fees, gas costs, and transfer times. All edge costs use the logarithmic formulation $w(e) = -\log(r(e))$, ensuring additive shortest-path search corresponds to multiplicative return optimization.
+
+\subsection{Hyperparameter Configuration}
+
+Table~\ref{tab:hyperparams} lists all hyperparameters used in the heuristic functions and search algorithms. These values are fixed across all experiments unless otherwise noted.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Hyperparameters and their values.}
+\label{tab:hyperparams}
+\begin{tabular}{llc}
+\toprule
+\textbf{Parameter} & \textbf{Description} & \textbf{Value} \\
+\midrule
+\multicolumn{3}{l}{\textit{H1 -- Liquidity Heuristic}} \\
+$\lambda_{\text{liq}}$ & Liquidity penalty weight & 1.0 \\
+Unknown penalty & No-data fallback cost & 5.0 \\
+Cache TTL & Volume cache lifetime & 60\,s \\
+\midrule
+\multicolumn{3}{l}{\textit{H2 -- Slippage Heuristic}} \\
+$\lambda_{\text{slip}}$ & Slippage penalty weight & 0.5 \\
+$\theta$ & Slippage tolerance & 10\,bps \\
+Unknown penalty & No-data fallback cost & 50.0 \\
+Cache TTL & Order-book cache lifetime & 30\,s \\
+\midrule
+\multicolumn{3}{l}{\textit{H4 -- Chain/Exchange Risk}} \\
+$\lambda_{\text{chain}}$ & Chain risk penalty weight & 1.0 \\
+$\lambda_{\text{exchange}}$ & Exchange risk penalty weight & 1.0 \\
+$w_{\min}$ & Min Weighted A* weight & 1.0 \\
+$w_{\max}$ & Max Weighted A* weight & 3.0 \\
+\midrule
+\multicolumn{3}{l}{\textit{Search Parameters}} \\
+Max depth & Maximum path hops & 6 \\
+$T_{\max}$ & Arbitrage time window & 1800\,s \\
+Early exit iter. & Iters after first profit & 200 \\
+$k$ (H3) & Multi-start parallel runs & 3 \\
+User overhead & Execution latency per hop & 45\,s \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{table*}[t]
 \centering

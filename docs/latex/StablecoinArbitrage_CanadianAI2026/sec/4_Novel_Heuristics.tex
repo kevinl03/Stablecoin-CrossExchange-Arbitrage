@@ -1,4 +1,4 @@
-We design four domain-specific heuristics to guide A* search toward reliable, low-risk, and realistically executable arbitrage routes. Each heuristic captures a different dimension of execution feasibility. Rather than detecting theoretical profit first and evaluating risk afterward, our approach embeds execution awareness directly into the search process.
+We design three domain-specific guidance heuristics ($h_1$, $h_2$, $h_4$) and one search-control strategy ($h_3$) to guide A* toward reliable, low-risk, and realistically executable arbitrage routes. Each heuristic captures a different dimension of execution feasibility. Rather than detecting theoretical profit first and evaluating risk afterward, our approach embeds execution awareness directly into the search process.
 
 \subsection{Design Principles for Domain-Specific Heuristics}
 
@@ -10,11 +10,14 @@ The heuristics are constructed according to three design principles:
     \item \textbf{Computational Efficiency:} Heuristic computation must remain lightweight relative to node expansion cost.
 \end{enumerate}
 
-Each heuristic modifies the evaluation function
+Each node-level heuristic modifies the evaluation function
 \[
 f(n) = g(n) + h(n),
-\] % this can be inline
-where $g(n)$ is accumulated cost and $h(n)$ encodes domain knowledge about future execution feasibility.
+\]
+where $g(n)$ is the accumulated cost in log space and $h(n) \geq 0$ is an additive guidance penalty encoding domain knowledge about future execution feasibility. As discussed in Section~3, these heuristics are \emph{guidance penalties}: they do not modify $g(n)$ and do not claim admissibility.
+
+\paragraph{Semantic separation from edge costs.}
+A key design decision is the division of responsibilities between \emph{edge costs} and \emph{heuristic penalties}. Edge effective rates $r(e)$ already incorporate all \textbf{static fees}: taker/maker trading fees, withdrawal fees, and network gas fees. These are deterministic costs known at graph-construction time. In contrast, the heuristic penalties $h_i(n)$ capture \textbf{dynamic execution risk} factors---volume-based liquidity pressure, order-book depth, chain congestion, and exchange reliability---that are stochastic, time-varying, and depend on the trader's order size. This separation ensures there is no double-counting between $g(n)$ and $h(n)$.
 
 \subsection{$h_1$ -- Liquidity Heuristic}
 
@@ -79,28 +82,40 @@ h_2(n) =
 \max \left\{ 0, \textit{slippage}_{bps} - \theta \right\},
 \]
 
-where $\theta$ is a configurable slippage tolerance (default: 10 bps).
+where $\theta$ is a configurable slippage tolerance (default: 10 bps = 0.10\%).
+
+\paragraph{Relationship to edge costs (no double-counting).}
+Edge effective rates $r(e)$ encode \emph{static} costs: the posted taker fee (e.g., 0.10\% on Binance) and withdrawal/gas fees. These fees are deterministic and independent of order size. By contrast, $h_2$ estimates \emph{dynamic} order-book slippage: the price impact of walking the live order book with a specific order size $Q$. Because edges use fixed taker-fee rates rather than order-book-derived VWAP, $h_2$ is additive guidance that captures information not present in $g(n)$, and there is no double-counting.
 
 \textbf{Characteristics:}
 \begin{itemize}
     \item Uses real-time order book data
     \item Side-aware (buy vs. sell impact)
     \item Directly penalizes large price impact
+    \item Purely additive guidance: does \emph{not} modify $g(n)$
 \end{itemize}
 
 This heuristic performs particularly well when order-book depth is the dominant constraint.
 
-\subsection{$h_3$ -- Parallel Execution Heuristic}
+\subsection{Multi-Start Search Strategy ($h_3$)}
+\label{sec:h3_multistart}
 
-The parallel-execution heuristic is a meta-strategy that runs multiple A* searches concurrently from diverse starting nodes. Each parallel instance uses a base heuristic (typically $h_1$ or $h_2$), and the best discovered solution is selected.
+Unlike $h_1$, $h_2$, and $h_4$, which are node-level heuristic functions that return a scalar penalty for each node, $h_3$ is a \textbf{search-control strategy} that operates at the meta-level. It runs multiple independent A* searches concurrently from randomly selected starting nodes, each using a base heuristic (typically $h_1$), and returns the best solution found across all parallel instances.
 
-Because $h_3$ operates at the search-control level rather than as a scalar node estimate, it does not admit a closed-form cost expression. Instead, it modifies exploration dynamics by expanding multiple regions of the state space simultaneously.
+This strategy is \emph{not} a heuristic in the formal A* sense: it does not define a per-node cost estimate $h_3(n)$, and it does not affect the $f(n) = g(n) + h(n)$ evaluation within any single search. Instead, it addresses a fundamentally different problem: when the profitable region of the graph is unknown a priori, multi-start search diversifies exploration across the state space.
+
+Formally, let $\{v_1, v_2, \dots, v_k\}$ be $k$ randomly sampled starting nodes. For each $v_i$, we run an independent A* search with some base heuristic $h_b \in \{h_1, h_2, h_4\}$:
+\[
+\text{result}_i = A^*(v_i, h_b), \quad i = 1, \dots, k.
+\]
+The final output is $\arg\max_{i} \text{profit}(\text{result}_i)$ among successful searches.
 
 \textbf{Characteristics:}
 \begin{itemize}
     \item Diversifies search across starting exchanges
-    \item Mitigates local optima bias
-    \item Higher computational cost
+    \item Mitigates dependence on a fixed starting point
+    \item Embarrassingly parallel (scales with available threads)
+    \item Higher total computational cost (linear in $k$)
 \end{itemize}
 
 This approach is particularly useful when profitable starting points are not known in advance.
@@ -136,10 +151,20 @@ The combined heuristic is:
 h_4(n) = h_{chain}(n) + h_{exchange}(n).
 \]
 
+\paragraph{Exchange reliability scores.}
+The scores $s(n)$ are \textbf{static priors} assigned based on each exchange's operational track record, regulatory compliance status, and historical uptime. We set: Binance = 0.9, Kraken = 0.9, Coinbase = 0.9 (US-regulated, publicly traded), OKX = 0.8, KuCoin = 0.6, Bybit = 0.5, Bitget = 0.5, HTX = 0.5, Crypto.com = 0.6, Gate.io = 0.4, MEXC = 0.4, Phemex = 0.4. These scores reflect publicly available information about exchange withdrawal suspensions, regulatory actions, and community-reported incidents. Future work could replace these priors with rolling empirical measurements (e.g., API uptime over the past 30 days).
+
+\paragraph{Chain transfer times.}
+Transfer-time estimates $t_{\min}$ are drawn from documented blockchain finality times plus typical exchange processing delays. For example: Solana $\approx$~1\,s, BNB Chain $\approx$~4\,s, Polygon $\approx$~5\,s, Tron $\approx$~30\,s, Arbitrum/Base $\approx$~120\,s, Ethereum $\approx$~600\,s.
+
+\paragraph{Weighted A* with $h_4$.}
+As described in Section~3, $h_4$ is used with Weighted A*. The node-specific weight $w(n)$ amplifies the heuristic penalty for nodes on fast-transfer chains where arbitrage opportunities are fleeting.
+
 \textbf{Characteristics:}
 \begin{itemize}
-    \item Models blockchain congestion risk
-    \item Incorporates exchange reliability
+    \item Models blockchain congestion and finality risk
+    \item Incorporates exchange operational reliability
+    \item Uses Weighted A* ($w \in [1.0, 3.0]$) for risk-adaptive search
     \item Prioritizes fast and stable execution paths
 \end{itemize}
 
