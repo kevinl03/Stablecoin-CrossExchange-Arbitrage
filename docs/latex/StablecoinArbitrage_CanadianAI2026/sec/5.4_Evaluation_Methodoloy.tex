@@ -2,56 +2,36 @@
 \subsection{Evaluation Methodology}
 \label{sec:evaluation}
 
-We evaluate our algorithms along four dimensions: correctness validation,
-deterministic heuristic comparison, stochastic robustness analysis, and
-standardized performance metrics. This multi-layered methodology ensures that
-reported improvements reflect both theoretical soundness and practical
-execution behavior under realistic market variability.
+We evaluate our algorithms along five dimensions: deterministic heuristic comparison on cached graph snapshots, graph scaling behaviour, temporal robustness over multi-hour campaigns, quote staleness analysis under execution delay, and hyperparameter sensitivity.
 
 % ---------------- 5.4.1 ----------------
-\subsubsection{Live Market Data Heuristic Comparison}
+\subsubsection{Test Environment}
 
-In deterministic experiments, we fix:
+Unless otherwise stated, all experiments use the following configuration:
+
 \begin{itemize}
-    \item Graph snapshot (single market capture)
-    \item Starting nodes (Binance:USDT, Kraken:USDT, Binance:BUSD)
-    \item Order sizes (\$100, \$1{,}000, \$10{,}000)
+    \item \textbf{Exchanges:} 12 CEXs (Binance, Kraken, KuCoin, Bybit, OKX, Gate.io, Bitget, MEXC, HTX, Coinbase, Crypto.com, Phemex).
+    \item \textbf{Graph:} 41 nodes (exchange$\times$stablecoin pairs), 864 directed edges (trades + transfers).
+    \item \textbf{Start nodes:} 30 randomly selected nodes for cached-graph experiments; 5 preferred major-exchange nodes for overnight and scaling experiments (see Table~\ref{tab:hyperparams} for all search parameters).
+    \item \textbf{Cash levels:} \$1{,}000, \$10{,}000, \$100{,}000.
+    \item \textbf{Heuristics tested:} $h_1$ (liquidity), $h_2$ (slippage), $h_4$ (chain/exchange risk via Weighted~A*), Dijkstra ($h{=}0$), and 3-hop enumeration baseline.
 \end{itemize}
 
-This controlled setup isolates the effect of heuristic guidance on:
-\begin{enumerate}
-    \item Path discovery success
-    \item Net profitability
-    \item Search runtime
-    \item Path length
-\end{enumerate}
+\paragraph{Cached vs.\ live experiments.}
+A key methodological distinction is between \emph{cached} and \emph{live} experiments. In cached experiments, the graph is built once from a live price snapshot and then all heuristics search on the \emph{same frozen graph}, isolating algorithmic differences from API I/O latency. In live experiments (overnight, staleness), each snapshot triggers fresh API calls, so wall-clock times include data-acquisition overhead. We report both, as the latency profile of each heuristic is itself a key finding (Section~\ref{sec:overnight}).
 
-Across deterministic runs, all successful algorithms converged to a
-transfer–trade pattern (path length 3). Profit scaled linearly with order size,
-confirming multiplicative cost modeling correctness. However, runtime and
-failure behavior varied significantly across heuristics, revealing meaningful
-differences in pruning aggressiveness and exploration breadth.
-
-% ---------------- 5.4.3 ---------------
+% ---------------- 5.4.2 ---------------
 \subsubsection{Performance Metrics}
 
-We report four standardized evaluation metrics; success rate, conditional average profit, runtime, and path length. 
+We report six standardized metrics across all experiments:
 
-$
-\text{Success Rate} =
-\frac{\text{\# profitable runs}}{\text{\# total runs}} 
-$
+\begin{enumerate}
+    \item \textbf{Success Rate}: $\frac{\text{\# profitable runs}}{\text{\# total runs}}$.
+    \item \textbf{Conditional Avg.\ Profit}: $\mathbb{E}[\text{Profit} \mid \text{Success}]$, net of trading, withdrawal, and gas fees.
+    \item \textbf{Node Expansions}: number of nodes popped from the open list (measures search effort independent of I/O).
+    \item \textbf{Wall-Clock Time}: end-to-end search time including any heuristic API calls (mean, median, and P99 reported separately).
+    \item \textbf{Path Length}: number of nodes in the discovered path.
+    \item \textbf{Path Type}: whether the path is intra-exchange (2~nodes, single trade) or cross-exchange ($\geq$3~nodes, involving transfers). We report both categories separately to distinguish trivial single-exchange mispricings from genuine cross-exchange arbitrage.
+\end{enumerate}
 
-
-$\text{Conditional Average Profit} = \mathbb{E}[\text{Profit} \mid \text{Success}]
-$
-
-Profit is measured net of trading, withdrawal, and gas fees, which are fees associated with transferring on the blockchain.
-
-Importantly, profit statistics are conditioned on successful runs.
-Failed runs (no profitable path found) are excluded from average
-profit computation but reflected in the success rate metric.
-
-These metrics jointly evaluate economic quality, computational efficiency,
-and algorithmic robustness, providing a comprehensive assessment of
-heuristic effectiveness.
+Profit statistics are conditioned on successful runs; failed runs are reflected only in the success rate. This separation avoids diluting economic performance metrics with zero-profit failures.
