@@ -1,0 +1,18 @@
+Empirically, we observe profitable path planning with a net profitability of approximately 0.04\% after fees under realistic execution assumptions. 
+Therefore, assuming three significant digits, a portfolio of at least \$10,000 is required to withdraw profits into standard currency. This bound is stable across tested order sizes and reflects the low-risk, high-frequency nature of stablecoin markets. Profitable paths consistently exhibit a three-hop structure (transfer--trade--transfer) with a combination of both intra-exchange and inter-exchange transfers for a profitable path. 
+
+Our results demonstrate that incorporating execution constraints directly into heuristic search bridges the gap between theoretical arbitrage detection and practical trading systems. By modeling real-world frictions within the graph structure itself, we establish execution-aware pathfinding as a viable foundation for scalable, cross-exchange arbitrage under realistic market conditions.
+
+\subsection{Future Work}
+
+Future work will focus on strengthening both the system architecture and the dynamic market model. One key direction is adaptive API caching. Our results show that short caching windows in the interval $(0, 60]$ seconds significantly reduce traversal latency by limiting blocking data requests, but introduce reduced data freshness. A dynamic caching policy that adjusts refresh intervals per node based on volatility, liquidity depth, or traversal frequency would formalize the trade-off between execution speed and data integrity.
+
+A second extension involves fully decoupling Multi-Agent Pathfinding search threads from graph update threads. Although A* instances execute in parallel, API fetch operations can still introduce latency variability. Separating search from data acquisition through non-blocking graph snapshots would allow uninterrupted traversal during high-frequency polling and improve real-time stability.
+
+\subsection{Limitations}
+
+Finally, the current framework has not executed liquid trades on the blockchains for the presented data. Although we use real market pricing and fees, the planning of the profitable path may change during execution. In practice, stable-coin markets rebalanced under execution pressure, and bids can be filled by other market players making trades on the blockchains at the prices that our heuristics deemed optimal.
+
+Incorporating higher-order response models such as stochastic signals that approximate the evolution of the order book in incremental trades would allow the algorithm to anticipate how the execution of one trade alters subsequent exchange rates. This would shift the system from static arbitrage detection to predictive execution-aware planning under dynamic market conditions.
+
+

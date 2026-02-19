@@ -1,0 +1,146 @@
+We design four domain-specific heuristics to guide A* search toward reliable, low-risk, and realistically executable arbitrage routes. Each heuristic captures a different dimension of execution feasibility. Rather than detecting theoretical profit first and evaluating risk afterward, our approach embeds execution awareness directly into the search process.
+
+\subsection{Design Principles for Domain-Specific Heuristics}
+
+The heuristics are constructed according to three design principles:
+
+\begin{enumerate}
+    \item \textbf{Execution Awareness:} Heuristics must model real-world trading frictions such as liquidity limits, slippage, and transfer latency.
+    \item \textbf{Early Pruning:} Infeasible or high-risk paths should be deprioritized before deep exploration.
+    \item \textbf{Computational Efficiency:} Heuristic computation must remain lightweight relative to node expansion cost.
+\end{enumerate}
+
+Each heuristic modifies the evaluation function
+\[
+f(n) = g(n) + h(n),
+\] % this can be inline
+where $g(n)$ is accumulated cost and $h(n)$ encodes domain knowledge about future execution feasibility.
+
+\subsection{$h_1$ -- Liquidity Heuristic}
+
+The liquidity heuristic models the risk that low-volume markets cannot support the required trade size without excessive execution impact.
+
+Let
+\begin{align}
+\textit{vol\_per\_sec}
+&=
+\frac{\textit{24h\_quote\_volume}}{24 \times 3600}
+\\
+\textit{liquidity\_ratio}
+&=
+\frac{\textit{vol\_per\_sec} \cdot T_{\textit{remain}}}
+{\textit{order\_size\_usd}}.
+\end{align}
+
+This ratio estimates whether expected market flow during the remaining arbitrage window can support the intended order size.
+
+We normalize this quantity into a bounded score:
+
+\[
+\textit{score}_{liq} =
+\textit{clamp}\!\left(
+\frac{\log_{10}(\textit{liquidity\_ratio}) + 1}{2},
+0,
+1
+\right).
+\]
+
+The heuristic cost becomes:
+
+\[
+h_1(n) = \lambda_{liq} \big(1 - \textit{score}_{liq}(n)\big).
+\]
+
+\textbf{Characteristics:}
+\begin{itemize}
+    \item Time-aware liquidity modeling
+    \item Accounts for order size relative to trading activity
+    \item Favors deep, actively traded markets
+\end{itemize}
+
+This heuristic is well suited for conservative strategies prioritizing reliable execution over aggressive profit maximization.
+
+\subsection{$h_2$ -- Slippage Heuristic}
+
+The slippage heuristic directly models expected execution price impact using real-time order-book depth.
+
+Let $P_{mid}$ denote the mid-price and $\textit{VWAP}(Q)$ the volume-weighted average price required to fill order size $Q$. Slippage in basis points is defined as:
+
+\[
+\textit{slippage}_{bps} =
+\frac{\textit{VWAP}(Q) - P_{mid}}{P_{mid}} \times 10^{4}.
+\]
+
+The heuristic is defined as:
+
+\[
+h_2(n) =
+\lambda_{slip} \cdot 
+\max \left\{ 0, \textit{slippage}_{bps} - \theta \right\},
+\]
+
+where $\theta$ is a configurable slippage tolerance (default: 10 bps).
+
+\textbf{Characteristics:}
+\begin{itemize}
+    \item Uses real-time order book data
+    \item Side-aware (buy vs. sell impact)
+    \item Directly penalizes large price impact
+\end{itemize}
+
+This heuristic performs particularly well when order-book depth is the dominant constraint.
+
+\subsection{$h_3$ -- Parallel Execution Heuristic}
+
+The parallel-execution heuristic is a meta-strategy that runs multiple A* searches concurrently from diverse starting nodes. Each parallel instance uses a base heuristic (typically $h_1$ or $h_2$), and the best discovered solution is selected.
+
+Because $h_3$ operates at the search-control level rather than as a scalar node estimate, it does not admit a closed-form cost expression. Instead, it modifies exploration dynamics by expanding multiple regions of the state space simultaneously.
+
+\textbf{Characteristics:}
+\begin{itemize}
+    \item Diversifies search across starting exchanges
+    \item Mitigates local optima bias
+    \item Higher computational cost
+\end{itemize}
+
+This approach is particularly useful when profitable starting points are not known in advance.
+
+\subsection{$h_4$ -- Chain Congestion and Exchange Reliability Heuristic}
+
+The $h_4$ heuristic incorporates transfer latency and operational reliability into the search.
+
+Let $t_{min}$ denote the shortest outgoing transfer time from the current node, and $T_{remain}$ the remaining arbitrage window. The chain reliability score is:
+
+\[
+\textit{score}_{chain} =
+1 - \frac{t_{min}}{T_{remain}}.
+\]
+
+The corresponding chain penalty is:
+
+\[
+h_{chain}(n) =
+\lambda_{chain} \big(1 - \textit{score}_{chain}(n)\big).
+\]
+
+If each exchange is assigned a reliability score $s(n) \in [0,1]$, we define:
+
+\[
+h_{exchange}(n) =
+\lambda_{exchange} \big(1 - s(n)\big).
+\]
+
+The combined heuristic is:
+
+\[
+h_4(n) = h_{chain}(n) + h_{exchange}(n).
+\]
+
+\textbf{Characteristics:}
+\begin{itemize}
+    \item Models blockchain congestion risk
+    \item Incorporates exchange reliability
+    \item Prioritizes fast and stable execution paths
+\end{itemize}
+
+In our experiments, this heuristic produced the fastest and most robust arbitrage routes, particularly in short-window environments.

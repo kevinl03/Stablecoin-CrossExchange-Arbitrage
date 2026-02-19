@@ -1,0 +1,24 @@
+\subsection{Results}
+
+\subsubsection{Deterministic Heuristic Comparison}
+
+We evaluate our four proposed heuristics (H1, H2, H3, H4) on fixed starting nodes across multiple order sizes to assess deterministic performance. Experiments are conducted on a graph with 19 nodes representing stablecoin-exchange pairs, using three fixed start nodes: \texttt{binance:BUSD}, \texttt{binance:USDT}, and \texttt{kraken:USDT}. We test order sizes of \$100, \$1,000, and \$10,000 to evaluate scalability.
+
+Table 4 explicitly shows the result information directly from blockchain data. All successful heuristics converge to identical optimal paths for each starting node, demonstrating that heuristic choice primarily affects search efficiency rather than final path quality. For example, from \texttt{binance:USDT} with \$10,000, all heuristics find the path: \texttt{binance:USDT} $\rightarrow$ \texttt{kucoin:USDT} $\rightarrow$ \texttt{kucoin:TUSD}, yielding \$3.76 profit (0.0376\% return).
+
+Execution time varies significantly across heuristics. H4 (weighted A* with risk-aware heuristic) achieves the fastest execution times, completing searches in 0.003--0.006 seconds. H1 and H2 require 0.002--5.140 seconds depending on start node, with H1 generally faster due to lower computational overhead (ticker data vs.\ order book walks). H3 (parallel multi-start) incurs overhead from parallel execution but benefits from exploring multiple starting positions simultaneously.
+
+A key observation is start node sensitivity: \texttt{binance:BUSD} consistently fails to find profitable paths across all heuristics and order sizes, while \texttt{binance:USDT} and \texttt{kraken:USDT} succeed. This suggests that BUSD markets on Binance lack sufficient arbitrage opportunities, likely due to limited trading pairs or higher fees relative to USDT.
+
+Path length analysis reveals that successful paths are consistently 3 hops (one transfer, one trade), indicating that the optimal arbitrage structure is simple: transfer to an exchange with favorable rates, then trade to a different stablecoin. Longer paths (4--6 hops) are occasionally found by H1 but yield similar profits, suggesting diminishing returns from additional hops due to higher fee accumulation and path simplification.
+
+\subsubsection{Comparison Against Baselines}
+
+We compare our heuristic-guided A* methods against four baseline algorithms: Dijkstra's algorithm (A* with $h(n) = 0$), Bellman-Ford negative cycle detection, simple 1-hop arbitrage, and simple 2-hop arbitrage with maximum depth constraint (2hop\_max).
+
+Simple 1-hop and 2-hop arbitrage algorithms fail to find profitable paths across all starting nodes and order sizes. This indicates that profitable arbitrage in our graph requires at least 3 hops (one transfer plus one trade), and simple enumeration of 1--2 hop paths is insufficient.
+
+Bellman-Ford negative cycle detection fails to find profitable cycles in all tested scenarios. This is expected, as our graph construction uses conservative pricing (bid/ask spreads) and includes all execution costs, which eliminates theoretical negative cycles that would exist under idealized pricing assumptions. The failure of Bellman-Ford validates our execution-aware approach: theoretical arbitrage detection algorithms cannot account for real-world execution constraints.
+
+Execution time comparison reveals that baseline algorithms (Dijkstra, 2hop\_max) achieve sub-millisecond execution times (0.000--0.001s) when they succeed, faster than our heuristic-guided methods. However, this speed comes at the cost of reduced robustness: baseline algorithms lack the guidance to efficiently explore the search space when optimal paths are not immediately obvious, and they cannot adapt to varying market conditions through heuristic information. It's likely the executing trades from Djikstra's found paths lead to higher slippage, where the node cost volatility or latency  is unaccounted for during execution.
+
