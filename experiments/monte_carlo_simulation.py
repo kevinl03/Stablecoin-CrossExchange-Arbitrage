@@ -4,8 +4,10 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import time
+from datetime import datetime, timezone
 import random
 from dataclasses import dataclass
 from pathlib import Path
@@ -39,18 +41,23 @@ from scripts.bellman_ford_arbitrage import (
     bellman_ford_arbitrage,
     PlanResult as BellmanFordPlanResult,
 )
+from scripts.three_hop_baseline import (
+    three_hop_enumeration,
+    PlanResult as ThreeHopPlanResult,
+)
 
-# Both A*, Weighted A*, baseline algorithms, and Bellman-Ford return a PlanResult-like object
-PlanLike = AStarPlanResult | WeightedPlanResult | BaselinePlanResult | BellmanFordPlanResult
+# Both A*, Weighted A*, baseline algorithms, Bellman-Ford, and 3-hop return a PlanResult-like object
+PlanLike = AStarPlanResult | WeightedPlanResult | BaselinePlanResult | BellmanFordPlanResult | ThreeHopPlanResult
 
 # ----------------------------------------------------------------------
-# "Quick" Monte Carlo knobs so it doesn't run forever
+# Monte Carlo configuration knobs
+# High-volume backtesting: 500 trials per heuristic for statistical power
 # ----------------------------------------------------------------------
 MC_MAX_DEPTH: int = 5          # shallower search than 6
 MC_MAX_TIME_SEC: float = 60.0  # cap per search (seconds)
-MC_NUM_TRIALS: int = 10        # trials per heuristic (was 50)
-MC_NUM_STARTS_H3: int = 2      # parallel random starts for h3
-MC_CASH_LEVELS = [1_000.0, 10_000.0, 100_000.0]
+MC_NUM_TRIALS: int = 500       # trials per heuristic for statistical significance
+MC_NUM_STARTS_H3: int = 3      # parallel random starts for h3
+MC_CASH_LEVELS = [100.0, 1_000.0, 10_000.0, 50_000.0, 100_000.0]
 
 
 # ----------------------------------------------------------------------
@@ -68,6 +75,8 @@ class MonteCarloResult:
     duration_sec: float
     success: bool
     error: Optional[str]
+    nodes_expanded: Optional[int] = None
+    nodes_generated: Optional[int] = None
 
 
 # ----------------------------------------------------------------------
@@ -164,11 +173,21 @@ def run_single_search(
                 min_profit_usd=min_profit_usd,
             )
 
+        elif heuristic == "3hop_enum":
+            if start_node is None:
+                raise ValueError("start_node must be provided for 3hop_enum")
+            result = three_hop_enumeration(
+                start_node=start_node,
+                liquid_cash_usd=cash_usd,
+                max_time_sec=max_time_sec,
+                min_profit_usd=min_profit_usd,
+            )
+
         else:
             raise ValueError(
                 f"Unknown heuristic: {heuristic}. Must be one of "
                 f"'h1_liquidity', 'h2_slippage', 'h4_chaincongestion_exchange_risk', "
-                f"'h3_parallel', 'simple_1hop', 'simple_2hop', 'bellman_ford'."
+                f"'h3_parallel', 'simple_1hop', 'simple_2hop', 'bellman_ford', '3hop_enum'."
             )
 
     except Exception as e:
@@ -200,6 +219,8 @@ def run_single_search(
         path_len=len(result.path),
         duration_sec=duration,
         success=True,
+        nodes_expanded=getattr(result, "nodes_expanded", None),
+        nodes_generated=getattr(result, "nodes_generated", None),
         error=None,
     )
 
@@ -238,6 +259,7 @@ def main():
     # Include timestamp in filename to avoid overwriting previous results
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     out_path = results_dir / f"monte_carlo_heuristics_{timestamp}.txt"
+    jsonl_path = results_dir / f"monte_carlo_heuristics_{timestamp}.jsonl"
 
     # Configuration of the simulation (quick mode)
     NUM_TRIALS = MC_NUM_TRIALS
@@ -250,9 +272,13 @@ def main():
         "simple_1hop",
         "simple_2hop",
         "bellman_ford",
+        "3hop_enum",
     ]
 
     all_results: List[MonteCarloResult] = []
+
+    # Open JSONL file for crash-safe incremental writes
+    jsonl_fout = jsonl_path.open("w", encoding="utf-8")
 
     with out_path.open("w", encoding="utf-8") as f:
         f.write("Monte Carlo experiments for h1, h2, h3, h4 (quick mode)\n")
@@ -274,18 +300,50 @@ def main():
                 cash = random.choice(CASH_LEVELS)
 
                 if h in ("h1_liquidity", "h2_slippage", "h4_chaincongestion_exchange_risk", 
-                         "simple_1hop", "simple_2hop", "bellman_ford"):
+                         "simple_1hop", "simple_2hop", "bellman_ford", "3hop_enum"):
                     start = pick_random_start_node(nodes)
                 else:
                     start = None  # h3_parallel chooses its own starts
 
                 print(f"[{h}] Trial {trial_idx}/{NUM_TRIALS} — cash=${cash:,.2f}")
-                res = run_single_search(
-                    heuristic=h,
-                    cash_usd=cash,
-                    start_node=start,
-                )
+                try:
+                    res = run_single_search(
+                        heuristic=h,
+                        cash_usd=cash,
+                        start_node=start,
+                    )
+                except Exception as e:
+                    import traceback
+                    traceback.print_exc()
+                    res = MonteCarloResult(
+                        heuristic=h,
+                        start_node=start,
+                        cash_usd=cash,
+                        final_cash_usd=None,
+                        profit_usd=None,
+                        path_len=None,
+                        duration_sec=0.0,
+                        success=False,
+                        error=f"crash: {type(e).__name__}: {e}",
+                    )
                 all_results.append(res)
+
+                # Write JSONL record immediately for crash resilience
+                jsonl_rec = {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "heuristic": res.heuristic,
+                    "start_node": f"{res.start_node[0]}:{res.start_node[1]}" if res.start_node else None,
+                    "cash_usd": res.cash_usd,
+                    "profit_usd": res.profit_usd,
+                    "path_len": res.path_len,
+                    "duration_sec": res.duration_sec,
+                    "success": res.success,
+                    "nodes_expanded": res.nodes_expanded,
+                    "nodes_generated": res.nodes_generated,
+                    "error": res.error,
+                }
+                jsonl_fout.write(json.dumps(jsonl_rec) + "\n")
+                jsonl_fout.flush()
 
                 start_str = (
                     "random_parallel"
@@ -311,7 +369,7 @@ def main():
                     f"final={final_str:10s} "
                     f"profit={profit_str:10s} "
                     f"len={str(res.path_len):>3s} "
-                    f"time={res.duration_sec:6.3f}s"
+                    f"time={res.duration_sec:8.5f}s"
                 )
                 if not res.success and res.error:
                     f.write(f"  (error={res.error})")
@@ -347,15 +405,26 @@ def main():
                 if num_trials > 0 else 0.0
             )
 
+            # Node expansion stats
+            expansions = [g.nodes_expanded for g in group if g.nodes_expanded is not None]
+            avg_exp = sum(expansions) / len(expansions) if expansions else 0
+            generated = [g.nodes_generated for g in group if g.nodes_generated is not None]
+            avg_gen = sum(generated) / len(generated) if generated else 0
+
             f.write(f"\nHeuristic: {h}\n")
             f.write(f"  Trials:        {num_trials}\n")
             f.write(f"  Successes:     {num_success}\n")
             f.write(f"  Success rate:  {success_rate*100:.2f}%\n")
             f.write(f"  Avg profit*:   ${avg_profit:.4f} (over successful runs)\n")
-            f.write(f"  Avg runtime:   {avg_time:.3f}s per trial\n")
+            f.write(f"  Avg runtime:   {avg_time:.5f}s per trial\n")
+            f.write(f"  Avg expanded:  {avg_exp:.1f} nodes\n")
+            f.write(f"  Avg generated: {avg_gen:.1f} nodes\n")
+
+    jsonl_fout.close()
 
     print(f"\nMonte Carlo experiments complete.")
     print(f"Results written to: {out_path}")
+    print(f"JSONL data: {jsonl_path}")
 
 
 if __name__ == "__main__":

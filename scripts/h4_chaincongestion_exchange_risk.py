@@ -153,11 +153,21 @@ def chain_congestion_heuristic_cost(
 
 # Scores are normalized to [0, 1].
 # Higher = more reliable (lower freeze risk).
+# Scores are static priors based on exchange operational history,
+# regulatory compliance status, and historical uptime data.
 EXCHANGE_RELIABILITY_SCORE = {
-    "binance": 0.9,
-    "kraken":  0.9,
-    "kucoin":  0.6,
-    "bybit":   0.4,
+    "binance":   0.9,   # Largest CEX, strong operational track record
+    "kraken":    0.9,   # US-regulated, high reliability
+    "coinbase":  0.9,   # US-regulated, publicly traded (COIN)
+    "okx":       0.8,   # Major global exchange, good uptime
+    "kucoin":    0.6,   # Mid-tier, occasional withdrawal suspensions
+    "bybit":     0.5,   # Growing but less regulatory clarity
+    "bitget":    0.5,   # Mid-tier, growing user base
+    "htx":       0.5,   # Formerly Huobi; ownership transitions
+    "gateio":    0.4,   # Smaller exchange, higher operational risk
+    "mexc":      0.4,   # Lower-tier, limited regulatory oversight
+    "cryptocom": 0.6,   # Regulated in multiple jurisdictions
+    "phemex":    0.4,   # Smaller exchange, limited track record
 }
 
 
