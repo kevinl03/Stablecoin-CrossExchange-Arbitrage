@@ -1,0 +1,55 @@
+Our experimental framework constructs a real-time, execution-aware graph representation of stablecoin arbitrage opportunities (see Figure~\ref{fig:cover_graph}). The graph structure consists of nodes representing $(\text{exchange}, \text{coin})$ pairs and directed edges representing trades and transfers.
+
+We gather live market data from five major exchanges (Binance, Kraken, KuCoin, Bybit, Coinbase) to construct price snapshots for each $(\text{exchange}, \text{coin})$ pair. Prices are normalized to USD using conservative bid/ask execution estimates. We apply a price tolerance filter to exclude depegged assets, ensuring only true stablecoins are included.
+
+The fee model captures three cost categories: trading fees as percentage-based taker fees, withdrawal fees as exchange-specific flat fees varying by blockchain network, and network gas fees estimated from historical averages. The model is portfolio-size-aware, enforcing minimum notional thresholds per network to filter unprofitable edges at small scales.
+
+We model end-to-end transfer time as blockchain confirmation time plus user execution overhead. Transfer latency is integrated into edge costs, enabling time-aware heuristics to assess feasibility against remaining arbitrage windows.
+
+The graph construction process creates nodes for $(\text{exchange}, \text{coin})$ pairs where the asset is listed and price data satisfies stability criteria. \textbf{Trade edges} connect coin pairs within exchanges, while \textbf{transfer edges} connect the same asset across exchanges via common blockchain networks, encoding withdrawal fees, gas costs, and transfer times. All edge costs use logarithmic formulation, ensuring additive shortest-path search corresponds to multiplicative return optimization.
+
+\begin{table*}[t]
+\centering
+\small
+\setlength{\tabcolsep}{6pt}
+\caption{Baseline Algorithm Performance Across Order Sizes. 
+All profits are net after trading, withdrawal, and gas fees. 
+Bellman--Ford detects theoretical cycles but fails to produce execution-ready profitable paths under real-world frictions.}
+\label{tab:baseline-performance}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Baseline} 
+& \textbf{Order Size} 
+& \textbf{Success Rate} 
+& \textbf{Avg Profit (\$)} 
+& \textbf{Avg Profit (\%)} 
+& \textbf{Avg Time (s)} 
+& \textbf{Max Path Len} \\
+\midrule
+
+Dijkstra ($h{=}0$)
+& \$100     & 2/3 & 0.04  & 0.04\%  & 0.002 & 3 \\
+& \$1,000   & 2/3 & 0.37  & 0.037\% & 0.001 & 3 \\
+& \$10,000  & 2/3 & 3.69  & 0.036\% & 0.001 & 3 \\
+\midrule
+
+2hop\_max
+& \$100     & 2/3 & 0.04  & 0.04\%  & 0.000 & 3 \\
+& \$1,000   & 2/3 & 0.37  & 0.037\% & 0.000 & 3 \\
+& \$10,000  & 2/3 & 3.69  & 0.036\% & 0.000 & 3 \\
+\midrule
+
+simple\_1hop
+& All Sizes & 0/3 & -- & -- & $<$0.001 & 1 \\
+\midrule
+
+simple\_2hop
+& All Sizes & 0/3 & -- & -- & $<$0.001 & 2 \\
+\midrule
+
+Bellman--Ford
+& All Sizes & 0/3 & -- & -- & $<$0.001 & -- \\
+
+\bottomrule
+\end{tabular}
+\end{table*}
