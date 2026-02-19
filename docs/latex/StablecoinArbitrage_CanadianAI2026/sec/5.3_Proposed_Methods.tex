@@ -1,69 +1,61 @@
-%Bombo Clat!
-
 \begin{table*}[t]
 \centering
 \small
-\setlength{\tabcolsep}{6pt}
+\setlength{\tabcolsep}{5pt}
 \renewcommand{\arraystretch}{1.15}
-\caption{Representative execution-ready profitable paths discovered by four heuristics. 
-All profits are net after trading, withdrawal, and gas fees.}
+\caption{Representative execution-ready profitable paths from cached-graph experiments (41~nodes, 864~edges, \$1{,}000 order size). Paths illustrate the different trade-offs each method makes: Dijkstra and $h_2$ find short, high-profit paths; $h_4$ routes through more reliable exchanges at the cost of profit.}
 \label{tab:heuristic-profitable-paths}
-\begin{tabular}{lclp{0.44\linewidth}p{0.20\linewidth}cc}
+\begin{tabular}{lclp{0.38\linewidth}rcc}
 \toprule
-\textbf{$h$} 
-& \textbf{Order Size} 
+\textbf{Method} 
 & \textbf{Start} 
-& \textbf{Profitable Path} 
-& \textbf{Fees (Trade / WD / Gas)} 
-& \textbf{Net Profit (\$)} 
-& \textbf{Net (\%)} \\
+& \textbf{Hops}
+& \textbf{Path Description} 
+& \textbf{Expand}
+& \textbf{Net (\$)} 
+& \textbf{Time (s)} \\
 \midrule
 
-$h_1$
-& \$100
-& \texttt{kraken:USDT}
-& Transfer \texttt{kraken} $\rightarrow$ \texttt{kucoin} (USDT on APT); 
-Trade USDT $\rightarrow$ TUSD (0.10\% taker).
-& \$0.10 / \$0.30 / \$0.10
-& 0.04
-& 0.040\% \\
+Dijkstra
+& \texttt{phemex:USDT}
+& 3
+& Transfer phemex$\to$kucoin (USDT on SOL); Trade USDT$\to$TUSD (0.10\% taker).
+& 410
+& 1.14
+& 0.020 \\
 
 \midrule
 
 $h_2$
-& \$100
-& \texttt{binance:USDT}
-& Transfer \texttt{binance} $\rightarrow$ \texttt{kucoin} (USDT on SOL); 
-Trade USDT $\rightarrow$ TUSD (0.10\% taker).
-& \$0.10 / \$0.25 / \$0.00
-& 0.04
-& 0.040\% \\
+& \texttt{phemex:USDT}
+& 3
+& Transfer phemex$\to$kucoin (USDT on SOL); Trade USDT$\to$TUSD (0.10\% taker).
+& 209
+& 1.14
+& 4.752 \\
 
 \midrule
 
-$h_3$
-& \$1{,}000
-& \texttt{binance:USDT}
-& Transfer \texttt{binance} $\rightarrow$ \texttt{kucoin} (USDT on SOL); 
-Trade USDT $\rightarrow$ TUSD (0.10\% taker).
-& \$1.00 / \$0.25 / \$0.00
-& 0.38
-& 0.038\% \\
+$h_1$
+& \texttt{phemex:USDT}
+& 3
+& Transfer phemex$\to$kucoin (USDT on SOL); Trade USDT$\to$TUSD (0.10\% taker).
+& 392
+& 1.14
+& 4.227 \\
 
 \midrule
 
 $h_4$
-& \$10{,}000
-& \texttt{binance:USDT}
-& Transfer \texttt{binance} $\rightarrow$ \texttt{kucoin} (USDT on SOL); 
-Trade USDT $\rightarrow$ TUSD (0.10\% taker).
-& \$10.00 / \$0.25 / \$0.00
-& 3.76
-& 0.038\% \\
+& \texttt{phemex:USDT}
+& 5
+& Longer path through higher-reliability exchanges (Binance, KuCoin); avoids low-reliability intermediaries.
+& 606
+& 0.98
+& 0.017 \\
 
 \bottomrule
 \end{tabular}
 \end{table*}
-
 
 

@@ -39,9 +39,13 @@ from scripts.bellman_ford_arbitrage import (
     bellman_ford_arbitrage,
     PlanResult as BellmanFordPlanResult,
 )
+from scripts.three_hop_baseline import (
+    three_hop_enumeration,
+    PlanResult as ThreeHopPlanResult,
+)
 
-# Result from either classic A*, weighted A*, baseline algorithms, or Bellman-Ford
-PlanLike = AStarPlanResult | WeightedPlanResult | BaselinePlanResult | BellmanFordPlanResult
+# Result from either classic A*, weighted A*, baseline algorithms, Bellman-Ford, or 3-hop
+PlanLike = AStarPlanResult | WeightedPlanResult | BaselinePlanResult | BellmanFordPlanResult | ThreeHopPlanResult
 
 # -------------------------------------------------------------------
 # "Quick experiment" knobs (tuned so it doesn't take an hour)
@@ -187,12 +191,22 @@ def run_single_search(
                 min_profit_usd=min_profit_usd,
             )
 
+        elif heuristic == "3hop_enum":
+            if start_node is None:
+                raise ValueError("start_node must be provided for 3hop_enum")
+            result = three_hop_enumeration(
+                start_node=start_node,
+                liquid_cash_usd=cash_usd,
+                max_time_sec=max_time_sec,
+                min_profit_usd=min_profit_usd,
+            )
+
         else:
             raise ValueError(
                 f"Unknown heuristic: {heuristic}. Must be one of "
                 f"'h1_liquidity', 'h2_slippage', 'h3_parallel', "
                 f"'h4_chaincongestion_exchange_risk', 'dijkstra', '2hop_max', "
-                f"'simple_1hop', 'simple_2hop', 'bellman_ford'."
+                f"'simple_1hop', 'simple_2hop', 'bellman_ford', '3hop_enum'."
             )
 
     except Exception as e:
@@ -411,7 +425,7 @@ def main() -> None:
         
         # Baseline algorithms: run for each start node
         for start in start_nodes:
-            for h in ["dijkstra", "2hop_max", "simple_1hop", "simple_2hop", "bellman_ford"]:
+            for h in ["dijkstra", "2hop_max", "simple_1hop", "simple_2hop", "bellman_ford", "3hop_enum"]:
                 tasks.append((h, start, cash))
         
         # h3_parallel: start nodes are chosen inside the function
@@ -470,7 +484,7 @@ def main() -> None:
                     f"final=${res.final_cash_usd:.2f} "
                     f"(profit=${res.profit_usd:.2f}){profit_str}, "
                     f"path_len={res.path_len}, "
-                    f"time={res.duration_sec:.3f}s",
+                    f"time={res.duration_sec:.5f}s",
                     flush=True
                 )
                 
@@ -515,7 +529,7 @@ def main() -> None:
             else:
                 log_and_write(
                     f"[DONE] {heuristic} from {start_str}: FAIL - {res.error} "
-                    f"(time={res.duration_sec:.3f}s)",
+                    f"(time={res.duration_sec:.5f}s)",
                     flush=True
                 )
             
@@ -586,7 +600,7 @@ def main() -> None:
             f"final={final_str:10s} "
             f"profit={profit_str:10s} "
             f"len={str(res.path_len):>3s}{profit_breakdown_str} "
-            f"time={res.duration_sec:6.3f}s"
+            f"time={res.duration_sec:8.5f}s"
         )
     
     log_and_write(f"\nCompleted: {time.strftime('%Y-%m-%d %H:%M:%S')}")

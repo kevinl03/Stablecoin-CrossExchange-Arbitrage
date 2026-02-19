@@ -32,6 +32,8 @@ class PlanResult:
     edges: List[Dict[str, Any]]     # sequence of edge dicts, used for edge costs and extracted from fees.py
     final_cash_usd: float
     profit_usd: float
+    nodes_expanded: int = 0         # number of nodes popped from frontier
+    nodes_generated: int = 0        # number of nodes pushed to frontier
 
 
 def _calculate_cost_breakdown(
@@ -209,10 +211,13 @@ def astar_best_path_with_liquidity(
     best_result: Optional[PlanResult] = None
     iterations_since_profit = 0
     found_profit = False
+    nodes_expanded = 0
+    nodes_generated = 1  # start node
 
     while frontier:
         f_score, g_score, _, state, path_nodes, path_edges = heapq.heappop(frontier)
         current_node = state.node
+        nodes_expanded += 1
 
         # Recompute current cash in USD from g_score
         current_cash = _final_cash_from_log_cost(liquid_cash_usd, g_score)
@@ -343,10 +348,18 @@ def astar_best_path_with_liquidity(
                 (f, new_g, counter, new_state, new_path_nodes, new_path_edges),
             )
             counter += 1
+            nodes_generated += 1
 
     if best_result is None:
-        logger.info(f"A* search completed (heuristic={heuristic}): No profitable path found")
+        logger.info(
+            f"A* search completed (heuristic={heuristic}): No profitable path found "
+            f"(expanded={nodes_expanded}, generated={nodes_generated})"
+        )
         return None
+
+    # Store search stats on result
+    best_result.nodes_expanded = nodes_expanded
+    best_result.nodes_generated = nodes_generated
 
     # Calculate final cost breakdown
     cost_breakdown = _calculate_cost_breakdown(best_result.edges, liquid_cash_usd)
@@ -363,6 +376,7 @@ def astar_best_path_with_liquidity(
         f"A* search completed (heuristic={heuristic}): "
         f"Final profit=${best_result.profit_usd:.2f}, "
         f"path_length={len(best_result.path)}{cost_info}, "
+        f"expanded={nodes_expanded}, generated={nodes_generated}, "
         f"path={' -> '.join(f'{ex}:{c}' for (ex, c) in best_result.path)}"
     )
     return best_result
