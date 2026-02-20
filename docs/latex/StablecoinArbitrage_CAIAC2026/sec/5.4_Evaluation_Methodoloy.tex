@@ -1,0 +1,37 @@
+% ---------------- 5.4 Evaluation Methodology ----------------
+\subsection{Evaluation Methodology}
+\label{sec:evaluation}
+
+We evaluate our algorithms along five dimensions: deterministic heuristic comparison on cached graph snapshots, graph scaling behaviour, temporal robustness over multi-hour campaigns, quote staleness analysis under execution delay, and hyperparameter sensitivity.
+
+% ---------------- 5.4.1 ----------------
+\subsubsection{Test Environment}
+
+Unless otherwise stated, all experiments use the following configuration:
+
+\begin{itemize}
+    \item \textbf{Exchanges:} 12 CEXs (Binance, Kraken, KuCoin, Bybit, OKX, Gate.io, Bitget, MEXC, HTX, Coinbase, Crypto.com, Phemex).
+    \item \textbf{Graph:} 41 nodes (exchange$\times$stablecoin pairs), 864 directed edges (trades + transfers).
+    \item \textbf{Start nodes:} 30 randomly selected nodes for cached-graph experiments; 5 preferred major-exchange nodes for overnight and scaling experiments (see Table~\ref{tab:hyperparams} for all search parameters).
+    \item \textbf{Cash levels:} \$1{,}000, \$10{,}000, \$100{,}000.
+    \item \textbf{Heuristics tested:} $h_1$ (liquidity), $h_2$ (slippage), $h_4$ (chain/exchange risk via Weighted~A*), Dijkstra ($h{=}0$), and 3-hop enumeration baseline.
+\end{itemize}
+
+\paragraph{Cached vs.\ live experiments.}
+A key methodological distinction is between \emph{cached} and \emph{live} experiments. In cached experiments, the graph is built once from a live price snapshot and then all heuristics search on the \emph{same frozen graph}, isolating algorithmic differences from API I/O latency. In live experiments (overnight, staleness), each snapshot triggers fresh API calls, so wall-clock times include data-acquisition overhead. We report both, as the latency profile of each heuristic is itself a key finding (Section~\ref{sec:overnight}).
+
+% ---------------- 5.4.2 ---------------
+\subsubsection{Performance Metrics}
+
+We report six standardized metrics across all experiments:
+
+\begin{enumerate}
+    \item \textbf{Success Rate}: $\frac{\text{\# profitable runs}}{\text{\# total runs}}$.
+    \item \textbf{Conditional Avg.\ Profit}: $\mathbb{E}[\text{Profit} \mid \text{Success}]$, net of trading, withdrawal, and gas fees.
+    \item \textbf{Node Expansions}: number of nodes popped from the open list (measures search effort independent of I/O).
+    \item \textbf{Wall-Clock Time}: end-to-end search time including any heuristic API calls (mean, median, and P99 reported separately).
+    \item \textbf{Path Length}: number of nodes in the discovered path.
+    \item \textbf{Path Type}: whether the path is intra-exchange (2~nodes, single trade) or cross-exchange ($\geq$3~nodes, involving transfers). We report both categories separately to distinguish trivial single-exchange mispricings from genuine cross-exchange arbitrage.
+\end{enumerate}
+
+Profit statistics are conditioned on successful runs; failed runs are reflected only in the success rate. This separation avoids diluting economic performance metrics with zero-profit failures.

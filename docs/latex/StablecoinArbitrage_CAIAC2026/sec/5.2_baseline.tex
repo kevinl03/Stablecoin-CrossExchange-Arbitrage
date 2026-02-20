@@ -1,0 +1,143 @@
+% ---------------- 5.2 Baseline Algorithms (Non-A*) ----------------
+% ---------------- 5.2 Ablation Studies ----------------
+\subsection{Ablation Studies on A*}
+
+To isolate the contribution of heuristic guidance, we evaluate our approach against three ablation baselines:
+
+\begin{enumerate}
+    \item \textbf{Cycle ablation:} We force classical cycle detection using Bellman--Ford, identifying negative cycles rather than optimizing for executable profitable paths.
+    
+    \item \textbf{Depth ablation:} We restrict search depth to shallow expansions. 
+    The \texttt{simple\_1hop} variant evaluates only single outgoing actions, while 
+    \texttt{simple\_2hop} evaluates minimal two-edge loops (the shortest possible cycle).
+    
+    \item \textbf{Heuristic ablation:} We remove heuristic guidance entirely by setting $h(n)=0$, reducing A* to Dijkstra’s algorithm and eliminating blockchain-aware signals such as congestion, liquidity, and order book depth.
+\end{enumerate}
+
+
+\subsubsection{Bellman--Ford Negative Cycle Detection}
+\label{sec:bf-baseline}
+
+We include Bellman--Ford negative-cycle detection as a classical arbitrage baseline. Given edge rates $r(e)$, we apply the log transform
+\[
+w(e) = -\log(r(e)),
+\] % this cna be inline
+so multiplicative rate products become additive path costs. Arbitrage opportunities correspond to negative-weight cycles. Bellman--Ford detects whether such a cycle exists in the transformed graph.
+
+In our setting, Bellman--Ford is treated as a \emph{detection} method rather than an execution planner: it does not optimize for order-size-dependent slippage, transfer latency windows, or reliability constraints, and therefore frequently fails to produce an executable profitable cycle under real-world frictions.
+
+\subsubsection{Greedy Spread-Based Strategy}
+\label{sec:greedy-baseline}
+
+We include shallow greedy baselines intended to emulate rapid spread scanning:
+
+\begin{itemize}
+    \item \textbf{1-hop edge scan (\texttt{simple\_1hop}):} tests whether any single outgoing action yields immediate positive gain. This is a minimal local check and typically cannot complete a full arbitrage cycle.
+    \item \textbf{2-hop loop scan (\texttt{simple\_2hop}):} tests whether a two-action sequence can return to the original asset (a minimal loop-back).
+\end{itemize}
+
+These strategies are extremely fast, but they generally fail under realistic fees and transfer costs because profitable cross-exchange opportunities typically require coordinated trade+transfer actions.
+
+\subsubsection{Dijkstra / Shortest Path Variant}
+\label{sec:dijkstra-baseline}
+
+We implement an unguided shortest-path baseline equivalent to A* with a zero heuristic:
+\[
+h(n) = 0.
+\] % this thingy can be inline 
+This reduces A* to Dijkstra’s algorithm, expanding nodes in non-decreasing accumulated cost $g(n)$. The baseline uses the same execution-aware edge model as our proposed methods (fees, withdrawals, gas, and transfer-time penalties encoded into $r(e)$), but provides no heuristic guidance.
+
+Dijkstra represents the most accurate static-cost optimum: its paths are exact under the market data at search time, but may deviate under execution when accounting for dynamic frictions such as order-book slippage and quote staleness.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{Baseline strategies used in evaluation.}
+\label{tab:baseline-summary}
+\begin{tabular}{ll}
+\toprule
+\textbf{Baseline} & \textbf{Description} \\
+\midrule
+Bellman--Ford & Negative-cycle detection on log-cost graph \\
+Dijkstra ($h{=}0$) & Unguided cost-based search (A* with $h(n)=0$) \\
+\texttt{2hop\_max} & Depth-limited unguided search (max 2 edges) \\
+\texttt{simple\_1hop} & One-edge greedy scan (no cycle planning) \\
+\texttt{simple\_2hop} & Two-edge loop-back greedy scan \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+% ---------------- 5.5.1 Cached-Graph Heuristic Comparison ----------------
+\subsubsection{Cached-Graph Heuristic Comparison}
+\label{sec:deterministic-compare}
+
+We compare all heuristics and baselines on a \emph{cached} graph snapshot (41~nodes, 864~edges) with 30 randomly selected start nodes and three cash levels, isolating search computation from API I/O. Table~\ref{tab:heuristic-performance} reports aggregate performance.
+
+\begin{table*}[t]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\caption{Cached-graph heuristic comparison (41~nodes, 864~edges, 30~start nodes per cash level). Success rate, conditional average profit, mean node expansions, and compute time (I/O excluded). Expansion reduction is relative to Dijkstra.}
+\label{tab:heuristic-performance}
+\begin{tabular}{llcrrrc}
+\toprule
+\textbf{Heuristic} 
+& \textbf{Cash} 
+& \textbf{Success} 
+& \textbf{Avg Profit (\$)} 
+& \textbf{Avg Expand} 
+& \textbf{Avg Time (s)} 
+& \textbf{Exp.\ $\Delta$ vs Dijkstra} \\
+\midrule
+
+Dijkstra ($h{=}0$)
+& \$1k      & 56.7\% &   1.00 &  359 & 0.010 & --- \\
+& \$10k     & 56.7\% &  10.01 &  359 & 0.010 & --- \\
+& \$100k    & 56.7\% & 100.07 &  359 & 0.010 & --- \\
+\midrule
+
+$h_1$ (liquidity)
+& \$1k      & 56.7\% &   0.67 &  319 & 0.172 & $+$11.2\% \\
+& \$10k     & 56.7\% &   6.72 &  568 & 0.016 & $-$58.0\% \\
+& \$100k    & 56.7\% &  63.11 &  715 & 0.021 & $-$98.9\% \\
+\midrule
+
+$h_2$ (slippage)
+& \$1k      & 56.7\% &   0.99 &  256 & 0.221 & $+$28.8\% \\
+& \$10k     & 56.7\% &   9.91 &  256 & 0.011 & $+$28.8\% \\
+& \$100k    & 56.7\% & 100.07 &  252 & 0.012 & $+$29.9\% \\
+\midrule
+
+$h_4$ (Weighted A*)
+& \$1k      & 56.7\% &   0.71 &  673 & 0.020 & $-$87.4\% \\
+& \$10k     & 56.7\% &   7.06 &  673 & 0.022 & $-$87.4\% \\
+& \$100k    & 56.7\% &  70.58 &  673 & 0.022 & $-$87.4\% \\
+\midrule
+
+3-hop enum.
+& \$1k      & 30.0\% &   0.54 &  346 & 0.000 & $+$3.6\% \\
+& \$10k     & 30.0\% &   5.40 &  346 & 0.000 & $+$3.6\% \\
+& \$100k    & 30.0\% &  54.04 &  346 & 0.000 & $+$3.6\% \\
+
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Several key observations emerge from the cached-graph comparison:
+
+\paragraph{$h_2$ is the most effective heuristic for search pruning.}
+$h_2$ achieves a consistent \textbf{29\% reduction in node expansions} relative to Dijkstra across all cash levels, while discovering paths with nearly identical profit (within 1\% at \$100k). Order-book depth information effectively prunes low-liquidity branches.
+
+\paragraph{$h_4$ explores more nodes but provides risk-aware guidance at zero I/O cost.}
+$h_4$ expands 87\% more nodes than Dijkstra because its penalty terms (chain congestion + exchange reliability) force the search to evaluate risk-adjusted alternatives. However, its compute time (0.020--0.022\,s) is \emph{comparable to Dijkstra} because it uses pre-computed chain transfer times and static exchange reliability scores with no API calls during search. The paths it discovers are longer (5--6~hops vs.\ 3) and route through more reliable exchanges, at the cost of lower profit.
+
+\paragraph{$h_1$ behaviour is cash-size-dependent.}
+At small order sizes (\$1k), $h_1$ achieves 11\% fewer expansions than Dijkstra, but at large sizes (\$100k) it expands 99\% more nodes. The liquidity ratio $\text{vol}/\text{order\_size}$ shrinks for larger orders, activating stronger penalties that force broader exploration.
+
+\paragraph{Dijkstra remains a strong baseline.}
+On a 41-node graph, Dijkstra discovers the highest-profit paths at moderate expansion cost. Its advantage is that it performs no heuristic computation, making it the natural choice when execution risk is not a concern.
+
+\paragraph{3-hop enumeration is brittle.}
+The structural baseline succeeds for only 30\% of start nodes and misses profitable 2-hop intra-exchange opportunities and 4+~hop cross-exchange paths that A*-based methods discover.

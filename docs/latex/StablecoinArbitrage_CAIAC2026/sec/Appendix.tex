@@ -1,0 +1,19 @@
+\subsection{Streamlit User Interface}
+
+We provide an interactive web-based interface built with Streamlit that enables real-time exploration of arbitrage opportunities and heuristic-guided pathfinding algorithms. The UI integrates live market data from multiple exchanges via the CCXT library, providing immediate visualization of the arbitrage graph structure and execution of search algorithms with real-time logging.
+
+\subsection{System Components}
+
+The interface consists of four primary tabs: (1) \textbf{Arbitrage Graph} displays an interactive network visualization where nodes represent (exchange, stablecoin) pairs and edges encode trades (blue) and transfers (green), with controls for heuristic selection, starting wallet, and capital allocation; (2) \textbf{Live Prices} shows real-time stablecoin prices across exchanges fetched via CCXT APIs; (3) \textbf{Fees} visualizes all fee structures used in the model; (4) \textbf{How to Use} provides documentation.
+
+\subsection{Real-Time Data Integration}
+
+The system uses CCXT to fetch live market data including ticker prices (bid/ask), 24-hour trading volume, and order book depth. Upon initialization or manual refresh, prices are normalized to USD, filtered for stablecoin peg compliance (5\% tolerance), and used to build the weighted graph structure. All data fetching occurs synchronously to ensure search algorithms operate on consistent market snapshots.
+
+\subsection{Interactive Algorithm Execution}
+
+Users can execute all four heuristic-guided search algorithms through a unified interface. During execution, a status container displays streaming log messages showing heuristic initialization, node expansion order, intermediate profitable paths, and final optimal path selection. Upon completion, results include start/final cash amounts, complete route paths, per-node heuristic values with risk assessments, and step-by-step execution details including fees and transfer times.
+
+\subsection{Technical Implementation}
+
+The UI uses Streamlit for web rendering, NetworkX for graph structures, Matplotlib for visualization, and Pandas for tabular display. Real-time logging is achieved through custom \texttt{logging.Handler} subclasses that update Streamlit containers asynchronously. CCXT provides a unified interface to multiple exchange APIs with graceful error handling for API failures and network timeouts.
