@@ -1,0 +1,20 @@
+{
+  "test": "consecutive_path_wallet_execution",
+  "timestamp": "2026-02-19T07:16:20.567017+00:00",
+  "config": {
+    "initial_cash": 10000.0,
+    "initial_node": "('binance', 'USDT')",
+    "max_paths": 20,
+    "min_profit_to_execute": 0.5
+  },
+  "summary": {
+    "total_value": 10000.0,
+    "total_profit": 0.0,
+    "num_nodes_held": 1,
+    "balances": {
+      "('binance', 'USDT')": 10000.0
+    },
+    "num_trades": 0
+  },
+  "execution_log": []
+}
