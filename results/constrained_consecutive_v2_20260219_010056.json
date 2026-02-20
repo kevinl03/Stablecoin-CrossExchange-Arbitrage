@@ -1,0 +1,97 @@
+{
+  "constraint_version": "v2_improved",
+  "tier1_nodes": [
+    [
+      "okx",
+      "USDT"
+    ],
+    [
+      "kraken",
+      "USDT"
+    ],
+    [
+      "binance",
+      "USDT"
+    ],
+    [
+      "kucoin",
+      "USDT"
+    ],
+    [
+      "binance",
+      "USDC"
+    ]
+  ],
+  "tier2_nodes": [
+    [
+      "gateio",
+      "USDT"
+    ],
+    [
+      "gateio",
+      "USDC"
+    ],
+    [
+      "okx",
+      "USDC"
+    ],
+    [
+      "htx",
+      "USDT"
+    ],
+    [
+      "bybit",
+      "USDT"
+    ]
+  ],
+  "tier3_nodes": [
+    [
+      "mexc",
+      "USDT"
+    ],
+    [
+      "huobi",
+      "USDT"
+    ],
+    [
+      "mexc",
+      "USDC"
+    ],
+    [
+      "upbit",
+      "USDT"
+    ],
+    [
+      "mexc",
+      "TUSD"
+    ]
+  ],
+  "trades_executed": 1,
+  "paths_rejected": 0,
+  "total_profit": 9.76459696046004,
+  "roi_pct": 0.0976459696046004,
+  "final_total_value": 10009.76459696046,
+  "final_balances": {
+    "mexc:TUSD": 10009.76459696046
+  },
+  "execution_log": [
+    {
+      "trade_number": 1,
+      "from_node": [
+        "binance",
+        "USDT"
+      ],
+      "to_node": [
+        "mexc",
+        "TUSD"
+      ],
+      "starting_cash": 10000.0,
+      "profit": 9.76459696046004,
+      "final_cash": 10009.76459696046,
+      "endpoint_tier": "TIER3",
+      "path_length": 3
+    }
+  ],
+  "timestamp": "2026-02-19T09:00:56.757625+00:00",
+  "test_type": "constrained_consecutive_v2"
+}
