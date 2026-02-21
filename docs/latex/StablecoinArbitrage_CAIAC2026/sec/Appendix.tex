@@ -1,19 +1,75 @@
-\subsection{Streamlit User Interface}
+% ============================================================
+% A.1 Hyperparameter Configuration
+% ============================================================
+\subsection{Hyperparameter Configuration}
+\label{sec:hyperparams}
 
-We provide an interactive web-based interface built with Streamlit that enables real-time exploration of arbitrage opportunities and heuristic-guided pathfinding algorithms. The UI integrates live market data from multiple exchanges via the CCXT library, providing immediate visualization of the arbitrage graph structure and execution of search algorithms with real-time logging.
+Table~\ref{tab:hyperparams} lists all hyperparameters used in the heuristic functions and search algorithms. Values are fixed across all experiments unless otherwise noted.
 
-\subsection{System Components}
+\begin{table}[h]
+\centering
+\small
+\caption{Hyperparameters and their values.}
+\label{tab:hyperparams}
+\begin{tabular}{llc}
+\toprule
+\textbf{Parameter} & \textbf{Description} & \textbf{Value} \\
+\midrule
+\multicolumn{3}{l}{\textit{H1 -- Liquidity Heuristic}} \\
+$\lambda_{\text{liq}}$ & Liquidity penalty weight & 1.0 \\
+Unknown penalty & No-data fallback cost & 5.0 \\
+Cache TTL & Volume cache lifetime & 60\,s \\
+\midrule
+\multicolumn{3}{l}{\textit{H2 -- Slippage Heuristic}} \\
+$\lambda_{\text{slip}}$ & Slippage penalty weight & 0.5 \\
+$\theta$ & Slippage tolerance & 10\,bps \\
+Unknown penalty & No-data fallback cost & 50.0 \\
+Cache TTL & Order-book cache lifetime & 30\,s \\
+\midrule
+\multicolumn{3}{l}{\textit{H4 -- Chain/Exchange Risk}} \\
+$\lambda_{\text{chain}}$ & Chain risk penalty weight & 1.0 \\
+$\lambda_{\text{exchange}}$ & Exchange risk penalty weight & 1.0 \\
+$w_{\min}$ & Min Weighted A* weight & 1.0 \\
+$w_{\max}$ & Max Weighted A* weight & 3.0 \\
+\midrule
+\multicolumn{3}{l}{\textit{Search Parameters}} \\
+Max depth & Maximum path hops & 6 \\
+$T_{\max}$ & Arbitrage time window & 1800\,s \\
+Early exit iter. & Iters after first profit & 200 \\
+$k$ (H3) & Multi-start parallel runs & 3 \\
+User overhead & Execution latency per hop & 45\,s \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-The interface consists of four primary tabs: (1) \textbf{Arbitrage Graph} displays an interactive network visualization where nodes represent (exchange, stablecoin) pairs and edges encode trades (blue) and transfers (green), with controls for heuristic selection, starting wallet, and capital allocation; (2) \textbf{Live Prices} shows real-time stablecoin prices across exchanges fetched via CCXT APIs; (3) \textbf{Fees} visualizes all fee structures used in the model; (4) \textbf{How to Use} provides documentation.
+\paragraph{Chain transfer times.}
+Transfer-time estimates are drawn from documented blockchain finality times plus typical exchange processing delays: Solana $\approx$~1\,s, BNB Chain $\approx$~4\,s, Polygon $\approx$~5\,s, Tron $\approx$~30\,s, Arbitrum/Base $\approx$~120\,s, Ethereum L1 $\approx$~600\,s. These are used by $h_4$ to compute chain reliability penalties and by the transfer-time model to assess path time-feasibility.
 
-\subsection{Real-Time Data Integration}
+\paragraph{Exchange reliability scores.}
+Each exchange is assigned a static reliability score $s(n) \in [0,1]$ based on historical uptime, withdrawal availability, and community reports. Higher scores indicate more reliable exchanges. These scores are pre-computed and cached, requiring zero API calls during search.
 
-The system uses CCXT to fetch live market data including ticker prices (bid/ask), 24-hour trading volume, and order book depth. Upon initialization or manual refresh, prices are normalized to USD, filtered for stablecoin peg compliance (5\% tolerance), and used to build the weighted graph structure. All data fetching occurs synchronously to ensure search algorithms operate on consistent market snapshots.
+% ============================================================
+% A.2 Ethics and Broader Impact
+% ============================================================
+\subsection{Ethics and Broader Impact}
+\label{sec:ethics_appendix}
 
-\subsection{Interactive Algorithm Execution}
+\paragraph{Data and privacy.}
+This work uses only publicly available market data (prices, order books, fee schedules) accessed through CCXT. No proprietary, personal, or user-specific data are collected or used.
 
-Users can execute all four heuristic-guided search algorithms through a unified interface. During execution, a status container displays streaming log messages showing heuristic initialization, node expansion order, intermediate profitable paths, and final optimal path selection. Upon completion, results include start/final cash amounts, complete route paths, per-node heuristic values with risk assessments, and step-by-step execution details including fees and transfer times.
+\paragraph{Market impact.}
+Arbitrage activity generally improves market efficiency by reducing cross-exchange price discrepancies. However, large-scale automated arbitrage could theoretically contribute to flash crashes or liquidity draining in thin markets. Our framework operates at order sizes (\$100--\$100k) that are small relative to exchange daily volumes (\$100M+) and is designed as a research prototype, not a production trading system.
 
-\subsection{Technical Implementation}
+\paragraph{Environmental considerations.}
+Our framework queries exchange APIs and performs lightweight graph search computations. It does not execute on-chain transactions, mine blocks, or contribute to blockchain energy consumption. The computational footprint is negligible (P99 search time $<$7\,s, even for API-dependent heuristics).
 
-The UI uses Streamlit for web rendering, NetworkX for graph structures, Matplotlib for visualization, and Pandas for tabular display. Real-time logging is achieved through custom \texttt{logging.Handler} subclasses that update Streamlit containers asynchronously. CCXT provides a unified interface to multiple exchange APIs with graceful error handling for API failures and network timeouts.
+\paragraph{Regulatory compliance.}
+Cross-exchange arbitrage operates within established market structures and does not exploit insider information or engage in market manipulation. Users of this framework should comply with applicable financial regulations in their jurisdiction, including exchange terms of service and cryptocurrency trading laws.
+
+% ============================================================
+% A.3 Interactive Visualization System
+% ============================================================
+\subsection{Interactive Visualization System}
+\label{sec:streamlit_ui}
+
+We provide a Streamlit-based web interface for real-time exploration of arbitrage opportunities. The UI integrates live CCXT market data and provides four tabs: (1)~\textbf{Arbitrage Graph} with interactive network visualization, heuristic selection, and search execution with streaming log output; (2)~\textbf{Live Prices} showing real-time stablecoin prices across exchanges; (3)~\textbf{Fees} displaying all fee structures; (4)~\textbf{Documentation}. Upon search completion, results include the complete route, per-node heuristic values, and step-by-step execution details with fees and transfer times. The system uses NetworkX for graph operations and Matplotlib for visualization.
