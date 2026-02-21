@@ -67,9 +67,85 @@ Our framework queries exchange APIs and performs lightweight graph search comput
 Cross-exchange arbitrage operates within established market structures and does not exploit insider information or engage in market manipulation. Users of this framework should comply with applicable financial regulations in their jurisdiction, including exchange terms of service and cryptocurrency trading laws.
 
 % ============================================================
-% A.3 Interactive Visualization System
+% A.3 Additional Experimental Results
+% ============================================================
+\subsection{Additional Experimental Results}
+\label{sec:additional_results}
+
+\paragraph{Heuristic comparison: expansions and compute time.}
+Figure~\ref{fig:app_expansion_time} compares mean node expansions and compute time across all heuristics on the cached graph. $h_2$ consistently achieves the fewest expansions, while $h_4$ matches Dijkstra-class latency due to pre-computed scores requiring zero API calls.
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig01_node_expansion_bar.png}
+    \caption{Mean node expansions by heuristic.}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig02_compute_time_bar.png}
+    \caption{Mean compute time by heuristic.}
+\end{subfigure}
+\caption{Heuristic comparison on cached graph (30~start nodes, 3~cash levels).}
+\label{fig:app_expansion_time}
+\end{figure}
+
+\paragraph{Overnight temporal evolution.}
+Figure~\ref{fig:app_overnight_ts} shows profit trajectories across 96~snapshots (8~hours, 5-min intervals). Profitable opportunities persist throughout the entire session, with profits clustering around 2--3 structural optima per start node. Periodic dips correspond to temporary market equilibria that resolve within minutes.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/fig10_overnight_timeseries.png}
+\caption{Overnight profit timeseries across all heuristics (8~hours, 5-min intervals, 5~start nodes, 3~cash levels).}
+\label{fig:app_overnight_ts}
+\end{figure}
+
+\paragraph{Sensitivity: $h_1$ liquidity penalty and max depth.}
+Figure~\ref{fig:app_sensitivity_extra} shows that $h_1$ performance is robust across $\lambda_{\text{liq}} \in [0.1, 5.0]$, and that increasing max depth beyond 3 hops yields no additional profit, confirming that profitable stablecoin paths are inherently short.
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig12_sensitivity_h1_lambda.png}
+    \caption{$h_1$: profit vs.\ $\lambda_{\text{liq}}$.}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig15_sensitivity_max_depth.png}
+    \caption{Profit vs.\ max path depth.}
+\end{subfigure}
+\caption{Additional sensitivity analysis.}
+\label{fig:app_sensitivity_extra}
+\end{figure}
+
+\paragraph{Radar summary and profit distribution.}
+Figure~\ref{fig:app_radar_profit} provides a multi-dimensional summary of heuristic performance across six metrics, alongside the profit distribution across order sizes. $h_4$ dominates on speed and reliability, while $h_2$ leads on expansion efficiency.
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig18_radar_summary.png}
+    \caption{Radar: multi-metric heuristic comparison.}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig03_profit_boxplot.png}
+    \caption{Profit distribution by heuristic.}
+\end{subfigure}
+\caption{Overall heuristic performance summary.}
+\label{fig:app_radar_profit}
+\end{figure}
+
+% ============================================================
+% A.4 Interactive Visualization System
 % ============================================================
 \subsection{Interactive Visualization System}
 \label{sec:streamlit_ui}
 
-We provide a Streamlit-based web interface for real-time exploration of arbitrage opportunities. The UI integrates live CCXT market data and provides four tabs: (1)~\textbf{Arbitrage Graph} with interactive network visualization, heuristic selection, and search execution with streaming log output; (2)~\textbf{Live Prices} showing real-time stablecoin prices across exchanges; (3)~\textbf{Fees} displaying all fee structures; (4)~\textbf{Documentation}. Upon search completion, results include the complete route, per-node heuristic values, and step-by-step execution details with fees and transfer times. The system uses NetworkX for graph operations and Matplotlib for visualization.
+We provide a Streamlit-based web interface for real-time exploration of arbitrage opportunities. The UI integrates live CCXT market data and provides four tabs: (1)~\textbf{Arbitrage Graph} with interactive network visualization, heuristic selection, and search execution with streaming log output; (2)~\textbf{Live Prices} showing real-time stablecoin prices across exchanges; (3)~\textbf{Fees} displaying all fee structures; (4)~\textbf{Documentation}. Upon search completion, results include the complete route, per-node heuristic values, and step-by-step execution details with fees and transfer times. The system uses NetworkX for graph operations and Matplotlib for visualization. Source code is available in the anonymized repository.
