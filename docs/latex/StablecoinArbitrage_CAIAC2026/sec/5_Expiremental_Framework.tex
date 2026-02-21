@@ -4,11 +4,9 @@ Our experimental framework constructs a real-time, execution-aware graph represe
 
 We gather live market data from twelve major exchanges (Binance, Kraken, KuCoin, Bybit, OKX, Gate.io, Bitget, MEXC, HTX, Coinbase, Crypto.com, Phemex) via the CCXT library~\cite{ccxt2024} to construct price snapshots for each $(\text{exchange}, \text{coin})$ pair. The expanded exchange set increases the node count from approximately 19 (in our initial 4-exchange configuration) to 50--100+ nodes, creating a meaningfully larger graph that stresses the search algorithms. Prices are normalized to USD using conservative bid/ask execution estimates. We apply a price tolerance filter ($\pm 2\%$ from \$1.00) to exclude depegged assets, ensuring only true stablecoins are included.
 
-The fee model captures three cost categories: trading fees as percentage-based taker fees (ranging from 0.05\% on MEXC to 0.60\% on Coinbase), withdrawal fees as exchange-specific flat fees varying by blockchain network, and network gas fees estimated from historical averages. The model is portfolio-size-aware, enforcing minimum notional thresholds per network to filter unprofitable edges at small scales.
+The fee model captures three cost categories: trading fees as percentage-based taker fees, withdrawal fees as exchange-specific flat fees varying by blockchain network, and network gas fees estimated from historical averages. The model is portfolio-size-aware, enforcing minimum notional thresholds per network to filter unprofitable edges at small scales.
 
 We model end-to-end transfer time as blockchain confirmation time plus a fixed user execution overhead of 45 seconds. Transfer latency is integrated into edge costs, enabling time-aware heuristics to assess feasibility against remaining arbitrage windows.
-
-The graph construction process creates nodes for $(\text{exchange}, \text{coin})$ pairs where the asset is listed and price data satisfies stability criteria. \textbf{Trade edges} connect coin pairs within exchanges, while \textbf{transfer edges} connect the same asset across exchanges via common blockchain networks, encoding withdrawal fees, gas costs, and transfer times. All edge costs use the logarithmic formulation $w(e) = -\log(r(e))$, ensuring additive shortest-path search corresponds to multiplicative return optimization.
 
 \subsection{Hyperparameter Configuration}
 

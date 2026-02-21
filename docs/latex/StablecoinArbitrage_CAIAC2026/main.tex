@@ -76,12 +76,10 @@ stablecoin arbitrage, A* search, cross-exchange trading, execution-aware pathfin
     Visualization of a successful arbitrage path identified by our search algorithm.
     The path shows a sequence of trades and transfers across multiple exchanges,
     starting from the initial node and following the highlighted edges to complete
-    a profitable cycle. Each node represents an (exchange, asset) pair, with node
+    a profitable path. Each node represents an (exchange, asset) pair, with node
     colors indicating the exchange. The bold red edges trace the optimal route,
     with edge labels showing the exchange rates for trades and transfer fees for
-    cross-exchange movements. This simplified view isolates the profitable path
-    from the full graph structure, demonstrating how the algorithm navigates
-    through the arbitrage opportunity space.
+    cross-exchange movements. 
     }
     \label{fig:successful_path}
 \end{figure}
@@ -97,7 +95,7 @@ stablecoin arbitrage, A* search, cross-exchange trading, execution-aware pathfin
 \section{Experiments and Evaluation}
 \input{sec/5_Expiremental_Framework}
 \input{sec/5.2_baseline}
-\input{sec/5.3_Proposed_Methods}
+%\input{sec/5.3_Proposed_Methods} gonna remove this section as it is onlly an extra table that I do not need. Paths can be verified through githu results folders
 \input{sec/5.4_Evaluation_Methodoloy}
 \input{sec/5.5_Results}
 \input{sec/5.6_Ethics}

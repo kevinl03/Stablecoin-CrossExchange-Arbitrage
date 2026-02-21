@@ -1,23 +1,10 @@
 We design three domain-specific guidance heuristics ($h_1$, $h_2$, $h_4$) and one search-control strategy ($h_3$) to guide A* toward reliable, low-risk, and realistically executable arbitrage routes. Each heuristic captures a different dimension of execution feasibility. Rather than detecting theoretical profit first and evaluating risk afterward, our approach embeds execution awareness directly into the search process.
 
-\subsection{Design Principles for Domain-Specific Heuristics}
-
-The heuristics are constructed according to three design principles:
-
-\begin{enumerate}
-    \item \textbf{Execution Awareness:} Heuristics must model real-world trading frictions such as liquidity limits, slippage, and transfer latency.
-    \item \textbf{Early Pruning:} Infeasible or high-risk paths should be deprioritized before deep exploration.
-    \item \textbf{Computational Efficiency:} Heuristic computation must remain lightweight relative to node expansion cost.
-\end{enumerate}
-
 Each node-level heuristic modifies the evaluation function
 \[
 f(n) = g(n) + h(n),
 \]
 where $g(n)$ is the accumulated cost in log space and $h(n) \geq 0$ is an additive guidance penalty encoding domain knowledge about future execution feasibility. As discussed in Section~3, these heuristics are \emph{guidance penalties}: they do not modify $g(n)$ and do not claim admissibility.
-
-\paragraph{Semantic separation from edge costs.}
-A key design decision is the division of responsibilities between \emph{edge costs} and \emph{heuristic penalties}. Edge effective rates $r(e)$ already incorporate all \textbf{static fees}: taker/maker trading fees, withdrawal fees, and network gas fees. These are deterministic costs known at graph-construction time. In contrast, the heuristic penalties $h_i(n)$ capture \textbf{dynamic execution risk} factors---volume-based liquidity pressure, order-book depth, chain congestion, and exchange reliability---that are stochastic, time-varying, and depend on the trader's order size. This separation ensures there is no double-counting between $g(n)$ and $h(n)$.
 
 \subsection{$h_1$ -- Liquidity Heuristic}
 
@@ -151,9 +138,6 @@ The combined heuristic is:
 h_4(n) = h_{chain}(n) + h_{exchange}(n).
 \]
 
-\paragraph{Exchange reliability scores.}
-The scores $s(n)$ are \textbf{static priors} assigned based on each exchange's operational track record, regulatory compliance status, and historical uptime. We set: Binance = 0.9, Kraken = 0.9, Coinbase = 0.9 (US-regulated, publicly traded), OKX = 0.8, KuCoin = 0.6, Bybit = 0.5, Bitget = 0.5, HTX = 0.5, Crypto.com = 0.6, Gate.io = 0.4, MEXC = 0.4, Phemex = 0.4. These scores reflect publicly available information about exchange withdrawal suspensions, regulatory actions, and community-reported incidents. Future work could replace these priors with rolling empirical measurements (e.g., API uptime over the past 30 days).
-
 \paragraph{Chain transfer times.}
 Transfer-time estimates $t_{\min}$ are drawn from documented blockchain finality times plus typical exchange processing delays. For example: Solana $\approx$~1\,s, BNB Chain $\approx$~4\,s, Polygon $\approx$~5\,s, Tron $\approx$~30\,s, Arbitrum/Base $\approx$~120\,s, Ethereum $\approx$~600\,s.
 
@@ -167,5 +151,3 @@ As described in Section~3, $h_4$ is used with Weighted A*. The node-specific wei
     \item Uses Weighted A* ($w \in [1.0, 3.0]$) for risk-adaptive search
     \item Prioritizes fast and stable execution paths
 \end{itemize}
-
-In our experiments, this heuristic produced the fastest and most robust arbitrage routes, particularly in short-window environments.

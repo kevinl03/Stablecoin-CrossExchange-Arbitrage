@@ -1,6 +1,6 @@
 Cryptocurrency arbitrage has been studied from multiple perspectives, including graph-theoretic opportunity detection, system-level arbitrage platforms, and execution strategy optimization. Most prior work focuses primarily on identifying arbitrage opportunities, while comparatively less attention has been devoted to modeling execution feasibility under real-world constraints. This section situates our approach within these research streams.
 
-\subsection{Graph-Theoretic Arbitrage Detection (Negative Cycles, Bellman--Ford)}
+\subsection{Graph-Theoretic Arbitrage Detection through Negative Cycles}
 
 The dominant formulation of arbitrage detection models financial markets as directed weighted graphs. Nodes represent currencies or tokens, and exchange rates are encoded as edges. Applying a logarithmic transformation,
 \[
@@ -12,29 +12,11 @@ Oantă and Coroiu (2023) adopt this paradigm for cross-exchange cryptocurrency m
 
 Similar graph-based formulations appear in decentralized finance (DeFi) arbitrage systems, improved negative-cycle detection algorithms, and real-time high-frequency frameworks. Across these works, the core objective is opportunity existence detection rather than execution-aware feasibility analysis.
 
-\subsection{Pathfinding Approaches in Financial Routing}
-
-Beyond negative-cycle detection, shortest-path formulations have been proposed to compute cost-minimizing trading routes. Algorithms such as Dijkstra’s method and its weighted variants provide efficient routing in additive cost graphs. However, these approaches typically assume static and deterministic edge weights.
-
-In cross-exchange contexts, routing decisions involve heterogeneous constraints, including withdrawal fees, transfer costs, and asset availability across exchanges. Traditional shortest-path algorithms can model additive costs but do not incorporate domain-specific risk factors or execution uncertainty during search. As a result, routing decisions often remain detached from real-world feasibility.
-
-\subsection{Heuristic Search in Constrained Optimization}
-
-Heuristic search methods such as A* have been widely studied in artificial intelligence for solving constrained pathfinding and planning problems. By incorporating domain-specific heuristics, A* can guide search toward promising regions of the state space while preserving optimality under admissible conditions.
-
-Although heuristic search has been extensively applied in robotics, logistics, and planning domains, its application to cross-exchange cryptocurrency arbitrage remains limited. Prior financial graph formulations focus on detecting negative cycles or computing shortest paths without embedding execution risk directly into heuristic guidance. This creates an opportunity to apply AI planning techniques to arbitrage execution planning under real-world constraints.
-
 \subsection{Arbitrage Under Latency, Fees, and Market Frictions}
 
 Execution feasibility has been studied more extensively in single-exchange optimal execution literature, often using reinforcement learning or stochastic control methods (e.g., Kearns \& Nevmyvaka, 2006). These approaches optimize trade scheduling within a single market, accounting for price impact and liquidity dynamics.
 
 However, cross-exchange arbitrage introduces additional constraints, including blockchain transfer latency, withdrawal fees, liquidity fragmentation, and exchange reliability. Stablecoin markets, in particular, exhibit narrow spreads and frequent micro-inefficiencies, making them highly sensitive to execution frictions. Existing detection-oriented methods do not explicitly integrate these constraints into the search process, increasing the risk of theoretical but non-executable opportunities.
-
-\subsection{Comparison to System-Oriented Arbitrage Platforms}
-
-Several systems-oriented contributions focus on scalable architectures for aggregating exchange data, computing spreads, and streaming arbitrage signals through APIs or dashboards. These works emphasize infrastructure, latency reduction, and data engineering robustness.
-
-While valuable from a systems perspective, such platforms typically treat arbitrage computation as a spread comparison or post-hoc cycle detection task. Execution constraints—including liquidity depth, slippage, transfer delays, and operational risk—are evaluated after opportunity detection rather than embedded within the search itself.
 
 \subsection{Risk-Aware A* and Stochastic Pathfinding}
 
@@ -48,11 +30,11 @@ Empirical studies of cross-chain arbitrage execution have documented the importa
 
 Our transfer-time model and chain reliability heuristic ($h_4$) draw on these insights: we incorporate blockchain finality times (ranging from $\sim$1\,s for Solana to $\sim$600\,s for Ethereum L1) and exchange processing overhead into the search, ensuring that discovered paths are time-feasible under realistic settlement conditions.
 
-\subsection{Liquidity and Slippage Models in CEX and AMM Markets}
+\subsection{Slippage Modeling}
 
-The relationship between order size and execution cost has been extensively modeled in both centralized exchange (CEX) and automated market maker (AMM) settings. In AMMs, slippage follows a deterministic curve defined by the bonding function (e.g., the constant-product formula $x \cdot y = k$), yielding quadratic cost in order size for small trades. In CEX order books, slippage depends on the depth profile of the limit order book and can exhibit discontinuities at price levels with thin liquidity.
+Execution cost increases with order size in both automated market makers (AMMs) and centralized exchanges (CEXs). In AMMs, price impact follows the bonding curve (e.g., $x \cdot y = k$), producing convex slippage. In CEX order books, slippage depends on available depth and may change abruptly when liquidity is thin.
 
-Our heuristic $h_2$ uses a simplified model: we walk the live order book to compute VWAP for a given order size and convert the price impact to basis points. This approach captures the essential structure of order-book slippage without requiring parametric model fitting. We acknowledge that more sophisticated piecewise or quadratic slippage models (as used in optimal execution literature) could improve accuracy for very large orders, and note this as a direction for future work.
+Heuristic $h_2$ estimates slippage by walking the live order book to compute the volume-weighted average price (VWAP) for a specified order size and converting the price impact to basis points. This avoids assuming a parametric impact model while reflecting real-time liquidity conditions.More advanced convex impact models from optimal execution theory, such as the framework of Almgren and Chriss (2001), could improve accuracy for larger trades and are left for future work.
 
 \subsection{Positioning of Our Contribution}
 

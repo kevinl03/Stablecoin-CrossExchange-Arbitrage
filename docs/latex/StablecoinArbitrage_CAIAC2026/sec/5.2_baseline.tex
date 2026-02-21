@@ -49,25 +49,6 @@ This reduces A* to Dijkstra’s algorithm, expanding nodes in non-decreasing acc
 
 Dijkstra represents the most accurate static-cost optimum: its paths are exact under the market data at search time, but may deviate under execution when accounting for dynamic frictions such as order-book slippage and quote staleness.
 
-\begin{table}[t]
-\centering
-\small
-\setlength{\tabcolsep}{4pt}
-\caption{Baseline strategies used in evaluation.}
-\label{tab:baseline-summary}
-\begin{tabular}{ll}
-\toprule
-\textbf{Baseline} & \textbf{Description} \\
-\midrule
-Bellman--Ford & Negative-cycle detection on log-cost graph \\
-Dijkstra ($h{=}0$) & Unguided cost-based search (A* with $h(n)=0$) \\
-\texttt{2hop\_max} & Depth-limited unguided search (max 2 edges) \\
-\texttt{simple\_1hop} & One-edge greedy scan (no cycle planning) \\
-\texttt{simple\_2hop} & Two-edge loop-back greedy scan \\
-\bottomrule
-\end{tabular}
-\end{table}
-
 
 % ---------------- 5.5.1 Cached-Graph Heuristic Comparison ----------------
 \subsubsection{Cached-Graph Heuristic Comparison}
@@ -135,9 +116,3 @@ $h_4$ expands 87\% more nodes than Dijkstra because its penalty terms (chain con
 
 \paragraph{$h_1$ behaviour is cash-size-dependent.}
 At small order sizes (\$1k), $h_1$ achieves 11\% fewer expansions than Dijkstra, but at large sizes (\$100k) it expands 99\% more nodes. The liquidity ratio $\text{vol}/\text{order\_size}$ shrinks for larger orders, activating stronger penalties that force broader exploration.
-
-\paragraph{Dijkstra remains a strong baseline.}
-On a 41-node graph, Dijkstra discovers the highest-profit paths at moderate expansion cost. Its advantage is that it performs no heuristic computation, making it the natural choice when execution risk is not a concern.
-
-\paragraph{3-hop enumeration is brittle.}
-The structural baseline succeeds for only 30\% of start nodes and misses profitable 2-hop intra-exchange opportunities and 4+~hop cross-exchange paths that A*-based methods discover.
