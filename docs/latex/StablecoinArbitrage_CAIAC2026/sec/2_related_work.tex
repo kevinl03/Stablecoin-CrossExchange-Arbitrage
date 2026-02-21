@@ -1,41 +1,13 @@
-Cryptocurrency arbitrage has been studied from multiple perspectives, including graph-theoretic opportunity detection, system-level arbitrage platforms, and execution strategy optimization. Most prior work focuses primarily on identifying arbitrage opportunities, while comparatively less attention has been devoted to modeling execution feasibility under real-world constraints. This section situates our approach within these research streams.
+Cryptocurrency arbitrage has been studied from multiple perspectives. Most prior work focuses on identifying arbitrage opportunities, while comparatively less attention has been devoted to modeling execution feasibility under real-world constraints.
 
-\subsection{Graph-Theoretic Arbitrage Detection through Negative Cycles}
+\paragraph{Graph-theoretic arbitrage detection.}
+The dominant formulation models financial markets as directed weighted graphs where the log transform $w(e)=-\log(r(e))$ converts multiplicative rates into additive costs, so arbitrage opportunities correspond to negative-weight cycles detectable by Bellman--Ford~\cite{bellman1958routing,cormen2009introduction}. Oant\u{a} and Coroiu~\cite{oanta2023crypto} adopt this paradigm in \emph{Crypto Advisor}, aggregating real-time exchange data to detect arbitrage cycles. Similar graph-based formulations appear in DeFi systems~\cite{defiposer2021}, improved negative-cycle algorithms~\cite{mmbf2024,rich2025}, and high-frequency frameworks~\cite{fang2022cryptocurrency}. Across these works, the core objective is opportunity detection rather than execution-aware feasibility.
 
-The dominant formulation of arbitrage detection models financial markets as directed weighted graphs. Nodes represent currencies or tokens, and exchange rates are encoded as edges. Applying a logarithmic transformation,
-\[
-w(e) = -\log(r(e)),
-\] %this one can be inline
-converts multiplicative exchange rates into additive costs, allowing arbitrage opportunities to be identified as negative-weight cycles. This transformation enables the use of classical shortest-path algorithms such as Bellman--Ford and its variants.
+\paragraph{Execution feasibility and market frictions.}
+Single-exchange optimal execution has been studied using reinforcement learning and stochastic control~\cite{kearns2006reinforcement,optimalexecution2024}. Cross-exchange arbitrage introduces additional constraints: blockchain transfer latency, withdrawal fees, liquidity fragmentation, and exchange reliability. Stablecoin markets are particularly sensitive to these frictions due to narrow spreads. Obadia et~al.~\cite{obadia2021flashbots} show that on-chain arbitrage profits are highly sensitive to transaction ordering and confirmation latency; in the CEX-to-CEX setting, withdrawal processing and blockchain finality delays add further uncertainty.
 
-Oantă and Coroiu (2023) adopt this paradigm for cross-exchange cryptocurrency markets in their system \emph{Crypto Advisor}, which aggregates real-time exchange data and detects arbitrage cycles using graph-based methods. The primary contribution is infrastructural, providing a scalable web-based platform for reporting opportunities. However, the detection framework assumes idealized execution conditions, including sufficient liquidity, static prices during execution, and negligible operational risk.
+\paragraph{Risk-aware pathfinding and slippage.}
+Nikolova and Karger~\cite{nikolova2008stochastic} study risk-averse pathfinding under stochastic edge weights, and Lim et~al.~\cite{lim2022cvar} propose CVaR pathfinding to minimize worst-case tail cost. Our $h_4$ heuristic addresses a similar concern by penalizing unreliable exchanges and congested chains. For slippage, execution cost increases with order size in both AMMs and CEX order books. Our $h_2$ heuristic estimates slippage via live VWAP computation, avoiding parametric assumptions; more advanced models such as Almgren and Chriss~\cite{almgren2001optimal} are left for future work.
 
-Similar graph-based formulations appear in decentralized finance (DeFi) arbitrage systems, improved negative-cycle detection algorithms, and real-time high-frequency frameworks. Across these works, the core objective is opportunity existence detection rather than execution-aware feasibility analysis.
-
-\subsection{Arbitrage Under Latency, Fees, and Market Frictions}
-
-Execution feasibility has been studied more extensively in single-exchange optimal execution literature, often using reinforcement learning or stochastic control methods (e.g., Kearns \& Nevmyvaka, 2006). These approaches optimize trade scheduling within a single market, accounting for price impact and liquidity dynamics.
-
-However, cross-exchange arbitrage introduces additional constraints, including blockchain transfer latency, withdrawal fees, liquidity fragmentation, and exchange reliability. Stablecoin markets, in particular, exhibit narrow spreads and frequent micro-inefficiencies, making them highly sensitive to execution frictions. Existing detection-oriented methods do not explicitly integrate these constraints into the search process, increasing the risk of theoretical but non-executable opportunities.
-
-\subsection{Risk-Aware A* and Stochastic Pathfinding}
-
-A growing body of work extends classical A* to settings where edge costs are uncertain or drawn from probability distributions. Nikolova and Karger (2008) study risk-averse pathfinding under stochastic edge weights using first-order stochastic dominance (FSD) as a preference criterion, demonstrating that risk-averse shortest paths can differ substantially from expected-cost shortest paths. More recently, Lim et~al.\ (2022) propose Conditional Value-at-Risk (CVaR) pathfinding, where the objective is to minimize the worst-case tail cost of a path, relevant to scenarios where downside risk is more important than average performance.
-
-Our heuristic $h_4$ (chain congestion and exchange reliability) implicitly addresses a similar concern: by penalizing paths through unreliable exchanges or congested chains, we steer the search toward routes with lower variance in execution outcomes. Future work could formalize this connection by adopting CVaR or FSD criteria directly in the edge-cost model.
-
-\subsection{Cross-Chain Arbitrage and Bridging Empirics}
-
-Empirical studies of cross-chain arbitrage execution have documented the importance of bridging latency and inventory management. Obadia et~al.\ (2021) analyze flashbots and maximal extractable value (MEV), showing that on-chain arbitrage profits are highly sensitive to transaction ordering and confirmation latency. In the cross-exchange (CEX-to-CEX) setting, withdrawal processing times and blockchain finality delays introduce additional uncertainty that is absent in single-chain MEV extraction.
-
-Our transfer-time model and chain reliability heuristic ($h_4$) draw on these insights: we incorporate blockchain finality times (ranging from $\sim$1\,s for Solana to $\sim$600\,s for Ethereum L1) and exchange processing overhead into the search, ensuring that discovered paths are time-feasible under realistic settlement conditions.
-
-\subsection{Slippage Modeling}
-
-Execution cost increases with order size in both automated market makers (AMMs) and centralized exchanges (CEXs). In AMMs, price impact follows the bonding curve (e.g., $x \cdot y = k$), producing convex slippage. In CEX order books, slippage depends on available depth and may change abruptly when liquidity is thin.
-
-Heuristic $h_2$ estimates slippage by walking the live order book to compute the volume-weighted average price (VWAP) for a specified order size and converting the price impact to basis points. This avoids assuming a parametric impact model while reflecting real-time liquidity conditions.More advanced convex impact models from optimal execution theory, such as the framework of Almgren and Chriss (2001), could improve accuracy for larger trades and are left for future work.
-
-\subsection{Positioning of Our Contribution}
-
-In contrast to prior work, our approach integrates feasibility modeling directly into the search process. Instead of first detecting theoretical arbitrage and then evaluating execution risk, we formulate arbitrage planning as a constraint-aware search problem and apply A* with domain-specific guidance heuristics. This approach bridges opportunity detection and executable route construction, particularly suited to the low-margin, friction-sensitive context of stablecoin markets.
+\paragraph{Positioning.}
+In contrast to prior work, our approach integrates feasibility modeling directly into A* search with domain-specific guidance heuristics, bridging opportunity detection and executable route construction for the low-margin stablecoin context.
