@@ -71,15 +71,11 @@ stablecoin arbitrage, A* search, cross-exchange trading, execution-aware pathfin
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.85\textwidth]{figures/SuccesfulPathProfit}
+    \includegraphics[width=0.65\textwidth]{figures/SuccesfulPathProfit}
     \caption{
-    Visualization of a successful arbitrage path identified by our search algorithm.
-    The path shows a sequence of trades and transfers across multiple exchanges,
-    starting from the initial node and following the highlighted edges to complete
-    a profitable path. Each node represents an (exchange, asset) pair, with node
-    colors indicating the exchange. The bold red edges trace the optimal route,
-    with edge labels showing the exchange rates for trades and transfer fees for
-    cross-exchange movements. 
+    A successful arbitrage path identified by our search algorithm.
+    Each node represents an (exchange, asset) pair, with colours indicating the exchange.
+    Bold red edges trace the profitable route, with labels showing exchange rates and transfer fees.
     }
     \label{fig:successful_path}
 \end{figure}
@@ -95,7 +91,7 @@ stablecoin arbitrage, A* search, cross-exchange trading, execution-aware pathfin
 \section{Experiments and Evaluation}
 \input{sec/5_Expiremental_Framework}
 \input{sec/5.2_baseline}
-%\input{sec/5.3_Proposed_Methods} gonna remove this section as it is onlly an extra table that I do not need. Paths can be verified through githu results folders
+%\input{sec/5.3_Proposed_Methods} % Removed: paths verifiable via GitHub results folders
 \input{sec/5.4_Evaluation_Methodoloy}
 \input{sec/5.5_Results}
 \input{sec/5.6_Ethics}

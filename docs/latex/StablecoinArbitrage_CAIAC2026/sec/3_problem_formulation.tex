@@ -2,116 +2,47 @@
 
 We formulate the stablecoin cross-exchange arbitrage problem as a directed weighted graph
 $G=(V,E)$. Each node $v\in V$ represents a unique stablecoin--exchange pair, written as
-$v=(exchange,coin)$. Each directed edge $e\in E$ corresponds either to a trade executed on an
-exchange or a transfer of funds between exchanges. 
+$v=(\text{exchange},\text{coin})$. Each directed edge $e\in E$ corresponds either to a trade executed on an
+exchange or a transfer of funds between exchanges.
 
-Every edge has an associated effective exchange rate that incorporates all relevant costs---including trading fees, withdrawal fees, spreads, and slippage. We assign each edge a weight using the negative logarithm of this effective rate:
-\[
-w(e) = -\log\!\big(\textit{effective\_rate}(e)\big).
-\] % this can be inline
-
-This transformation converts multiplicative returns into additive costs, enabling the use of shortest-path algorithms to evaluate profitability.
+Every edge has an associated effective exchange rate that incorporates all relevant costs (trading fees, withdrawal fees, spreads, and slippage). We assign each edge a weight $w(e) = -\log(\textit{effective\_rate}(e))$, converting multiplicative returns into additive costs and enabling shortest-path algorithms to evaluate profitability.
 
 \subsection{Path Profitability}
 
-Given a path $P=(v_0,v_1,\dots,v_k)$ with initial capital $C_0$, the final capital after executing all trades and transfers along the path is
-\[
-C_k = C_0 \cdot \prod_{e\in P} r(e)
-\]
-where $r(e)$ denotes the effective rate on edge $e$. A path is profitable when the net gain exceeds a user-specified minimum profit threshold:
-\[
-C_k - C_0 \ge \textit{min\_profit}.
-\] % this can be inline 
-
-Expressing this condition in additive log space gives an equivalent constraint:
+Given a path $P=(v_0,v_1,\dots,v_k)$ with initial capital $C_0$, the final capital is
+$C_k = C_0 \cdot \prod_{e\in P} r(e)$
+where $r(e)$ denotes the effective rate on edge $e$. A path is profitable when $C_k - C_0 \ge \textit{min\_profit}$. In additive log space this becomes:
 \[
 \sum_{e\in P} -\log\!\big(r(e)\big)
 \;\le\;
 -\log\!\left(1+\frac{\textit{min\_profit}}{C_0}\right).
 \]
 
-Thus, the arbitrage search problem becomes the task of identifying a path that begins at a given start node $v_0$ and ends at some end node $v_k$, and yields a multiplicative return greater than one. More formally, we seek:
-\[
-\textit{Find } P: v_0 \to v_k \;\; \textit{s.t.}\;\; \prod_{e\in P} r(e) > 1
-\]
-This constitutes a minimum-cost path search under realistic execution constraints.
+The search problem is to find a path from start node $v_0$ to some node $v_k$ such that $\prod_{e\in P} r(e) > 1$.
 
 \paragraph{Goal Condition.}
-We define the \emph{goal set} $\mathcal{G}$ as the set of all nodes reachable from the start node $v_0$ at which the accumulated capital exceeds the initial capital:
-\[
-\mathcal{G} = \bigl\{\, v_k \in V \;\big|\; C_k = C_0 \cdot \textstyle\prod_{e \in P} r(e) > C_0 \,\bigr\}.
-\]
-Critically, we do \emph{not} require $v_k = v_0$. This is an \textbf{open-path} formulation: the trader may end on any exchange--coin pair where the marked-to-market USD value of the position exceeds the initial capital.
-
-This design is economically justified because all assets in our graph are stablecoins pegged to USD. The terminal position $v_k = (\text{exchange}_k, \text{coin}_k)$ holds a stablecoin whose value is within a narrow band of \$1.00 by construction (we enforce a price tolerance of $\pm 2\%$ when building the graph). Therefore, ``profit'' at any terminal node is realized value: the trader holds $C_k$ units of a USD-pegged asset, and $C_k - C_0$ is the net gain. No additional conversion step is needed to ``close'' the position into USD.
-
-Standard arbitrage literature typically requires closed cycles ($v_k = v_0$), but this restriction is unnecessarily limiting in the stablecoin domain. A profitable open path—for example, starting with USDT on Binance and ending with USDC on Kraken—yields the same economic outcome as a closed cycle, because both endpoints hold fungible USD-denominated value. Our formulation therefore maximizes the opportunity set without sacrificing profit interpretation.
+We define the goal set $\mathcal{G} = \bigl\{\, v_k \in V \;\big|\; C_k > C_0 \,\bigr\}$.
+Critically, we do \emph{not} require $v_k = v_0$. This is an \textbf{open-path} formulation: the trader may end on any exchange--coin pair where the USD value exceeds the initial capital. This is justified because all assets are stablecoins pegged to USD (we enforce a $\pm 2\%$ price tolerance when building the graph), so profit at any terminal node is realized value. Standard arbitrage literature typically requires closed cycles, but this restriction is unnecessarily limiting in the stablecoin domain: a profitable open path (e.g., starting with USDT on Kraken and ending with TUSD on KuCoin) yields the same economic outcome.
 
 \subsection{A* Search Formulation}
 
-To solve the arbitrage problem efficiently, we apply the A* search algorithm. For each node $n$, we maintain a cost-to-reach value $g(n)$, computed as the sum of the additive edge costs encountered so far:
-\[
-g(n) = \sum_{e\in path} -\log\!\big(r(e)\big).
-\]
-
-We define a heuristic function $h(n)$ that estimates the remaining cost or execution risk required to complete a profitable cycle. The A* evaluation function is given by
-\[
-f(n) = g(n) + h(n),
-\]
-where $g(n)$ denotes the accumulated path cost in log space and $h(n)$ estimates the remaining cost to complete a feasible arbitrage path. The algorithm terminates when a path yields final capital exceeding the initial capital, that is, when $C_n > C_0$. This formulation allows A* to balance realized execution costs with heuristic estimates of remaining feasibility and risk.
+We apply A* search with cost-to-reach $g(n) = \sum_{e\in \text{path}} -\log(r(e))$ and evaluation function $f(n) = g(n) + h(n)$, where $h(n)$ estimates remaining execution risk. The algorithm terminates when $C_n > C_0$.
 
 \paragraph{Heuristic Design Philosophy.}
-In standard A*, optimality is guaranteed when the heuristic $h(n)$ is \emph{admissible}, i.e., $h(n) \leq h^*(n)$ for all nodes $n$, where $h^*(n)$ is the true remaining cost to the nearest goal. In our domain, however, $h^*(n)$ is not well-defined for two reasons: (i) the goal set $\mathcal{G}$ depends on the \emph{accumulated capital} along the path (not just the current node), and (ii) market conditions change over time, so edge costs are not truly static.
+In our domain, the true remaining cost $h^*(n)$ is not well-defined because (i) the goal set depends on accumulated capital along the path, and (ii) market conditions change over time. We therefore design heuristics $h_1$--$h_4$ as \textbf{guidance penalties} rather than admissible lower bounds. Each $h_i(n) \geq 0$ penalizes execution-risk features (illiquidity, slippage, chain congestion, exchange unreliability), steering A* toward paths more likely to remain profitable under real-world conditions.
 
-We therefore design our heuristics $h_1$--$h_4$ as \textbf{guidance penalties} rather than admissible lower bounds. Each heuristic $h_i(n) \geq 0$ penalizes execution-risk features (illiquidity, slippage, chain congestion, exchange unreliability) at a given node. These penalties steer A* toward paths that are more likely to remain profitable under real-world conditions, even though they do not satisfy the formal admissibility condition $h(n) \leq h^*(n)$.
-
-For the chain congestion and exchange reliability heuristic ($h_4$), we employ \textbf{Weighted A*} with the evaluation function:
-\[
-f(n) = g(n) + w(n) \cdot h(n), \quad w(n) \in [w_{\min}, w_{\max}],
-\]
-where $w(n)$ is a node-specific weight computed from the chain kickback risk score $\rho(n) \in [0,1]$ as:
-\[
-w(n) = w_{\min} + (w_{\max} - w_{\min}) \cdot \rho(n).
-\]
-In our experiments, we set $w_{\min} = 1.0$ and $w_{\max} = 3.0$. Fast-transfer chains (high $\rho$) receive higher weight, penalizing paths that traverse chains where arbitrage opportunities are likely to vanish before execution completes. When $w(n)=1$ for all nodes, Weighted A* reduces to standard A*.
+For $h_4$, we employ \textbf{Weighted A*}~\cite{pohl1970weighted} with $f(n) = g(n) + w(n) \cdot h(n)$, where $w(n) = w_{\min} + (w_{\max} - w_{\min}) \cdot \rho(n)$ and $\rho(n) \in [0,1]$ is a chain kickback risk score. When $w(n)=1$ for all nodes, this reduces to standard A*.
 
 \paragraph{Completeness.}
-The algorithm is not complete: market data does not guarantee the existence of a profitable path from every starting node $v \in V$. The search terminates either when a profitable path is found, when the search frontier is exhausted, or when depth/time limits are reached.
-
+The algorithm is not complete: market data does not guarantee a profitable path from every starting node. Search terminates when a profitable path is found, the frontier is exhausted, or depth/time limits are reached.
 
 \subsection{Demonstrative Example}
 
-Consider a simplified arbitrage graph with three nodes: $\text{binance:USDT}$, $\text{kucoin:USDT}$, and $\text{kucoin:TUSD}$. Suppose we have the following edges with effective rates:
+Consider a simplified arbitrage path with three nodes: $\text{kraken:USDT}$, $\text{kucoin:USDT}$, and $\text{kucoin:TUSD}$. Suppose the following edges with effective rates:
 
 \begin{itemize}
-\item $\text{binance:USDT} \to \text{kucoin:USDT}$: rate $r_1 = 0.9995$ (includes transfer fee)
-\item $\text{kucoin:USDT} \to \text{kucoin:TUSD}$: rate $r_2 = 1.0042$ (profitable trade)
-\item $\text{kucoin:TUSD} \to \text{binance:USDT}$: rate $r_3 = 0.9995$ (transfer back)
+\item $\text{kraken:USDT} \to \text{kucoin:USDT}$: rate $r_1 = 0.9995$ (cross-exchange transfer)
+\item $\text{kucoin:USDT} \to \text{kucoin:TUSD}$: rate $r_2 = 1.0042$ (intra-exchange trade)
 \end{itemize}
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=0.9\linewidth]{figures/arbitrage_path.png}
-    \caption{
-    Simplified three-node arbitrage cycle across Binance and KuCoin.
-    Edge labels denote effective multiplicative rates $r_i$ and corresponding
-    log-space weights $w_i = -\log r_i$. The total log-cost of the cycle is
-    negative, indicating a theoretical profitable arbitrage opportunity. It is important to note, our research is not constrained to profitable cycles, and is allows for any profitable path to represent a goal state.
-    }
-    \label{fig:arbitrage_example}
-\end{figure}
-
-
-The cycle $\text{binance:USDT} \to \text{kucoin:USDT} \to \text{kucoin:TUSD} \to \text{binance:USDT}$ has a multiplicative return of:
-\[
-\prod_{e\in P} r(e) = 0.9995 \times 1.0042 \times 0.9995 \approx 1.0032
-\]
-
-Starting with \$10,000, the final capital would be approximately \$10,032, yielding a profit of \$32. The edge weights in log space are:
-\begin{align}
-w_1 &= -\log(0.9995) \approx 0.0005 \\
-w_2 &= -\log(1.0042) \approx -0.0042 \\
-w_3 &= -\log(0.9995) \approx 0.0005
-\end{align}
-
-The total path cost is $0.0005 - 0.0042 + 0.0005 = -0.0032$, which is negative, indicating a profitable cycle (negative cost in log space corresponds to positive return).
+The path $\text{kraken:USDT} \to \text{kucoin:USDT} \to \text{kucoin:TUSD}$ has a multiplicative return of $0.9995 \times 1.0042 \approx 1.0037$. Starting with \$10{,}000, the final capital is approximately \$10{,}037, yielding a profit of \$37. The total log-space cost is $-\log(0.9995) + (-\log(1.0042)) \approx 0.0005 - 0.0042 = -0.0037$, which is negative, indicating a profitable path. This example illustrates both inter-exchange transfer and intra-exchange trade edges, and shows that profitable paths need not form closed cycles.
