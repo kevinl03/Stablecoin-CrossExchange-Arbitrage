@@ -1,0 +1,234 @@
+================================================================================
+  $100 PORTFOLIO TEST — Gas & Fee Sensitivity Analysis
+  Timestamp: 2026-02-27 23:53:38
+  Portfolio: $100.00
+================================================================================
+
+  WHY $100 MATTERS:
+    - Ethereum gas ($5/swap) = 5% of portfolio per swap
+    - A bridge flat fee of $5 = 5% loss instantly
+    - Only cheap chains (Solana, Polygon, Base, L2s) are viable
+    - CEX withdrawal fees can exceed the entire spread
+
+  ALGORITHMS COMPARED:
+    1. Dijkstra — greedy, expands lowest-cost first.
+       LIMITATION: cannot take a loss now for a bigger gain later
+       because it never revisits cheaper-looking states.
+    2. Bellman-Ford SSSP — relaxes ALL edges at each depth.
+       CAN take an intermediate loss if the next step profits more.
+       Guaranteed optimal within the depth limit.
+    3. Bellman-Ford cycle detection — finds risk-free loops.
+
+
+
+████████████████████████████████████████████████████████████████████████████████
+  PART 1: DEX ON-CHAIN ARBITRAGE ($100)
+████████████████████████████████████████████████████████████████████████████████
+
+[defi_graph] Fetching on-chain prices from DeFi-Llama …
+[defi_graph] Nodes:  47
+[defi_graph] Swap edges:   290
+[defi_graph] Bridge edges: 126
+[defi_graph] Total edges:  416
+
+────────────────────────────────────────────────────────────────────────
+  START: (polygon, USDC)  |  $100
+────────────────────────────────────────────────────────────────────────
+
+  [Dijkstra] Profit: $0.1447 (+0.1447%)
+  Path: polygon:USDC → polygon:WETH → arbitrum:WETH
+
+  [BF-SSSP] Profit: $0.1447  (+0.1447%)  Final: $100.1447  Time: 120s
+  Path: 3 nodes
+    1. SWAP   polygon     USDC  → WETH   rate=0.99680000  fee=0.300%  gas=$0.02  [LOSS]
+    2. BRIDGE  polygon    → arbitrum    [WETH ]  rate=1.00466160  $1,852.04→$1,867.77 (ratio=1.008494)  fee=0.080%+$0.30  time=120s  [gain]
+
+────────────────────────────────────────────────────────────────────────
+  START: (polygon, WETH)  |  $100
+────────────────────────────────────────────────────────────────────────
+
+  [Dijkstra] Profit: $0.4662 (+0.4662%)
+  Path: polygon:WETH → arbitrum:WETH
+
+  [BF-SSSP] Profit: $0.4662  (+0.4662%)  Final: $100.4662  Time: 120s
+  Path: 2 nodes
+    1. BRIDGE  polygon    → arbitrum    [WETH ]  rate=1.00466160  $1,852.04→$1,867.77 (ratio=1.008494)  fee=0.080%+$0.30  time=120s  [gain]
+
+────────────────────────────────────────────────────────────────────────
+  START: (arbitrum, WETH)  |  $100
+────────────────────────────────────────────────────────────────────────
+
+  [Dijkstra] No profitable path.
+
+  [BF-SSSP] No profitable path.
+
+────────────────────────────────────────────────────────────────────────
+  START: (base, WETH)  |  $100
+────────────────────────────────────────────────────────────────────────
+
+  [Dijkstra] No profitable path.
+
+  [BF-SSSP] No profitable path.
+
+────────────────────────────────────────────────────────────────────────
+  START: (optimism, WETH)  |  $100
+────────────────────────────────────────────────────────────────────────
+
+  [Dijkstra] Profit: $0.5430 (+0.5430%)
+  Path: optimism:WETH → arbitrum:WETH
+
+  [BF-SSSP] Profit: $0.5430  (+0.5430%)  Final: $100.5430  Time: 120s
+  Path: 2 nodes
+    1. BRIDGE  optimism   → arbitrum    [WETH ]  rate=1.00542993  $1,850.62→$1,867.77 (ratio=1.009265)  fee=0.080%+$0.30  time=120s  [gain]
+
+────────────────────────────────────────────────────────────────────────
+  START: (solana, SOL)  |  $100
+────────────────────────────────────────────────────────────────────────
+
+  [Dijkstra] No profitable path.
+
+  [BF-SSSP] No profitable path.
+
+────────────────────────────────────────────────────────────────────────
+  START: (solana, USDC)  |  $100
+────────────────────────────────────────────────────────────────────────
+
+  [Dijkstra] No profitable path.
+
+  [BF-SSSP] No profitable path.
+
+────────────────────────────────────────────────────────────────────────
+  START: (arbitrum, WBTC)  |  $100
+────────────────────────────────────────────────────────────────────────
+
+  [Dijkstra] No profitable path.
+
+  [BF-SSSP] No profitable path.
+
+────────────────────────────────────────────────────────────────────────
+  Bellman-Ford Cycle Detection ($100)
+────────────────────────────────────────────────────────────────────────
+  No cycles found at $100.
+
+
+
+████████████████████████████████████████████████████████████████████████████████
+  PART 2: CEX CRYPTO ARBITRAGE ($100)
+████████████████████████████████████████████████████████████████████████████████
+
+[crypto_graph] Fetching live market data …
+  Fetching tickers from binance …
+    → 68 relevant pairs found
+  Fetching tickers from kraken …
+    → 37 relevant pairs found
+  Fetching tickers from kucoin …
+    → 40 relevant pairs found
+  Fetching tickers from bybit …
+    → 35 relevant pairs found
+  Fetching tickers from okx …
+    → 33 relevant pairs found
+  Fetching tickers from gateio …
+    → 41 relevant pairs found
+  Fetching tickers from bitget …
+    → 38 relevant pairs found
+  Fetching tickers from mexc …
+    → 39 relevant pairs found
+  Fetching tickers from htx …
+    → 23 relevant pairs found
+  Fetching tickers from coinbase …
+    → 39 relevant pairs found
+  Fetching tickers from cryptocom …
+    → 23 relevant pairs found
+  Fetching tickers from phemex …
+    → 27 relevant pairs found
+[crypto_graph] Nodes: 197
+[crypto_graph] Trade edges: 784
+[crypto_graph] Transfer edges: 564
+[crypto_graph] Total edges: 1348
+
+────────────────────────────────────────────────────────────────────────
+  START: (binance, USDT)  |  $100
+────────────────────────────────────────────────────────────────────────
+
+  [Dijkstra] No profitable path.
+
+  [BF-SSSP] No profitable path.
+
+────────────────────────────────────────────────────────────────────────
+  START: (binance, BTC)  |  $100
+────────────────────────────────────────────────────────────────────────
+
+  [Dijkstra] No profitable path.
+
+  [BF-SSSP] No profitable path.
+
+────────────────────────────────────────────────────────────────────────
+  START: (okx, SOL)  |  $100
+────────────────────────────────────────────────────────────────────────
+
+  [Dijkstra] No profitable path.
+
+  [BF-SSSP] No profitable path.
+
+────────────────────────────────────────────────────────────────────────
+  START: (coinbase, USDC)  |  $100
+────────────────────────────────────────────────────────────────────────
+
+  [Dijkstra] No profitable path.
+
+  [BF-SSSP] No profitable path.
+
+────────────────────────────────────────────────────────────────────────
+  START: (mexc, XRP)  |  $100
+────────────────────────────────────────────────────────────────────────
+
+  [Dijkstra] No profitable path.
+
+  [BF-SSSP] No profitable path.
+
+────────────────────────────────────────────────────────────────────────
+  START: (kucoin, ETH)  |  $100
+────────────────────────────────────────────────────────────────────────
+
+  [Dijkstra] No profitable path.
+
+  [BF-SSSP] No profitable path.
+
+────────────────────────────────────────────────────────────────────────
+  Bellman-Ford Cycle Detection ($100)
+────────────────────────────────────────────────────────────────────────
+  No cycles found at $100.
+
+
+
+████████████████████████████████████████████████████████████████████████████████
+  ALGORITHM COMPARISON SUMMARY
+████████████████████████████████████████████████████████████████████████████████
+
+  ┌────────────────────┬───────────────┬────────────────────────────────────┐
+  │ Algorithm          │ Negative      │ Key Behaviour                      │
+  │                    │ Edges?        │                                    │
+  ├────────────────────┼───────────────┼────────────────────────────────────┤
+  │ Dijkstra           │ NO — greedy,  │ Always picks lowest-cost next      │
+  │ (current default)  │ may miss      │ step. CANNOT take a loss now for   │
+  │                    │ optimal paths │ a bigger gain later.               │
+  ├────────────────────┼───────────────┼────────────────────────────────────┤
+  │ BF-SSSP (NEW)      │ YES — handles │ Relaxes ALL edges at each depth.   │
+  │                    │ negative      │ WILL take intermediate loss if     │
+  │                    │ edges         │ the overall path profits more.     │
+  │                    │ correctly     │ Guaranteed optimal within depth.   │
+  ├────────────────────┼───────────────┼────────────────────────────────────┤
+  │ BF Cycle Detect    │ YES           │ Finds ALL risk-free arbitrage      │
+  │                    │               │ loops (negative-weight cycles).    │
+  │                    │               │ Does not need a start node.        │
+  ├────────────────────┼───────────────┼────────────────────────────────────┤
+  │ A* + Heuristics    │ Depends on h  │ Faster than Dijkstra if heuristic  │
+  │ (h1-h4, existing)  │               │ is good. Same negative-edge issue. │
+  └────────────────────┴───────────────┴────────────────────────────────────┘
+
+  RECOMMENDATION for volatile markets:
+    Use BF-SSSP as the primary algorithm. It finds paths Dijkstra misses
+    where you lose money on an intermediate swap/transfer but gain more
+    on the next step (e.g., pay gas to bridge ETH to a chain where it's
+    1.7% more expensive, even though the bridge itself costs 0.06%).
+
