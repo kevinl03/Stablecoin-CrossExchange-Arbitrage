@@ -1,0 +1,61 @@
+% ---------------- 5.2 Ablation Studies ----------------
+\subsection{Ablation Studies}
+
+We isolate heuristic contributions via three ablation baselines: (1)~\textbf{Cycle ablation} using Bellman--Ford negative-cycle detection; (2)~\textbf{Depth ablation} with \texttt{simple\_1hop} (single action) and \texttt{simple\_2hop} (minimal two-edge path); (3)~\textbf{Heuristic ablation} setting $h(n)=0$ (Dijkstra). Bellman--Ford detects whether negative-weight cycles exist in the log-transformed graph but does not account for slippage, latency, or reliability, and fails to produce executable paths under realistic frictions. The shallow baselines fail across all start nodes, confirming that profitable stablecoin arbitrage requires $\geq$3 hops. Results are in Table~\ref{tab:baseline-performance}.
+
+\subsubsection{Cached-Graph Heuristic Comparison}
+\label{sec:deterministic-compare}
+
+We compare all heuristics on a cached graph (41~nodes, 864~edges, 30~start nodes, three cash levels), isolating search from API I/O. Table~\ref{tab:heuristic-performance} reports aggregate performance.
+
+\begin{table*}[t]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\caption{Cached-graph heuristic comparison (41~nodes, 864~edges, 30~start nodes per cash level). Expansion reduction is relative to Dijkstra.}
+\label{tab:heuristic-performance}
+\begin{tabular}{llcrrrc}
+\toprule
+\textbf{Heuristic} 
+& \textbf{Cash} 
+& \textbf{Success} 
+& \textbf{Avg Profit (\$)} 
+& \textbf{Avg Expand} 
+& \textbf{Avg Time (s)} 
+& \textbf{Exp.\ $\Delta$ vs Dijkstra} \\
+\midrule
+
+Dijkstra ($h{=}0$)
+& \$1k      & 56.7\% &   1.00 &  359 & 0.010 & --- \\
+& \$10k     & 56.7\% &  10.01 &  359 & 0.010 & --- \\
+& \$100k    & 56.7\% & 100.07 &  359 & 0.010 & --- \\
+\midrule
+
+$h_1$ (liquidity)
+& \$1k      & 56.7\% &   0.67 &  319 & 0.172 & $+$11.2\% \\
+& \$10k     & 56.7\% &   6.72 &  568 & 0.016 & $-$58.0\% \\
+& \$100k    & 56.7\% &  63.11 &  715 & 0.021 & $-$98.9\% \\
+\midrule
+
+$h_2$ (slippage)
+& \$1k      & 56.7\% &   0.99 &  256 & 0.221 & $+$28.8\% \\
+& \$10k     & 56.7\% &   9.91 &  256 & 0.011 & $+$28.8\% \\
+& \$100k    & 56.7\% & 100.07 &  252 & 0.012 & $+$29.9\% \\
+\midrule
+
+$h_4$ (Weighted A*)
+& \$1k      & 56.7\% &   0.71 &  673 & 0.020 & $-$87.4\% \\
+& \$10k     & 56.7\% &   7.06 &  673 & 0.022 & $-$87.4\% \\
+& \$100k    & 56.7\% &  70.58 &  673 & 0.022 & $-$87.4\% \\
+\midrule
+
+3-hop enum.
+& \$1k      & 30.0\% &   0.54 &  346 & 0.000 & $+$3.6\% \\
+& \$10k     & 30.0\% &   5.40 &  346 & 0.000 & $+$3.6\% \\
+& \$100k    & 30.0\% &  54.04 &  346 & 0.000 & $+$3.6\% \\
+
+\bottomrule
+\end{tabular}
+\end{table*}
+
+$h_2$ achieves a consistent \textbf{29\% reduction in node expansions} relative to Dijkstra while matching profit within 1\% at \$100k. $h_4$ expands 87\% more nodes but at comparable wall-clock time (0.020\,s vs.\ 0.010\,s) due to zero API overhead, producing longer risk-aware paths. $h_1$ behaviour is cash-dependent: 11\% fewer expansions at \$1k but 99\% more at \$100k.

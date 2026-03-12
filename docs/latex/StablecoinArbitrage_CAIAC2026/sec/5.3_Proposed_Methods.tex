@@ -1,0 +1,61 @@
+\begin{table*}[t]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.15}
+\caption{Representative execution-ready profitable paths from cached-graph experiments (41~nodes, 864~edges, \$1{,}000 order size). Paths illustrate the different trade-offs each method makes: Dijkstra and $h_2$ find short, high-profit paths; $h_4$ routes through more reliable exchanges at the cost of profit.}
+\label{tab:heuristic-profitable-paths}
+\begin{tabular}{lclp{0.38\linewidth}rcc}
+\toprule
+\textbf{Method} 
+& \textbf{Start} 
+& \textbf{Hops}
+& \textbf{Path Description} 
+& \textbf{Expand}
+& \textbf{Net (\$)} 
+& \textbf{Time (s)} \\
+\midrule
+
+Dijkstra
+& \texttt{phemex:USDT}
+& 3
+& Transfer phemex$\to$kucoin (USDT on SOL); Trade USDT$\to$TUSD (0.10\% taker).
+& 410
+& 1.14
+& 0.020 \\
+
+\midrule
+
+$h_2$
+& \texttt{phemex:USDT}
+& 3
+& Transfer phemex$\to$kucoin (USDT on SOL); Trade USDT$\to$TUSD (0.10\% taker).
+& 209
+& 1.14
+& 4.752 \\
+
+\midrule
+
+$h_1$
+& \texttt{phemex:USDT}
+& 3
+& Transfer phemex$\to$kucoin (USDT on SOL); Trade USDT$\to$TUSD (0.10\% taker).
+& 392
+& 1.14
+& 4.227 \\
+
+\midrule
+
+$h_4$
+& \texttt{phemex:USDT}
+& 5
+& Longer path through higher-reliability exchanges (Binance, KuCoin); avoids low-reliability intermediaries.
+& 606
+& 0.98
+& 0.017 \\
+
+\bottomrule
+\end{tabular}
+\end{table*}
+
+

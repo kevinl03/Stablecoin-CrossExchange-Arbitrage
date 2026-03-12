@@ -1,0 +1,51 @@
+Our experimental framework constructs a real-time, execution-aware graph representation of stablecoin arbitrage opportunities (see Figure~\ref{fig:cover_graph}).
+
+\subsection{Data Sources and Graph Construction}
+
+We gather live market data from twelve major exchanges (Binance, Kraken, KuCoin, Bybit, OKX, Gate.io, Bitget, MEXC, HTX, Coinbase, Crypto.com, Phemex) via CCXT~\cite{ccxt2024}. Prices are normalized to USD using conservative bid/ask estimates, and a $\pm 2\%$ price tolerance filter excludes depegged assets. The fee model captures taker fees, exchange-specific withdrawal fees per blockchain, and estimated gas fees. Transfer time is modelled as blockchain confirmation time plus 45\,s user execution overhead. All hyperparameters are listed in Appendix~\ref{sec:hyperparams}.
+
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\caption{Baseline algorithm performance on cached graph (41~nodes, 864~edges, 30~start nodes). 
+All profits are net after trading, withdrawal, and gas fees.}
+\label{tab:baseline-performance}
+\begin{tabular}{lccccccc}
+\toprule
+\textbf{Baseline} 
+& \textbf{Cash} 
+& \textbf{Succ.} 
+& \textbf{Profit (\$)} 
+& \textbf{Profit (\%)} 
+& \textbf{Expand}
+& \textbf{Time (s)} 
+& \textbf{Hops} \\
+\midrule
+
+Dijkstra ($h{=}0$)
+& \$1k      & 56.7\% &   1.00 & 0.100  & 359 & 0.010 & 3 \\
+& \$10k     & 56.7\% &  10.01 & 0.100  & 359 & 0.010 & 3 \\
+& \$100k    & 56.7\% & 100.07 & 0.100  & 359 & 0.010 & 3 \\
+\midrule
+
+3-hop enum.
+& \$1k      & 30.0\% &   0.54 & 0.054  & 346 & $<$0.001 & 3 \\
+& \$10k     & 30.0\% &   5.40 & 0.054  & 346 & $<$0.001 & 3 \\
+& \$100k    & 30.0\% &  54.04 & 0.054  & 346 & $<$0.001 & 3 \\
+\midrule
+
+\texttt{simple\_1hop}
+& All       & 0/30  & -- & -- & -- & $<$0.001 & 1 \\
+\midrule
+
+\texttt{simple\_2hop}
+& All       & 0/30  & -- & -- & -- & $<$0.001 & 2 \\
+\midrule
+
+Bellman--Ford
+& All       & 0/30  & -- & -- & -- & $<$0.001 & -- \\
+
+\bottomrule
+\end{tabular}
+\end{table}

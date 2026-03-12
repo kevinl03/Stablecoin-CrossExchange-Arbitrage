@@ -1,0 +1,48 @@
+\subsection{Graph Representation}
+
+We formulate the stablecoin cross-exchange arbitrage problem as a directed weighted graph
+$G=(V,E)$. Each node $v\in V$ represents a unique stablecoin--exchange pair, written as
+$v=(\text{exchange},\text{coin})$. Each directed edge $e\in E$ corresponds either to a trade executed on an
+exchange or a transfer of funds between exchanges.
+
+Every edge has an associated effective exchange rate that incorporates all relevant costs (trading fees, withdrawal fees, spreads, and slippage). We assign each edge a weight $w(e) = -\log(\textit{effective\_rate}(e))$, converting multiplicative returns into additive costs and enabling shortest-path algorithms to evaluate profitability.
+
+\subsection{Path Profitability}
+
+Given a path $P=(v_0,v_1,\dots,v_k)$ with initial capital $C_0$, the final capital is
+$C_k = C_0 \cdot \prod_{e\in P} r(e)$
+where $r(e)$ denotes the effective rate on edge $e$. A path is profitable when $C_k - C_0 \ge \textit{min\_profit}$. In additive log space this becomes:
+\[
+\sum_{e\in P} -\log\!\big(r(e)\big)
+\;\le\;
+-\log\!\left(1+\frac{\textit{min\_profit}}{C_0}\right).
+\]
+
+The search problem is to find a path from start node $v_0$ to some node $v_k$ such that $\prod_{e\in P} r(e) > 1$.
+
+\paragraph{Goal Condition.}
+We define the goal set $\mathcal{G} = \bigl\{\, v_k \in V \;\big|\; C_k > C_0 \,\bigr\}$.
+Critically, we do \emph{not} require $v_k = v_0$. This is an \textbf{open-path} formulation: the trader may end on any exchange--coin pair where the USD value exceeds the initial capital. This is justified because all assets are stablecoins pegged to USD (we enforce a $\pm 2\%$ price tolerance when building the graph), so profit at any terminal node is realized value. Standard arbitrage literature typically requires closed cycles, but this restriction is unnecessarily limiting in the stablecoin domain: a profitable open path (e.g., starting with USDT on Kraken and ending with TUSD on KuCoin) yields the same economic outcome.
+
+\subsection{A* Search Formulation}
+
+We apply A* search with cost-to-reach $g(n) = \sum_{e\in \text{path}} -\log(r(e))$ and evaluation function $f(n) = g(n) + h(n)$, where $h(n)$ estimates remaining execution risk. The algorithm terminates when $C_n > C_0$.
+
+\paragraph{Heuristic Design Philosophy.}
+In our domain, the true remaining cost $h^*(n)$ is not well-defined because (i) the goal set depends on accumulated capital along the path, and (ii) market conditions change over time. We therefore design heuristics $h_1$--$h_4$ as \textbf{guidance penalties} rather than admissible lower bounds. Each $h_i(n) \geq 0$ penalizes execution-risk features (illiquidity, slippage, chain congestion, exchange unreliability), steering A* toward paths more likely to remain profitable under real-world conditions.
+
+For $h_4$, we employ \textbf{Weighted A*}~\cite{pohl1970weighted} with $f(n) = g(n) + w(n) \cdot h(n)$, where $w(n) = w_{\min} + (w_{\max} - w_{\min}) \cdot \rho(n)$ and $\rho(n) \in [0,1]$ is a chain kickback risk score. When $w(n)=1$ for all nodes, this reduces to standard A*.
+
+\paragraph{Completeness.}
+The algorithm is not complete: market data does not guarantee a profitable path from every starting node. Search terminates when a profitable path is found, the frontier is exhausted, or depth/time limits are reached.
+
+\subsection{Demonstrative Example}
+
+Consider a simplified arbitrage path with three nodes: $\text{kraken:USDT}$, $\text{kucoin:USDT}$, and $\text{kucoin:TUSD}$. Suppose the following edges with effective rates:
+
+\begin{itemize}
+\item $\text{kraken:USDT} \to \text{kucoin:USDT}$: rate $r_1 = 0.9995$ (cross-exchange transfer)
+\item $\text{kucoin:USDT} \to \text{kucoin:TUSD}$: rate $r_2 = 1.0042$ (intra-exchange trade)
+\end{itemize}
+
+The path $\text{kraken:USDT} \to \text{kucoin:USDT} \to \text{kucoin:TUSD}$ has a multiplicative return of $0.9995 \times 1.0042 \approx 1.0037$. Starting with \$10{,}000, the final capital is approximately \$10{,}037, yielding a profit of \$37. The total log-space cost is $-\log(0.9995) + (-\log(1.0042)) \approx 0.0005 - 0.0042 = -0.0037$, which is negative, indicating a profitable path. This example illustrates both inter-exchange transfer and intra-exchange trade edges, and shows that profitable paths need not form closed cycles.

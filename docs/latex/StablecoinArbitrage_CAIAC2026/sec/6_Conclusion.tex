@@ -1,0 +1,16 @@
+We presented an execution-aware A* search framework for cross-exchange stablecoin arbitrage that integrates real-world trading costs (fees, slippage, withdrawal costs, gas, transfer latency, and exchange reliability) directly into graph-based pathfinding. Three guidance heuristics ($h_1$, $h_2$, $h_4$) and a multi-start strategy ($h_3$) were evaluated across \textbf{7{,}200 overnight instances}, sensitivity sweeps, and graph-scaling trials on 12 exchanges (41~nodes, 864~edges).
+
+\paragraph{Core contribution.}
+The execution-aware graph formulation is the primary contribution: by encoding all frictions into edge weights via $w(e)=-\log(r(e))$, even Dijkstra ($h{=}0$) achieves 100\% overnight success with \$42.87 mean profit, establishing that the modelling, not any single heuristic, drives value.
+
+\paragraph{Heuristic roles.}
+$h_2$ (slippage) is most effective for search efficiency (29--36\% expansion reduction, 95.7\% cross-exchange paths) but suffers P99 = 6.8\,s latency from live API calls. $h_4$ (Weighted A*) is best for real-time deployment (P99 = 33\,ms, zero API overhead). $h_1$ (liquidity) is useful at small order sizes but counterproductive at large ones.
+
+\paragraph{Empirical findings.}
+Profitable paths are short (2--3 hops) with $\sim$0.09\% net returns. Opportunities persist across all 96 overnight snapshots. Sensitivity analysis confirms robustness to hyperparameters and linear profit scaling with order size.
+
+\subsection{Future Work and Limitations}
+
+Key directions include: (1)~asynchronous order-book pre-fetching to combine $h_2$'s pruning quality with $h_4$'s latency; (2)~extension to DEXs/AMMs with deterministic bonding-curve slippage; (3)~historical tick-data replay for rigorous staleness analysis; (4)~adaptive heuristic selection based on data freshness.
+
+The framework has not executed live trades; planned paths may change before execution. Approximately 20\% of discovered paths are intra-exchange trades discoverable by trivial price comparison. Exchange reliability scores are static priors that may not capture sudden failures.

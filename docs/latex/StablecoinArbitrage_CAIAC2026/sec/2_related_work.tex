@@ -1,0 +1,13 @@
+Cryptocurrency arbitrage has been studied from multiple perspectives. Most prior work focuses on identifying arbitrage opportunities, while comparatively less attention has been devoted to modeling execution feasibility under real-world constraints.
+
+\paragraph{Graph-theoretic arbitrage detection.}
+The dominant formulation models financial markets as directed weighted graphs where the log transform $w(e)=-\log(r(e))$ converts multiplicative rates into additive costs, so arbitrage opportunities correspond to negative-weight cycles detectable by Bellman--Ford~\cite{bellman1958routing,cormen2009introduction}. Oant\u{a} and Coroiu~\cite{oanta2023crypto} adopt this paradigm in \emph{Crypto Advisor}, aggregating real-time exchange data to detect arbitrage cycles. Similar graph-based formulations appear in DeFi systems~\cite{defiposer2021}, improved negative-cycle algorithms~\cite{mmbf2024,rich2025}, and high-frequency frameworks~\cite{fang2022cryptocurrency}. Across these works, the core objective is opportunity detection rather than execution-aware feasibility.
+
+\paragraph{Execution feasibility and market frictions.}
+Single-exchange optimal execution has been studied using reinforcement learning and stochastic control~\cite{kearns2006reinforcement,optimalexecution2024}. Cross-exchange arbitrage introduces additional constraints: blockchain transfer latency, withdrawal fees, liquidity fragmentation, and exchange reliability. Stablecoin markets are particularly sensitive to these frictions due to narrow spreads. Obadia et~al.~\cite{obadia2021flashbots} show that on-chain arbitrage profits are highly sensitive to transaction ordering and confirmation latency; in the CEX-to-CEX setting, withdrawal processing and blockchain finality delays add further uncertainty.
+
+\paragraph{Risk-aware pathfinding and slippage.}
+Nikolova and Karger~\cite{nikolova2008stochastic} study risk-averse pathfinding under stochastic edge weights, and Lim et~al.~\cite{lim2022cvar} propose CVaR pathfinding to minimize worst-case tail cost. Our $h_4$ heuristic addresses a similar concern by penalizing unreliable exchanges and congested chains. For slippage, execution cost increases with order size in both AMMs and CEX order books. Our $h_2$ heuristic estimates slippage via live VWAP computation, avoiding parametric assumptions; more advanced models such as Almgren and Chriss~\cite{almgren2001optimal} are left for future work.
+
+\paragraph{Positioning.}
+In contrast to prior work, our approach integrates feasibility modeling directly into A* search with domain-specific guidance heuristics, bridging opportunity detection and executable route construction for the low-margin stablecoin context.

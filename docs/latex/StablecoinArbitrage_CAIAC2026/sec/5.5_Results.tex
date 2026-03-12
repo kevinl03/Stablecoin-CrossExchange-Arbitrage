@@ -1,0 +1,130 @@
+\subsection{Results}
+
+\subsubsection{Deterministic Heuristic Comparison}
+
+On the cached graph (41~nodes, 864~edges, 30~start nodes, three cash levels), all A*-based methods achieve identical 56.7\% success rates, confirming that heuristic choice affects \emph{which} path is found, not \emph{whether} one exists (Table~\ref{tab:heuristic-performance}). The 3-hop baseline succeeds for only 30\% of start nodes. Start-node sensitivity persists: $\sim$43\% of nodes yield no profitable path regardless of method.
+
+\subsubsection{Comparison Against Baselines}
+
+The 3-hop enumeration baseline finds the same optimal paths as A* when 3-hop paths exist, confirming no path-quality sacrifice. Its complexity $O(|V| \cdot d^3)$ becomes prohibitive for larger graphs (Section~\ref{sec:graph_scaling}). Simple 1-hop and 2-hop baselines and Bellman--Ford all fail to produce profitable paths, validating that our execution-aware graph eliminates theoretical-only opportunities.
+
+\subsubsection{Graph Scaling}
+\label{sec:graph_scaling}
+
+We scale from 4 to 12 exchanges (19--41~nodes, 161--864~edges, 10~trials each). Table~\ref{tab:graph_scaling} shows that Dijkstra's expansions remain flat (341--404) while $h_1$ and $h_4$ expand 19--130\% more nodes due to penalty-driven exploration. The 3-hop baseline exhibits high variance (67--662 evaluations), contrasting with monotonic A* scaling.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Mean node expansions by graph size and heuristic (10 trials each).}
+\label{tab:graph_scaling}
+\begin{tabular}{rrrcccc}
+\toprule
+\textbf{Exch.} & \textbf{$|V|$} & \textbf{$|E|$} & \textbf{Dijkstra} & $\mathbf{h_1}$ & $\mathbf{h_4}$ & \textbf{3-hop} \\
+\midrule
+ 4 &  19 &  161 & 341 & 407 & 600 & 365 \\
+ 6 &  28 &  368 & 378 & 758 & 1100 & 662 \\
+ 8 &  35 &  619 & 387 & 479 & 618 & 378 \\
+10 &  39 &  760 & 404 & 577 & 706 & 490 \\
+12 &  41 &  864 & 395 & 768 & 910 &  67 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/fig08_graph_scaling_expansions.png}
+    \caption{Mean node expansions vs.\ number of exchanges. Heuristic-guided methods expand more nodes than Dijkstra due to penalty-driven exploration.}
+    \label{fig:graph_scaling_exp}
+\end{figure}
+
+\subsubsection{Quote Staleness and Path Survival}
+\label{sec:quote_staleness}
+
+We re-evaluate discovered paths against fresh market data after delays of 5--300\,s across 270 measurements. \textbf{99.6\%} of paths remain profitable up to 120\,s; only at 300\,s does a single path lose profitability (98\% survival). This demonstrates strong \emph{structural} persistence of stablecoin arbitrage paths, driven by the slowly-changing fee landscape. We note that CCXT-level ticker caching may mask true price-change risk; historical tick-data replay would strengthen this finding (see Table~\ref{tab:staleness} and Figure~\ref{fig:staleness}).
+
+\begin{table}[t]
+\centering
+\small
+\caption{Quote staleness: path survival and profit change. Negative decay indicates profits increased.}
+\label{tab:staleness}
+\begin{tabular}{rcrc}
+\toprule
+\textbf{Delay (s)} & \textbf{Paths} & \textbf{Profitable} & \textbf{Mean Decay (\%)} \\
+\midrule
+   5 & 45 & 100\% & $-64.6$ \\
+  10 & 45 & 100\% & $-67.0$ \\
+  30 & 45 & 100\% & $-71.6$ \\
+  60 & 45 & 100\% & $-72.7$ \\
+ 120 & 45 & 100\% & $-72.4$ \\
+ 300 & 45 &  98\% & $-55.0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/fig09_quote_staleness.png}
+    \caption{Quote staleness: profit change and survival rate vs.\ re-evaluation delay (5--300\,s).}
+    \label{fig:staleness}
+\end{figure}
+
+\subsubsection{Temporal Robustness: 8-Hour Overnight Test}
+\label{sec:overnight}
+
+We run all five methods from 5~start nodes at three cash levels over 96~snapshots (8~hours, 5-min intervals), yielding \textbf{7{,}200 search instances}. All A*-based methods achieve \textbf{100\% success}; 3-hop enumeration succeeds in only 39.8\% of runs. Table~\ref{tab:overnight_pathtype} shows that $h_2$ produces the highest cross-exchange path ratio (95.7\%), while $h_4$ and $h_1$ more frequently settle on intra-exchange trades.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Overnight path-type breakdown (1{,}440~runs each).}
+\label{tab:overnight_pathtype}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Method} & \textbf{Cross-Exch.} & \textbf{Intra-Exch.} & \textbf{Cross \%} \\
+\midrule
+$h_2$ (slippage) &  1{,}378 &   62 & 95.7\% \\
+Dijkstra         &  1{,}254 &  186 & 87.1\% \\
+$h_1$ (liquidity)&    966 &  474 & 67.1\% \\
+$h_4$ (Weighted) &    849 &  591 & 58.9\% \\
+3-hop enum.      &    573 &    0 & 100\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Restricting to cross-exchange paths, Dijkstra achieves the highest mean profit (\$42.42), followed by $h_2$ (\$39.15), $h_1$ (\$34.97), $h_4$ (\$22.16), and 3-hop (\$20.76). The key differentiator is \emph{latency}: $h_4$ achieves P99 = 33\,ms (comparable to Dijkstra's 17\,ms) via pre-computed scores, while $h_1$ and $h_2$ suffer P99 latencies of 6.8--6.9\,s from live API calls, making $h_4$ the only viable heuristic for real-time deployment. $h_2$ achieves the fewest mean expansions (269 vs.\ Dijkstra's 422). Arbitrage opportunities persist across all 96~snapshots, with profits clustering around 2--3 structural optima per start node (Figure~\ref{fig:overnight_comparison}).
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figures/fig11_overnight_heuristic_comparison.png}
+    \caption{Overnight heuristic comparison: mean profit, success rate, and node expansions across 1{,}440 runs per method.}
+    \label{fig:overnight_comparison}
+\end{figure}
+
+\subsubsection{Sensitivity Analysis}
+\label{sec:sensitivity}
+
+We conduct parameter sweeps on the 12-exchange graph.
+
+\paragraph{$h_1$ penalty weight.}
+Sweeping $\lambda_{\text{liq}} \in \{0.1, 0.5, 1.0, 2.0, 5.0\}$ (25~trials each), profit and success rate are invariant (80\%, \$27.77). Expansions vary by only 5.6\%, indicating the penalty primarily reorders the open list.
+
+\paragraph{$h_2$ slippage parameters.}
+A joint sweep of $(\lambda_{\text{slip}}, \theta)$ across 100~configurations shows a broad plateau of high performance at moderate values ($\lambda_{\text{slip}} \in [0.3, 1.0]$, $\theta \in [5, 20]$\,bps), confirming $h_2$ is not sensitive to precise tuning (Figure~\ref{fig:sens_h2}).
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/fig13_sensitivity_h2_heatmap.png}
+    \caption{$h_2$ sensitivity: success rate across $(\lambda_{\text{slip}}, \theta)$ grid. A broad plateau of high success exists around moderate parameter values.}
+    \label{fig:sens_h2}
+\end{figure}
+
+\paragraph{Order size and path depth.}
+Profit scales linearly from \$0.09 at \$100 to \$86.18 at \$100k, with constant 80\% success rate (Figure~\ref{fig:sens_order}). Varying depth from 3 to 6 hops yields identical optimal paths, confirming profitable paths are inherently short (3~hops).
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/fig14_sensitivity_order_size.png}
+    \caption{Mean profit vs.\ order size (\$100--\$100k). Profit scales linearly; success rate is constant at 80\%.}
+    \label{fig:sens_order}
+\end{figure}

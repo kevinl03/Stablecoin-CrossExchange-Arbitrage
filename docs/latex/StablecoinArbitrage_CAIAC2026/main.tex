@@ -1,0 +1,120 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%    Canadian AI Latex Template    %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[10pt]{cai26}
+
+\begin{document}
+% Editorial staff will replace the following values:
+% 1. Conference Year
+% 2. Issue number
+% 3. Article DOI
+\def\conferenceyear{2026}
+\def\paperID{*****} % Paper ID will be assigned during submission
+\volumeheader{39}{0}%{00.000}
+\begin{center}
+
+\title{Execution-Aware A* Search for Cross-Exchange Stablecoin Arbitrage}
+\maketitle
+
+\thispagestyle{empty}
+\pagenumbering{gobble}
+
+% Add Authors and Affiliations
+% For double blind review, authors are anonymized
+\begin{tabular}{cc}
+Anonymous Author(s)\\
+Paper ID \paperID
+\end{tabular}
+  
+% Emails omitted for double-blind review
+\emails{
+  (emails omitted for review)
+}
+\vspace*{0.1in}
+\end{center}
+
+
+
+% ---------------- Abstract ----------------
+\input{sec/0_abstract}
+
+% add your keywords
+\begin{keywords}{Keywords:}
+stablecoin arbitrage, A* search, cross-exchange trading, execution-aware pathfinding, cryptocurrency, graph algorithms
+\end{keywords}
+\copyrightnotice
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/CoverPageGraphPaper.png}
+    \caption{
+    Overview of the cross-exchange arbitrage graph used in our experiments.
+    Nodes represent (exchange, asset) pairs. Intra-exchange edges denote trading pairs,
+    while inter-exchange edges represent asset transfers.
+    }
+    \label{fig:cover_graph}
+\end{figure}
+
+% ---------------- 1. Introduction ----------------
+\section{Introduction}
+\input{sec/1_intro}
+
+
+% ---------------- 2. Related Work ----------------
+\section{Related Work}
+\input{sec/2_related_work}
+
+
+% ---------------- 3. Problem Formulation ----------------
+\section{Problem Formulation}
+\input{sec/3_problem_formulation}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.65\textwidth]{figures/SuccesfulPathProfit}
+    \caption{
+    A successful arbitrage path identified by our search algorithm.
+    Each node represents an (exchange, asset) pair, with colours indicating the exchange.
+    Bold red edges trace the profitable route, with labels showing exchange rates and transfer fees.
+    }
+    \label{fig:successful_path}
+\end{figure}
+
+
+
+
+% ---------------- 4. Novel Heuristics ----------------
+\section{Novel Heuristics for Arbitrage Search}
+\input{sec/4_Novel_Heuristics}
+
+% ---------------- 5. Experiments ----------------
+\section{Experiments and Evaluation}
+\input{sec/5_Expiremental_Framework}
+\input{sec/5.2_baseline}
+%\input{sec/5.3_Proposed_Methods} % Removed: paths verifiable via GitHub results folders
+\input{sec/5.4_Evaluation_Methodoloy}
+\input{sec/5.5_Results}
+\input{sec/5.6_Ethics}
+
+% ---------------- 6. Conclusions ----------------
+\section{Conclusions}
+\input{sec/6_Conclusion}
+
+% ---------------- Acknowledgments ----------------
+\section*{Acknowledgments}
+% Acknowledgments section left blank for double-blind review.
+% For camera-ready version, add: We thank Hang Ma for helpful feedback on an earlier draft of this paper.
+
+% ---------------- Bibliography ----------------
+% All references should be stored in the file "references.bib".
+% That call to use that file is in "cai26.cls". 
+% Please do not modify anything below this line.
+\printbibliography[heading=subbibintoc]
+
+% ---------------- Appendix ----------------
+\appendix
+\section{Appendix}
+\input{sec/Appendix}
+
+\end{document}
+

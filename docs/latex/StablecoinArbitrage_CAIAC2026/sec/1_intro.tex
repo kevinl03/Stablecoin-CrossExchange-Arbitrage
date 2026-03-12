@@ -1,0 +1,20 @@
+\subsection{Problem Statement and Research Questions}
+
+Cross-exchange stablecoin arbitrage exploits price differences for the same asset across centralized exchanges. Profitable opportunities depend not only on visible price spreads but also on fees, slippage, transfer delays, liquidity constraints, exchange reliability, and short arbitrage windows. We formulate this as a graph-planning problem and develop an automated route planner that computes complete, executable trade-and-transfer paths rather than simple pairwise price gaps. By incorporating trading fees, withdrawal costs, transfer latencies, liquidity depth, and live market data via CCXT~\cite{ccxt2024}, the system generates execution-ready arbitrage paths. Unlike prior detection tools~\cite{oanta2023crypto}, our approach integrates real-world constraints and applies A* search with domain-specific heuristics.
+
+Our methodology addresses four research questions: (1)~Do certain heuristics consistently outperform others on specific trading-instance classes? (2)~How does each heuristic influence A*'s node-expansion behaviour? (3)~How does performance change as structural difficulty increases (liquidity sparsity, high withdrawal fees, fragmented listings)? (4)~When heuristics return suboptimal routes, how close are they to the best-known solution?
+
+\subsection{Why Cross-Exchange Stablecoin Arbitrage Matters}
+
+Stablecoins serve as the primary liquidity bridges in cryptocurrency markets. Because centralized exchanges operate independently, price discrepancies for the same USD-pegged asset frequently arise due to fragmented liquidity, withdrawal delays, blockchain congestion, and operational frictions. Unlike volatile cryptocurrencies, stablecoins operate within a bounded price band anchored to fiat currency, reframing arbitrage from speculative price prediction into a constrained execution-optimization problem where path-dependent execution costs dominate expected return.
+
+During periods of macroeconomic instability, stablecoin flows intensify as capital migrates toward dollar-pegged assets, amplifying cross-exchange imbalances and increasing both spread frequency and execution complexity.
+
+\subsection{Key Challenges}
+
+Cross-exchange arbitrage is constrained by several real-world frictions.
+\textbf{Liquidity:} order-book depth determines deployable capital without market impact.
+\textbf{Slippage:} large orders incur nonlinear price impact, so theoretical profit often differs from realized profit.
+\textbf{Latency:} blockchain confirmations may exceed the arbitrage window.
+\textbf{Reliability:} exchanges may experience withdrawal suspensions or API instability.
+These constraints interact: faster chains may reduce latency but carry higher reliability risk. Our heuristic-guided A* framework models these trade-offs to prioritize routes that are not only theoretically profitable but realistically executable.
