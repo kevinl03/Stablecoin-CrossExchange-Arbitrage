@@ -1,0 +1,9 @@
+We formulate cross-exchange stablecoin arbitrage as a graph-planning problem and develop a route planner that computes executable trade-and-transfer paths using A* search with domain-specific heuristics and live market data via CCXT\textsuperscript{\cite{ccxt2024}}. Our methodology addresses four research questions: (1)~Do certain heuristics consistently outperform others on specific trading-instance classes? (2)~How does each heuristic influence A*'s node-expansion behaviour? (3)~How does performance change as structural difficulty increases? (4)~When heuristics return suboptimal routes, how close are they to the best-known solution?
+
+Stablecoins, with a combined market capitalization exceeding \$300 billion\textsuperscript{\cite{coinmarketcap2025stablecoin}}, serve as the primary liquidity bridges in cryptocurrency markets. Because centralized exchanges operate independently, price discrepancies frequently arise from fragmented liquidity, withdrawal delays, and blockchain congestion. Unlike volatile cryptocurrencies, stablecoins operate within a bounded price band anchored to fiat currency, reframing arbitrage into a constrained execution-optimization problem. The growing institutional relevance of digital assets, underscored by the U.S.\ Strategic Bitcoin Reserve in 2025\textsuperscript{\cite{whitehouse2025reserve}}, further motivates research into this infrastructure.
+
+The four key challenges addressed are: \textbf{Liquidity -} order-book depth limits deployable capital, 
+\textbf{Slippage -} large orders incur nonlinear price impact, 
+\textbf{Latency -} blockchain confirmations may exceed the arbitrage window, and 
+\textbf{Reliability -} exchanges may suspend withdrawals or experience API instability.
+These constraints interact, and our heuristic-guided A* framework models these trade-offs to prioritize realistically executable routes.

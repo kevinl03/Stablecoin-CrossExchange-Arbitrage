@@ -1,0 +1,65 @@
+\subsection{Setup}
+
+We gather live market data from twelve major exchanges via CCXT\textsuperscript{\cite{ccxt2024}}, constructing graphs of up to 41~nodes and 864~edges. We evaluate via cached-graph heuristic comparison, graph scaling (4--12 exchanges), an 8-hour overnight campaign, and quote staleness.
+
+\subsection{Results}
+
+Tables~\ref{tab:heuristic-compact} and~\ref{tab:graph_scaling} summarize heuristic performance. On the cached graph (30~start nodes), all A*-based methods achieve identical 56.7\% success; Bellman--Ford, 1-hop, and 2-hop baselines fail entirely. $h_2$ reduces expansions by \textbf{29\%} relative to Dijkstra while matching its profit within 1\%, suggesting slippage-aware guidance follows the same optimal routes with less wasted exploration. $h_1$ and $h_4$ expand 58--87\% \emph{more} nodes and find 30--33\% less profit, indicating their risk penalties overcompensate and divert search from structurally optimal paths.
+
+\begin{table*}[t]
+\centering
+\small
+\begin{minipage}[t]{0.48\textwidth}
+\centering
+\caption{Heuristic comparison at \$10k (30~starts).}
+\label{tab:heuristic-compact}
+\begin{tabular}{lcrrr}
+\toprule
+\textbf{Heuristic} & \textbf{Succ.} & \textbf{Profit} & \textbf{Exp.} & \textbf{$\Delta$} \\
+\midrule
+Dijkstra          & 56.7\% & \$10.01 & 359 & ---        \\
+$h_1$ (liquidity) & 56.7\% & \$6.72  & 568 & $-$58\%    \\
+$h_2$ (slippage)  & 56.7\% & \$9.91  & 256 & $+$29\%    \\
+$h_4$ (Wt.\ A*)   & 56.7\% & \$7.06  & 673 & $-$87\%    \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\centering
+\caption{Node expansions by graph size (10~trials).}
+\label{tab:graph_scaling}
+\begin{tabular}{rrrccc}
+\toprule
+\textbf{Ex.} & $|V|$ & $|E|$ & \textbf{Dijk.} & $\mathbf{h_1}$ & $\mathbf{h_4}$ \\
+\midrule
+ 4 & 19 &  161 & 341 & 407  & 600  \\
+ 6 & 28 &  368 & 378 & 758  & 1100 \\
+ 8 & 35 &  619 & 387 & 479  & 618  \\
+10 & 39 &  760 & 404 & 577  & 706  \\
+12 & 41 &  864 & 395 & 768  & 910  \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\end{table*}
+
+Over an 8-hour overnight campaign (\textbf{7{,}200 instances}), all A*-based methods achieve \textbf{100\% success}; 3-hop enumeration succeeds in only 39.8\%. $h_2$ matches Dijkstra-level profit across all order sizes while consistently expanding fewer nodes (Figure~\ref{fig:results_grid}). Re-evaluating paths after 5--300\,s delays, 99.6\% remain profitable up to 120\,s.
+
+\begin{figure}[t]
+\centering
+\begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig08_graph_scaling_expansions.png}
+    \caption{Node expansions vs.\ graph size.}
+    \label{fig:graph_scaling_exp}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig11_overnight_heuristic_comparison.png}
+    \caption{Overnight comparison (1{,}440 runs each).}
+    \label{fig:overnight_comparison}
+\end{subfigure}
+\caption{(a) Dijkstra expansions stay flat as graphs grow; penalty heuristics scale worse. (b) Profit, success, and expansions across the 8-hour campaign.}
+\label{fig:results_grid}
+\end{figure}

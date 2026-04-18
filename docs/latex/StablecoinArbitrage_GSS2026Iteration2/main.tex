@@ -1,0 +1,76 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%    Canadian AI GSS Extended Abstract — Iteration 2
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[10pt]{cai26}
+
+\begin{document}
+\def\conferenceyear{2026}
+\def\paperID{*****}
+\volumeheader{39}{0}
+\begin{center}
+
+\title{Execution-Aware A* Search for Cross-Exchange Stablecoin Arbitrage}
+\maketitle
+
+\thispagestyle{empty}
+\pagenumbering{gobble}
+
+\begin{tabular}{cc}
+Anonymous Author(s)\\
+Paper ID \paperID
+\end{tabular}
+
+\vspace*{0.1in}
+\end{center}
+
+% ---------------- Abstract ----------------
+\input{sec/0_abstract}
+
+\begin{keywords}{Keywords:}
+stablecoin arbitrage, A* search, cross-exchange trading, execution-aware pathfinding, cryptocurrency, graph algorithms
+\end{keywords}
+
+% ---------------- 1. Introduction ----------------
+\section{Introduction}
+\input{sec/1_intro}
+
+% ---------------- 2. Related Work ----------------
+\section{Related Work}
+\input{sec/2_related_work}
+
+% ---------------- 3. Problem Formulation ----------------
+\section{Problem Formulation}
+\input{sec/3_problem_formulation}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.48\textwidth]{figures/SuccesfulPathProfit}
+    \caption{
+    A profitable arbitrage path: $\text{kraken:USDT} \to \text{kucoin:USDT} \to \text{kucoin:TUSD}$.
+    The first edge is a cross-exchange transfer ($r_1 = 0.9995$) and the second is an intra-exchange trade ($r_2 = 1.0042$),
+    yielding a multiplicative return of $\approx 1.0037$ (\$37 profit on \$10{,}000).
+    This illustrates the open-path formulation: profitable paths need not form closed cycles.
+    }
+    \label{fig:successful_path}
+\end{figure}
+
+% ---------------- 4. Novel Heuristics ----------------
+\section{Novel Heuristics for Arbitrage Search}
+\input{sec/4_Novel_Heuristics}
+
+% ---------------- 5. Experiments ----------------
+\section{Experiments and Evaluation}
+\input{sec/5_experiments}
+
+% ---------------- 6. Conclusions ----------------
+\section{Conclusions}
+\input{sec/6_Conclusion}
+
+% ---------------- Acknowledgments ----------------
+\section*{Acknowledgments}
+% Acknowledgments section left blank for double-blind review.
+
+% ---------------- Bibliography ----------------
+\printbibliography[heading=subbibintoc]
+
+\end{document}

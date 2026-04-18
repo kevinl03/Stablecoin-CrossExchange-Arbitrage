@@ -1,0 +1,22 @@
+\subsection{Graph Representation}
+
+We formulate the problem as a directed weighted graph $G=(V,E)$ where each node $v\in V$ represents a unique (exchange, stablecoin) pair and each directed edge $e\in E$ corresponds to a trade or a cross-exchange transfer. Every edge has an associated effective exchange rate incorporating all relevant costs, and we assign weight $w(e) = -\log(\textit{effective\_rate}(e))$, converting multiplicative returns into additive costs for shortest-path algorithms.
+
+\subsection{Path Profitability}
+
+Given a path $P=(v_0,v_1,\dots,v_k)$ with initial capital $C_0$, the final capital is
+$C_k = C_0 \cdot \prod_{e\in P} r(e)$
+where $r(e)$ denotes the effective rate on edge $e$. A path is profitable when $C_k - C_0 \ge \textit{min\_profit}$. In additive log space this becomes:
+\[
+\sum_{e\in P} -\log\!\big(r(e)\big)
+\;\le\;
+-\log\!\left(1+\frac{\textit{min\_profit}}{C_0}\right).
+\]
+
+The goal set is $\mathcal{G} = \bigl\{\, v_k \in V \;\big|\; C_k > C_0 \,\bigr\}$. We do \emph{not} require $v_k = v_0$: this \textbf{open-path} formulation allows the trader to end on any pair where USD value exceeds initial capital, justified because all assets are USD-pegged stablecoins ($\pm 2\%$ price tolerance).
+
+\subsection{A* Search Formulation}
+
+We apply A* search with cost-to-reach $g(n) = \sum_{e\in \text{path}} -\log(r(e))$ and evaluation function $f(n) = g(n) + h(n)$, where $h(n)$ estimates the execution risk of the remaining path given current blockchain state, including factors such as liquidity depth, order-book slippage, chain congestion, and exchange reliability. The algorithm terminates when $C_n > C_0$.
+
+For $h_4$, we employ \textbf{Weighted A*}\textsuperscript{\cite{pohl1970weighted}} with $f(n) = g(n) + w(n) \cdot h(n)$, where $w(n) = w_{\min} + (w_{\max} - w_{\min}) \cdot \rho(n)$ and $\rho(n) \in [0,1]$ is a chain kickback risk score. When $w(n)=1$ for all nodes, this reduces to standard A*. The algorithm is not complete: market data does not guarantee a profitable path from every starting node. Search terminates when a profitable path is found, the frontier is exhausted, or depth/time limits are reached.
