@@ -44,6 +44,8 @@ def fetch_price_snapshot() -> Tuple[Dict[NodeId, float], float]:
     pairs where we have a configured market in data.py.
 
     Filters out coins that deviate too far from $1.00 (not true stablecoins).
+    Exchanges that fail on the first attempt are skipped for all remaining
+    coins to avoid long cumulative timeouts.
 
     Returns:
         prices:    dict[(exchange, coin)] -> price_usd
@@ -51,9 +53,13 @@ def fetch_price_snapshot() -> Tuple[Dict[NodeId, float], float]:
     """
     prices: Dict[NodeId, float] = {}
     snapshot_ts = time.time()
+    failed_exchanges: set = set()
 
     for coin in STABLE_COINS:
         for ex_name, ex in EXCHANGES.items():
+            if ex_name in failed_exchanges:
+                continue
+
             market = COIN_MARKETS.get(coin, {}).get(ex_name)
             if not market:
                 continue
@@ -61,36 +67,36 @@ def fetch_price_snapshot() -> Tuple[Dict[NodeId, float], float]:
             try:
                 ticker = ex.fetch_ticker(market)
             except Exception:
+                failed_exchanges.add(ex_name)
                 continue
 
             bid = ticker.get("bid")
             ask = ticker.get("ask")
             last = ticker.get("last")
 
-            # Use conservative pricing: bid for selling, ask for buying
-            # Since we're normalizing to USD, we use bid (conservative estimate)
-            # This gives us a lower bound on the coin's value
             if isinstance(bid, (int, float)) and isinstance(ask, (int, float)):
-                # Use bid price (conservative - what we'd get if selling)
-                # This prevents overestimating coin values
                 conservative_price = bid
             elif isinstance(last, (int, float)):
-                # Fallback to last price if bid/ask unavailable
                 conservative_price = float(last)
             else:
-                # no usable price
                 continue
 
             price_usd = normalize_price_to_usd(coin, market, conservative_price)
             if price_usd is None:
                 continue
 
-            # Filter out coins that deviate too far from $1.00
-            # These are not true stablecoins (e.g., FRAX trading at $0.82)
             if abs(price_usd - 1.0) > STABLECOIN_PRICE_TOLERANCE:
-                continue  # Skip this coin on this exchange
+                continue
 
             prices[(ex_name, coin)] = price_usd
+
+    if failed_exchanges:
+        import logging
+        logging.warning(
+            "Could not reach %d exchange(s): %s",
+            len(failed_exchanges),
+            ", ".join(sorted(failed_exchanges)),
+        )
 
     return prices, snapshot_ts
 

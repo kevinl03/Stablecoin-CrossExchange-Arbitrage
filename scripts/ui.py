@@ -64,15 +64,28 @@ def build_nx_graph(show_all: bool = False):
     
     Args:
         show_all: If True, build an unfiltered graph with all possible nodes/edges
+
+    Returns:
+        (G, error_msg) where error_msg is None on success or a string describing the failure.
     """
-    if show_all:
-        nodes, adj = build_graph_unfiltered()
-    else:
-        nodes, adj = build_graph()
+    try:
+        if show_all:
+            nodes, adj = build_graph_unfiltered()
+        else:
+            nodes, adj = build_graph()
+    except Exception as exc:
+        return nx.DiGraph(), f"Failed to fetch exchange data: {exc}"
+
+    if not nodes:
+        return nx.DiGraph(), (
+            "No exchange data could be retrieved. "
+            "This usually means your network is blocking cryptocurrency exchange APIs "
+            "(common on public wifi, campus, and corporate networks). "
+            "Try switching to a mobile hotspot or home network."
+        )
 
     G = nx.DiGraph()
 
-    # Add nodes
     for node_id, meta in nodes.items():
         ex, coin = node_id
         G.add_node(
@@ -83,7 +96,6 @@ def build_nx_graph(show_all: bool = False):
             snapshot_ts=meta["snapshot_ts"],
         )
 
-    # Add edges
     for from_node, edges in adj.items():
         for e in edges:
             kind = e.get("kind", "trade")
@@ -100,10 +112,10 @@ def build_nx_graph(show_all: bool = False):
                 withdraw_fee=e.get("withdrawal_fee_units"),
                 chain=e.get("chain"),
                 transfer_time_sec=e.get("transfer_time_sec", 0.0),
-                raw_edge=e,  # keep original dict if we ever need it
+                raw_edge=e,
             )
 
-    return G
+    return G, None
 
 
 def build_graph_unfiltered():
@@ -1372,13 +1384,26 @@ def main():
 
     # Session state: store the current NetworkX graph and search result text
     if "graph" not in st.session_state:
-        st.session_state["graph"] = build_nx_graph(show_all=False)
+        with st.spinner("Fetching live data from exchanges (this may take up to a minute)..."):
+            G, err = build_nx_graph(show_all=False)
+        st.session_state["graph"] = G
+        if err:
+            st.session_state["network_error"] = err
     if "best_trade_text" not in st.session_state:
         st.session_state["best_trade_text"] = "Click **Run search** to compute a path."
     if "show_all" not in st.session_state:
         st.session_state["show_all"] = False
     if "last_search_result" not in st.session_state:
         st.session_state["last_search_result"] = None
+
+    if st.session_state.get("network_error"):
+        st.error(st.session_state["network_error"])
+        st.info(
+            "**Troubleshooting:**\n"
+            "- Switch to a mobile hotspot or home wifi\n"
+            "- Use a VPN that allows exchange traffic\n"
+            "- Click **Update price** below once you're on a working network"
+        )
 
     G: nx.DiGraph = st.session_state["graph"]
 
@@ -1411,20 +1436,26 @@ def main():
             # Rebuild graph if checkbox state changed
             if show_all != st.session_state.get("show_all", False):
                 st.session_state["show_all"] = show_all
-                st.session_state["graph"] = build_nx_graph(show_all=show_all)
-                G = st.session_state["graph"]
-                # Refresh start wallet options in case node set changed
+                G, err = build_nx_graph(show_all=show_all)
+                st.session_state["graph"] = G
+                st.session_state["network_error"] = err
+                if err:
+                    st.error(err)
                 start_wallet_options[:] = sorted(
                     f"{ex}:{coin}" for (ex, coin) in G.nodes()
                 )
 
             # Update prices -> rebuild the graph
             if st.button("Update price"):
-                st.session_state["graph"] = build_nx_graph(show_all=show_all)
-                G = st.session_state["graph"]
-                st.success("Prices updated and graph rebuilt.")
+                with st.spinner("Fetching live data from exchanges..."):
+                    G, err = build_nx_graph(show_all=show_all)
+                st.session_state["graph"] = G
+                st.session_state["network_error"] = err
+                if err:
+                    st.error(err)
+                else:
+                    st.success("Prices updated and graph rebuilt.")
 
-                # Refresh start wallet options in case node set changed
                 start_wallet_options[:] = sorted(
                     f"{ex}:{coin}" for (ex, coin) in G.nodes()
                 )
@@ -1558,9 +1589,14 @@ def main():
 
         # Optional: allow refresh here as well
         if st.button("Refresh prices", key="refresh_prices_tab"):
-            st.session_state["graph"] = build_nx_graph(show_all=st.session_state.get("show_all", False))
-            G = st.session_state["graph"]
-            st.success("Prices refreshed.")
+            with st.spinner("Fetching live data from exchanges..."):
+                G, err = build_nx_graph(show_all=st.session_state.get("show_all", False))
+            st.session_state["graph"] = G
+            st.session_state["network_error"] = err
+            if err:
+                st.error(err)
+            else:
+                st.success("Prices refreshed.")
 
         price_rows = []
         for node in G.nodes():
