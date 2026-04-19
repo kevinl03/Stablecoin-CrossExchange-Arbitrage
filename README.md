@@ -2,11 +2,11 @@
 
 **Kevin Litvin** -- Simon Fraser University
 
-[![Paper](https://img.shields.io/badge/Paper-PDF-red.svg)](docs/latex/StablecoinArbitrage_GSS2026Iteration2/Execution_Aware_A_Star_Search_for_Cross_Exchange_Stablecoin_Arbitrage_GSS2026.pdf)
+[![Paper](https://img.shields.io/badge/Paper-PDF-red.svg)](docs/latex/StablecoinArbitrage_GSS2026/Execution_Aware_A_Star_Search_for_Cross_Exchange_Stablecoin_Arbitrage_GSS2026.pdf)
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> **[Read the Paper (PDF)](docs/latex/StablecoinArbitrage_GSS2026Iteration2/Execution_Aware_A_Star_Search_for_Cross_Exchange_Stablecoin_Arbitrage_GSS2026.pdf)**
+> **[Read the Paper (PDF)](docs/latex/StablecoinArbitrage_GSS2026/Execution_Aware_A_Star_Search_for_Cross_Exchange_Stablecoin_Arbitrage_GSS2026.pdf)**
 >
 > Published at the Canadian AI 2026 Graduate Student Symposium (GSS).
 
@@ -52,7 +52,7 @@ Cross-exchange cryptocurrency arbitrage enables low-risk profit from price discr
 ├── testing/              # Verification and debugging utilities
 └── docs/
     ├── latex/            # LaTeX source for the papers
-    │   ├── StablecoinArbitrage_GSS2026Iteration2/   # GSS paper (primary)
+    │   ├── StablecoinArbitrage_GSS2026/   # GSS paper (primary)
     │   └── StablecoinArbitrage_CAIAC2026/           # Full-length paper
     ├── img/              # README images
     ├── videos/           # Demo recordings
