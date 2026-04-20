@@ -44,7 +44,7 @@ from scripts.h2_slippage import (
     slippage_heuristic_cost,
     UNKNOWN_SLIPPAGE_PENALTY,
 )
-from scripts.h4_chaincongestion_exchange_risk import (
+from scripts.h3_chaincongestion_exchange_risk import (
     chain_congestion_heuristic_cost,
     exchange_risk_heuristic_cost,
     chain_exchange_risk_heuristic_cost,
@@ -1160,10 +1160,10 @@ def run_search_and_format(
 
     # Get loggers for search modules
     astar_logger = logging.getLogger("scripts.astar_vol")
-    h3_parallel_logger = logging.getLogger("scripts.h3_parallel")
+    parallel_baseline_logger = logging.getLogger("scripts.parallel_baseline")
     weighted_logger = logging.getLogger("scripts.weighted_astar")
 
-    for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+    for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
         lg.addHandler(handler)
         lg.setLevel(logging.INFO)
 
@@ -1173,7 +1173,7 @@ def run_search_and_format(
         streamlit_handler = StreamlitLogHandler(status_container)
         streamlit_handler.setLevel(logging.INFO)
         streamlit_handler.setFormatter(logging.Formatter("%(message)s"))
-        for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+        for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
             lg.addHandler(streamlit_handler)
 
     try:
@@ -1181,23 +1181,23 @@ def run_search_and_format(
         if heuristic_name not in [
             "h1_liquidity",
             "h2_slippage",
-            "h3_parallel",
-            "h4_chain_congestion",
+            "parallel_baseline",
+            "h3_chain_congestion",
         ]:
             if streamlit_handler:
-                for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+                for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
                     lg.removeHandler(streamlit_handler)
-            for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+            for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
                 lg.removeHandler(handler)
             return (
                 f"Invalid heuristic: {heuristic_name}. "
                 "Must be 'h1_liquidity', 'h2_slippage', "
-                "'h3_parallel', or 'h4_chain_congestion'."
+                "'parallel_baseline', or 'h3_chain_congestion'."
             )
 
         # Handle parallel search heuristic
-        if heuristic_name == "h3_parallel":
-            from scripts.h3_parallel import parallel_search_from_random_starts
+        if heuristic_name == "parallel_baseline":
+            from scripts.parallel_baseline import parallel_search_from_random_starts
 
             if streamlit_handler:
                 streamlit_handler.container.text(
@@ -1216,7 +1216,7 @@ def run_search_and_format(
                 num_starts=3,
             )
 
-        elif heuristic_name == "h4_chain_congestion":
+        elif heuristic_name == "h3_chain_congestion":
             # Weighted A* with chain + exchange risk heuristic
             result = weighted_astar_best_path(
             start_node=start_node,
@@ -1239,21 +1239,21 @@ def run_search_and_format(
 
         # Clean up handlers
         if streamlit_handler:
-            for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+            for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
                 lg.removeHandler(streamlit_handler)
-        for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+        for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
             lg.removeHandler(handler)
 
     except Exception as e:
         if streamlit_handler:
-            for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+            for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
                 lg.removeHandler(streamlit_handler)
-        for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+        for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
             lg.removeHandler(handler)
         return f"Error while running search: {e}", None
 
     if result is None:
-        if heuristic_name == "h3_parallel":
+        if heuristic_name == "parallel_baseline":
             return (
                 "No profitable path found from any of the 3 random starting points "
                 f"with {liquid_cash:.2f} USD using parallel search.",
@@ -1272,12 +1272,12 @@ def run_search_and_format(
     route_str = " -> ".join(f"{ex}:{c}" for (ex, c) in result.path)
 
     lines: list[str] = []
-    if heuristic_name == "h3_parallel":
+    if heuristic_name == "parallel_baseline":
         lines.append(
             "Max profitable current trade (Parallel search from 3 random starts):"
         )
         lines.append("Note: Searched from 3 random starting points in parallel")
-    elif heuristic_name == "h4_chain_congestion":
+    elif heuristic_name == "h3_chain_congestion":
         lines.append(
             "Max profitable current trade (Weighted A* with chain + exchange risk):"
         )
@@ -1302,7 +1302,7 @@ def run_search_and_format(
     current_cash = liquid_cash
     remaining_time = 1800.0  # max_time_sec from search call
 
-    if heuristic_name == "h3_parallel":
+    if heuristic_name == "parallel_baseline":
         lines.append(
             "Per-node heuristic values are omitted for parallel search "
             "(multiple A* runs with a base heuristic)."
@@ -1354,7 +1354,7 @@ def run_search_and_format(
                     f"    Slippage: {label} [penalty={h2_val:.4f}]"
                 )
 
-            elif heuristic_name == "h4_chain_congestion":
+            elif heuristic_name == "h3_chain_congestion":
                 # Chain kickback risk
                 h_chain = chain_congestion_heuristic_cost(
                     exchange_name=exchange,
@@ -1546,14 +1546,14 @@ def main():
                 [
                     "h1_liquidity",        # volume-based heuristic
                     "h2_slippage",         # order-book slippage heuristic
-                    "h3_parallel",         # parallel search from random starts
-                    "h4_chain_congestion", # Weighted A* using chain + exchange risk
+                    "parallel_baseline",         # parallel search from random starts
+                    "h3_chain_congestion", # Weighted A* using chain + exchange risk
                 ],
                 help="Select which heuristic h(n) to use in the search.",
             )
 
             # Start wallet selection (only hidden for parallel search)
-            if heuristic != "h3_parallel":
+            if heuristic != "parallel_baseline":
                 start_wallet = st.selectbox(
                     "Starting wallet (exchange:coin)",
                     options=start_wallet_options,
@@ -1813,12 +1813,12 @@ This is the graph over which the A\\* / Weighted A\\* search runs.
 3. **Heuristic**  
    - `h1_liquidity` – prefers routes with high trading volume / good liquidity.  
    - `h2_slippage` – penalizes routes where large orders would move the price a lot.  
-   - `h3_parallel` – runs several A\\* searches in parallel from random starting nodes.  
-   - `h4_chain_congestion` – Weighted A\\* that also penalizes fast / risky chains and less reliable exchanges.
+   - `parallel_baseline` – runs several A\\* searches in parallel from random starting nodes.  
+   - `h3_chain_congestion` – Weighted A\\* that also penalizes fast / risky chains and less reliable exchanges.
 
 4. **Starting wallet (exchange:coin)**  
    - Where your funds are assumed to live **before** you start the route.  
-   - For `h3_parallel` this is hidden; the algorithm chooses random starts instead.
+   - For `parallel_baseline` this is hidden; the algorithm chooses random starts instead.
 
 5. **Run search**  
    - Launches the selected search algorithm.  
@@ -1899,7 +1899,7 @@ These are exactly the fees that are baked into the **green transfer edges** on t
   - Try running the same starting wallet and cash with different heuristics
     to see how the route changes.  
   - `h1_liquidity` is usually the safest baseline;  
-    `h4_chain_congestion` is more conservative about infrastructure risk.
+    `h3_chain_congestion` is more conservative about infrastructure risk.
 
 - Remember: this UI is **simulation only**.  
   It does not place real orders or transfers funds.

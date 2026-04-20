@@ -1,4 +1,4 @@
-We design three guidance heuristics ($h_1$, $h_2$, $h_4$) and one search-control strategy ($h_3$) to steer A* toward executable arbitrage routes. Each captures a different dimension of execution feasibility via an additive penalty $h(n) \geq 0$ in $f(n) = g(n) + h(n)$. These are \emph{guidance penalties}, not admissible lower bounds.
+We design three guidance heuristics ($h_1$, $h_2$, $h_3$) to steer A* toward executable arbitrage routes. Each captures a different dimension of execution feasibility via an additive penalty $h(n) \geq 0$ in $f(n) = g(n) + h(n)$. These are \emph{guidance penalties}, not admissible lower bounds. We also evaluate a parallelized multi-start baseline that wraps any heuristic.
 
 \subsection{$h_1$ -- Liquidity Heuristic}
 
@@ -20,13 +20,13 @@ h_2(n) = \lambda_{slip} \cdot \max\!\bigl\{0,\; \textit{slippage}_{bps} - \theta
 \]
 where $\theta$ is a configurable tolerance. Edge costs encode static taker and withdrawal fees; $h_2$ captures \emph{dynamic} order-book slippage, so there is no double-counting with $g(n)$.
 
-\subsection{Multi-Start Search Strategy ($h_3$)}
+\subsection{$h_3$ -- Chain Congestion and Exchange Reliability}
 
-$h_3$ runs $k$ independent A* searches in parallel from randomly sampled starting nodes, each using a base heuristic, and returns the most profitable result.
-
-\subsection{$h_4$ -- Chain Congestion and Exchange Reliability}
-
-$h_4$ penalizes transfer latency and operational risk using pre-computed chain transfer times and static reliability scores $s(n) \in [0,1]$:
+$h_3$ penalizes transfer latency and operational risk using pre-computed chain transfer times and static reliability scores $s(n) \in [0,1]$:
 \[
-h_4(n) = \lambda_{chain}\!\left(\frac{t_{\min}}{T_{\text{remain}}}\right) + \lambda_{exchange}\!\left(1 - s(n)\right).
+h_3(n) = \lambda_{chain}\!\left(\frac{t_{\min}}{T_{\text{remain}}}\right) + \lambda_{exchange}\!\left(1 - s(n)\right).
 \]
+
+\subsection{Parallelized Multi-Start Baseline}
+
+The parallelized baseline runs $k$ independent A* searches in parallel from randomly sampled starting nodes, each using a base heuristic, and returns the most profitable result.

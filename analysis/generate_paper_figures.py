@@ -65,8 +65,8 @@ HEURISTIC_COLORS = {
     "dijkstra": "#888888",
     "h1_liquidity": "#2196F3",
     "h2_slippage": "#4CAF50",
-    "h3_parallel": "#FF9800",
-    "h4_chaincongestion_exchange_risk": "#9C27B0",
+    "parallel_baseline": "#FF9800",
+    "h3_chaincongestion_exchange_risk": "#9C27B0",
     "3hop_enum": "#F44336",
     "bellman_ford": "#795548",
     "simple_1hop": "#BDBDBD",
@@ -77,12 +77,17 @@ HEURISTIC_LABELS = {
     "dijkstra": "Dijkstra (h=0)",
     "h1_liquidity": "H1: Liquidity",
     "h2_slippage": "H2: Slippage",
-    "h3_parallel": "H3: Parallel",
-    "h4_chaincongestion_exchange_risk": "H4: Congestion/Risk",
+    "parallel_baseline": "H3: Parallel",
+    "h3_chaincongestion_exchange_risk": "H4: Congestion/Risk",
     "3hop_enum": "3-Hop Baseline",
     "bellman_ford": "Bellman-Ford",
     "simple_1hop": "1-Hop Baseline",
     "simple_2hop": "2-Hop Baseline",
+}
+
+HEURISTIC_LABEL_MAP = {
+    "h4_chaincongestion_exchange_risk": "h3_chaincongestion_exchange_risk",
+    "h3_parallel": "parallel_baseline",
 }
 
 def _label(h: str) -> str:
@@ -117,7 +122,7 @@ def fig01_node_expansion_bar():
     recs = [r for r in recs if r["success"] and r.get("nodes_expanded")]
 
     heur_order = ["dijkstra", "h1_liquidity", "h2_slippage",
-                  "h4_chaincongestion_exchange_risk", "3hop_enum"]
+                  "h3_chaincongestion_exchange_risk", "3hop_enum"]
     data = {}
     for h in heur_order:
         vals = [r["nodes_expanded"] for r in recs if r["heuristic"] == h]
@@ -159,7 +164,7 @@ def fig02_compute_time_bar():
     recs = _load_jsonl(CACHED_GRAPH_FILE)
 
     heur_order = ["dijkstra", "h1_liquidity", "h2_slippage",
-                  "h4_chaincongestion_exchange_risk", "3hop_enum"]
+                  "h3_chaincongestion_exchange_risk", "3hop_enum"]
     data = {}
     for h in heur_order:
         vals = [r["compute_time_sec"] for r in recs if r["heuristic"] == h]
@@ -193,8 +198,8 @@ def fig02_compute_time_bar():
 def fig03_profit_boxplot():
     recs = _load_jsonl(MONTE_CARLO_FILE)
 
-    heur_order = ["dijkstra", "h1_liquidity", "h2_slippage", "h3_parallel",
-                  "h4_chaincongestion_exchange_risk", "3hop_enum"]
+    heur_order = ["dijkstra", "h1_liquidity", "h2_slippage", "parallel_baseline",
+                  "h3_chaincongestion_exchange_risk", "3hop_enum"]
 
     fig, ax = plt.subplots(figsize=(10, 6))
     plot_data = []
@@ -228,8 +233,8 @@ def fig04_success_rate():
     recs = _load_jsonl(MONTE_CARLO_FILE)
 
     heur_order = ["simple_1hop", "simple_2hop", "bellman_ford", "3hop_enum",
-                  "dijkstra", "h1_liquidity", "h2_slippage", "h3_parallel",
-                  "h4_chaincongestion_exchange_risk"]
+                  "dijkstra", "h1_liquidity", "h2_slippage", "parallel_baseline",
+                  "h3_chaincongestion_exchange_risk"]
 
     fig, ax = plt.subplots(figsize=(10, 5))
     rates = []
@@ -266,7 +271,7 @@ def fig05_expansion_vs_profit():
     recs = _load_jsonl(MONTE_CARLO_FILE)
 
     heur_order = ["dijkstra", "h1_liquidity", "h2_slippage",
-                  "h4_chaincongestion_exchange_risk", "3hop_enum"]
+                  "h3_chaincongestion_exchange_risk", "3hop_enum"]
 
     fig, ax = plt.subplots(figsize=(8, 6))
     for h in heur_order:
@@ -311,7 +316,7 @@ def fig06_graph_scaling_structure():
     ax1.legend()
 
     # Right: success rate by size
-    heur_order = ["dijkstra", "h1_liquidity", "h2_slippage", "h4_chaincongestion_exchange_risk"]
+    heur_order = ["dijkstra", "h1_liquidity", "h2_slippage", "h3_chaincongestion_exchange_risk"]
     for h in heur_order:
         rates = []
         for sz in sizes:
@@ -343,7 +348,7 @@ def fig07_graph_scaling_time():
     recs = _load_jsonl(GRAPH_SCALING_FILE)
 
     sizes = sorted(set(r["n_exchanges"] for r in recs))
-    heur_order = ["dijkstra", "h1_liquidity", "h2_slippage", "h4_chaincongestion_exchange_risk"]
+    heur_order = ["dijkstra", "h1_liquidity", "h2_slippage", "h3_chaincongestion_exchange_risk"]
 
     fig, ax = plt.subplots(figsize=(8, 5))
     for h in heur_order:
@@ -372,7 +377,7 @@ def fig08_graph_scaling_expansions():
     recs = _load_jsonl(GRAPH_SCALING_FILE)
 
     sizes = sorted(set(r["n_exchanges"] for r in recs))
-    heur_order = ["dijkstra", "h1_liquidity", "h2_slippage", "h4_chaincongestion_exchange_risk"]
+    heur_order = ["dijkstra", "h1_liquidity", "h2_slippage", "h3_chaincongestion_exchange_risk"]
 
     fig, ax = plt.subplots(figsize=(8, 5))
     for h in heur_order:
@@ -526,7 +531,7 @@ def fig11_overnight_heuristic_comparison():
 
     # Group by snapshot+heuristic, average profit
     heur_order = ["dijkstra", "h1_liquidity", "h2_slippage",
-                  "h4_chaincongestion_exchange_risk", "3hop_enum"]
+                  "h3_chaincongestion_exchange_risk", "3hop_enum"]
 
     snapshots = sorted(set(r["snapshot_idx"] for r in results))
 
@@ -760,7 +765,7 @@ def fig16_profit_by_cash():
     cash_levels = sorted(set(r["cash_usd"] for r in results))
 
     heur_order = ["dijkstra", "h1_liquidity", "h2_slippage",
-                  "h4_chaincongestion_exchange_risk", "3hop_enum"]
+                  "h3_chaincongestion_exchange_risk", "3hop_enum"]
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
@@ -807,7 +812,7 @@ def fig17_expansion_distribution():
     recs = _load_jsonl(MONTE_CARLO_FILE)
 
     heur_order = ["dijkstra", "h1_liquidity", "h2_slippage",
-                  "h4_chaincongestion_exchange_risk"]
+                  "h3_chaincongestion_exchange_risk"]
 
     fig, ax = plt.subplots(figsize=(8, 5))
     plot_data = []
@@ -841,7 +846,7 @@ def fig18_radar_summary():
     recs_mc = _load_jsonl(MONTE_CARLO_FILE)
 
     heur_order = ["dijkstra", "h1_liquidity", "h2_slippage",
-                  "h3_parallel", "h4_chaincongestion_exchange_risk"]
+                  "parallel_baseline", "h3_chaincongestion_exchange_risk"]
 
     categories = ["Success\nRate", "Avg\nProfit", "Speed\n(1/time)", "Pruning\n(1/expanded)", "Consistency\n(1/std)"]
     N = len(categories)
@@ -921,8 +926,8 @@ def table_summary():
     print("-" * 80)
 
     heur_order = ["simple_1hop", "simple_2hop", "bellman_ford", "3hop_enum",
-                  "dijkstra", "h1_liquidity", "h2_slippage", "h3_parallel",
-                  "h4_chaincongestion_exchange_risk"]
+                  "dijkstra", "h1_liquidity", "h2_slippage", "parallel_baseline",
+                  "h3_chaincongestion_exchange_risk"]
     for h in heur_order:
         subset = [r for r in recs if r["heuristic"] == h]
         successes = [r for r in subset if r["success"]]

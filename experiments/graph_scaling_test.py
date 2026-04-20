@@ -16,7 +16,7 @@
 #     10 exchanges → ~35 nodes
 #     12 exchanges → ~41 nodes (full graph)
 #
-#   For each graph size we run Dijkstra vs H1 vs H4 from all start nodes
+#   For each graph size we run Dijkstra vs H1 vs H3 from all start nodes
 #   and compare:
 #     - Node expansions
 #     - Nodes generated
@@ -81,7 +81,7 @@ EXCHANGE_TIERS = [
     ["binance", "kraken", "kucoin", "bybit", "okx", "gateio", "bitget", "mexc", "htx", "coinbase", "cryptocom", "phemex"],
 ]
 
-HEURISTICS = ["dijkstra", "h1_liquidity", "h4_chaincongestion_exchange_risk", "3hop_enum"]
+HEURISTICS = ["dijkstra", "h1_liquidity", "h3_chaincongestion_exchange_risk", "3hop_enum"]
 
 
 def _build_restricted_graph(exchange_subset: List[str]) -> Tuple[Dict, Dict]:
@@ -139,7 +139,7 @@ def _run_search(
                 early_exit_after_profit=EARLY_EXIT,
                 early_exit_iterations=EARLY_EXIT_ITERS,
             )
-        elif heuristic == "h4_chaincongestion_exchange_risk":
+        elif heuristic == "h3_chaincongestion_exchange_risk":
             result = weighted_astar_best_path(
                 start_node=start_node,
                 liquid_cash_usd=cash_usd,

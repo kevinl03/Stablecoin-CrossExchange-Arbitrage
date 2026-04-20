@@ -4,7 +4,7 @@ We gather live market data from twelve major exchanges via CCXT\textsuperscript{
 
 \subsection{Results}
 
-Tables~\ref{tab:heuristic-compact} and~\ref{tab:graph_scaling} summarize heuristic performance. Because $h_3$ is a multi-start search strategy that wraps an underlying heuristic rather than modifying per-node guidance, it is orthogonal to the single-start comparisons in these tables; all overnight experiments already use $k{=}3$ parallel starts (see Appendix). On the cached graph (30~start nodes), all A*-based methods achieve identical 56.7\% success; Bellman--Ford, 1-hop, and 2-hop baselines fail entirely. $h_2$ reduces expansions by \textbf{29\%} relative to Dijkstra while matching its profit within 1\%, suggesting slippage-aware guidance follows the same optimal routes with less wasted exploration. $h_1$ and $h_4$ expand 58--87\% \emph{more} nodes and find 30--33\% less profit, indicating their risk penalties overcompensate and divert search from structurally optimal paths.
+Tables~\ref{tab:heuristic-compact} and~\ref{tab:graph_scaling} summarize heuristic performance. On the cached graph (30~start nodes), all A*-based methods achieve identical 56.7\% success; Bellman--Ford, 1-hop, and 2-hop baselines fail entirely. $h_2$ reduces expansions by \textbf{29\%} relative to Dijkstra while matching its profit within 1\%, suggesting slippage-aware guidance follows the same optimal routes with less wasted exploration. $h_1$ and $h_3$ expand 58--87\% \emph{more} nodes and find 30--33\% less profit, indicating their risk penalties overcompensate and divert search from structurally optimal paths. The parallelized multi-start baseline ($k{=}3$ parallel starts from random nodes) achieves comparable success rates but does not reduce per-search node expansions; its benefit is robustness to unlucky starting positions.
 
 \begin{table*}[t]
 \centering
@@ -20,7 +20,7 @@ Tables~\ref{tab:heuristic-compact} and~\ref{tab:graph_scaling} summarize heurist
 Dijkstra          & 56.7\% & \$10.01 & 359 & ---        \\
 $h_1$ (liquidity) & 56.7\% & \$6.72  & 568 & $-$58\%    \\
 $h_2$ (slippage)  & 56.7\% & \$9.91  & 256 & $+$29\%    \\
-$h_4$ (Wt.\ A*)   & 56.7\% & \$7.06  & 673 & $-$87\%    \\
+$h_3$ (Wt.\ A*)   & 56.7\% & \$7.06  & 673 & $-$87\%    \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -31,7 +31,7 @@ $h_4$ (Wt.\ A*)   & 56.7\% & \$7.06  & 673 & $-$87\%    \\
 \label{tab:graph_scaling}
 \begin{tabular}{rrrccc}
 \toprule
-\textbf{Ex.} & $|V|$ & $|E|$ & \textbf{Dijk.} & $\mathbf{h_1}$ & $\mathbf{h_4}$ \\
+\textbf{Ex.} & $|V|$ & $|E|$ & \textbf{Dijk.} & $\mathbf{h_1}$ & $\mathbf{h_3}$ \\
 \midrule
  4 & 19 &  161 & 341 & 407  & 600  \\
  6 & 28 &  368 & 378 & 758  & 1100 \\
