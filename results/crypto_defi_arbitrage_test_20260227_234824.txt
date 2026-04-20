@@ -1,0 +1,281 @@
+================================================================================
+  CRYPTO & DeFi ARBITRAGE — COMPREHENSIVE TEST RUN
+  Timestamp: 2026-02-27 23:47:44
+================================================================================
+
+
+████████████████████████████████████████████████████████████████████████████████
+  PART 1: CENTRALIZED EXCHANGE (CEX) ARBITRAGE
+  Exchanges: Binance, Kraken, KuCoin, Bybit, OKX, Gate.io,
+             Bitget, MEXC, HTX, Coinbase, Crypto.com, Phemex
+  Algorithm: Dijkstra (A* with h=0) + Bellman-Ford
+████████████████████████████████████████████████████████████████████████████████
+
+── Building CEX graph (live data from 12 exchanges via CCXT) ──
+
+──────────────────────────────────────────────────────────────────────
+  Dijkstra | Start: ('binance', 'USDT') | Portfolio: $10,000 | Max depth: 5
+──────────────────────────────────────────────────────────────────────
+
+[crypto_graph] Fetching live market data …
+  Fetching tickers from binance …
+    → 68 relevant pairs found
+  Fetching tickers from kraken …
+    → 37 relevant pairs found
+  Fetching tickers from kucoin …
+    → 40 relevant pairs found
+  Fetching tickers from bybit …
+    → 35 relevant pairs found
+  Fetching tickers from okx …
+    → 33 relevant pairs found
+  Fetching tickers from gateio …
+    → 41 relevant pairs found
+  Fetching tickers from bitget …
+    → 38 relevant pairs found
+  Fetching tickers from mexc …
+    → 39 relevant pairs found
+  Fetching tickers from htx …
+    → 23 relevant pairs found
+  Fetching tickers from coinbase …
+    → 39 relevant pairs found
+  Fetching tickers from cryptocom …
+    → 23 relevant pairs found
+  Fetching tickers from phemex …
+    → 27 relevant pairs found
+[crypto_graph] Nodes: 197
+[crypto_graph] Trade edges: 784
+[crypto_graph] Transfer edges: 2576
+[crypto_graph] Total edges: 3360
+  *** PROFITABLE PATH ***
+  Profit: $2.80  (+0.0280%)  Final value: $10,002.80
+  Path length: 4 nodes
+    1. XFER    binance    → mexc        [USDT]  chain=SOL  wd_fee=0.25  gas=$0.00  time=1s  rate=0.99997497
+    2. TRADE   mexc        USDT  → SUI    pair=SUI/USDT  rate=0.99938313  fee=0.050%
+    3. XFER    mexc       → okx         [SUI]  chain=SUI  wd_fee=0.04  gas=$0.10  time=2s  rate=1.00092213
+  Search stats: expanded=514, generated=1538
+
+──────────────────────────────────────────────────────────────────────
+  Dijkstra | Start: ('binance', 'BTC') | Portfolio: $50,000 | Max depth: 5
+──────────────────────────────────────────────────────────────────────
+  *** PROFITABLE PATH ***
+  Profit: $25.02  (+0.0500%)  Final value: $50,025.02
+  Path length: 2 nodes
+    1. XFER    binance    → okx         [BTC]  chain=LIGHTNING  wd_fee=0.0  gas=$0.00  time=0s  rate=1.00050048
+  Search stats: expanded=202, generated=871
+
+──────────────────────────────────────────────────────────────────────
+  Dijkstra | Start: ('kraken', 'ETH') | Portfolio: $20,000 | Max depth: 5
+──────────────────────────────────────────────────────────────────────
+  *** PROFITABLE PATH ***
+  Profit: $11.01  (+0.0551%)  Final value: $20,011.01
+  Path length: 2 nodes
+    1. XFER    kraken     → gateio      [ETH]  chain=ARB  wd_fee=0.00015  gas=$0.50  time=120s  rate=1.00055061
+  Search stats: expanded=202, generated=787
+
+──────────────────────────────────────────────────────────────────────
+  Dijkstra | Start: ('coinbase', 'USDT') | Portfolio: $10,000 | Max depth: 5
+──────────────────────────────────────────────────────────────────────
+  No profitable path found.
+
+──────────────────────────────────────────────────────────────────────
+  Dijkstra | Start: ('okx', 'SOL') | Portfolio: $5,000 | Max depth: 5
+──────────────────────────────────────────────────────────────────────
+  *** PROFITABLE PATH ***
+  Profit: $0.38  (+0.0076%)  Final value: $5,000.38
+  Path length: 5 nodes
+    1. TRADE   okx         SOL   → USDC   pair=SOL/USDC  rate=0.99874738  fee=0.100%
+    2. XFER    okx        → mexc        [USDC]  chain=SOL  wd_fee=0.1  gas=$0.00  time=1s  rate=0.99998997
+    3. TRADE   mexc        USDC  → ADA    pair=ADA/USDC  rate=0.99950000  fee=0.050%
+    4. XFER    mexc       → coinbase    [ADA]  chain=ADA  wd_fee=1.0  gas=$0.00  time=0s  rate=1.00184165
+  Search stats: expanded=1544, generated=2231
+
+──────────────────────────────────────────────────────────────────────
+  Dijkstra | Start: ('binance', 'XRP') | Portfolio: $15,000 | Max depth: 5
+──────────────────────────────────────────────────────────────────────
+  *** PROFITABLE PATH ***
+  Profit: $13.43  (+0.0895%)  Final value: $15,013.43
+  Path length: 2 nodes
+    1. XFER    binance    → okx         [XRP]  chain=XRP  wd_fee=0.15  gas=$0.00  time=0s  rate=1.00089501
+  Search stats: expanded=202, generated=515
+
+──────────────────────────────────────────────────────────────────────
+  Bellman-Ford (negative cycle detection) | Portfolio: $10,000
+──────────────────────────────────────────────────────────────────────
+  *** 2 CYCLE(S) FOUND ***
+
+  ── Cycle 1 ──
+  Profit: $0.00  (+0.0000%)  Final value: $10,000.00
+  Path length: 2 nodes
+    1. XFER    kraken     → okx         [BTC]  chain=LIGHTNING  wd_fee=0.0  gas=$0.00  time=0s  rate=1.00040922
+    2. XFER    okx        → kraken      [BTC]  chain=LIGHTNING  wd_fee=0.0  gas=$0.00  time=0s  rate=0.99959095
+
+  ── Cycle 2 ──
+  Profit: $0.00  (+0.0000%)  Final value: $10,000.00
+  Path length: 2 nodes
+    1. XFER    okx        → kraken      [BTC]  chain=LIGHTNING  wd_fee=0.0  gas=$0.00  time=0s  rate=0.99959095
+    2. XFER    kraken     → okx         [BTC]  chain=LIGHTNING  wd_fee=0.0  gas=$0.00  time=0s  rate=1.00040922
+
+  CEX total runtime: 40.2s
+
+
+
+████████████████████████████████████████████████████████████████████████████████
+  PART 2: DECENTRALIZED EXCHANGE (DEX) ON-CHAIN ARBITRAGE
+  DEXes: Uniswap V3, Curve, Jupiter, Raydium, PancakeSwap, …
+  Chains: Ethereum, Arbitrum, Base, Optimism, Polygon, Solana, Avax, BSC
+  Data: DeFi-Llama (on-chain prices) + Hyperliquid (perp mids)
+  Algorithm: Dijkstra (A* with h=0) + Bellman-Ford
+████████████████████████████████████████████████████████████████████████████████
+
+── Building DEX graph (live on-chain prices from DeFi-Llama) ──
+
+──────────────────────────────────────────────────────────────────────
+  Dijkstra | Start: ('ethereum', 'WETH') | Portfolio: $10,000 | Max depth: 6
+──────────────────────────────────────────────────────────────────────
+
+[defi_graph] Fetching on-chain prices from DeFi-Llama …
+[defi_graph] Nodes:  47
+[defi_graph] Swap edges:   290
+[defi_graph] Bridge edges: 194
+[defi_graph] Total edges:  484
+  *** PROFITABLE PATH ***
+  Profit: $206.41  (+2.0641%)  Final value: $10,206.41
+  Path length: 6 nodes
+    1. BRIDGE  ethereum   → arbitrum    [WETH ]  rate=1.01063498  price $1,861.14→$1,883.00  ratio=1.011748  fee=0.060%+$5.00  time=180s
+    2. SWAP    arbitrum    WETH  → WBTC   rate=0.99698000  dex_fee=0.30%  gas=$0.20
+    3. BRIDGE  arbitrum   → optimism    [WBTC ]  rate=0.99938619  price $64,050.16→$64,064.02  ratio=1.000216  fee=0.080%+$0.30  time=120s
+    4. SWAP    optimism    WBTC  → WETH   rate=0.99698000  dex_fee=0.30%  gas=$0.20
+    5. BRIDGE  optimism   → arbitrum    [WETH ]  rate=1.01665182  price $1,850.62→$1,883.00  ratio=1.017496  fee=0.080%+$0.30  time=120s
+  Search stats: expanded=436, generated=436
+
+──────────────────────────────────────────────────────────────────────
+  Dijkstra | Start: ('arbitrum', 'WETH') | Portfolio: $25,000 | Max depth: 6
+──────────────────────────────────────────────────────────────────────
+  *** PROFITABLE PATH ***
+  Profit: $369.61  (+1.4784%)  Final value: $25,369.61
+  Path length: 7 nodes
+    1. SWAP    arbitrum    WETH  → AAVE   rate=0.99698000  dex_fee=0.30%  gas=$0.20
+    2. BRIDGE  arbitrum   → polygon     [AAVE ]  rate=0.99917000  price $108.22→$108.22  ratio=1.000000  fee=0.080%+$0.30  time=120s
+    3. SWAP    polygon     AAVE  → WBTC   rate=0.99699800  dex_fee=0.30%  gas=$0.02
+    4. BRIDGE  polygon    → optimism    [WBTC ]  rate=1.00808000  price $63,497.78→$64,064.02  ratio=1.008917  fee=0.080%+$0.30  time=120s
+    5. SWAP    optimism    WBTC  → WETH   rate=0.99698000  dex_fee=0.30%  gas=$0.20
+    6. BRIDGE  optimism   → arbitrum    [WETH ]  rate=1.01665182  price $1,850.62→$1,883.00  ratio=1.017496  fee=0.080%+$0.30  time=120s
+  Search stats: expanded=506, generated=506
+
+──────────────────────────────────────────────────────────────────────
+  Dijkstra | Start: ('arbitrum', 'WBTC') | Portfolio: $50,000 | Max depth: 6
+──────────────────────────────────────────────────────────────────────
+  *** PROFITABLE PATH ***
+  Profit: $768.70  (+1.5374%)  Final value: $50,768.70
+  Path length: 6 nodes
+    1. BRIDGE  arbitrum   → optimism    [WBTC ]  rate=0.99938619  price $64,050.16→$64,064.02  ratio=1.000216  fee=0.080%+$0.30  time=120s
+    2. SWAP    optimism    WBTC  → DAI    rate=0.99698000  dex_fee=0.30%  gas=$0.20
+    3. BRIDGE  optimism   → polygon     [DAI  ]  rate=1.00617086  price $0.99→$1.00  ratio=1.007007  fee=0.080%+$0.30  time=120s
+    4. SWAP    polygon     DAI   → WETH   rate=0.99699800  dex_fee=0.30%  gas=$0.02
+    5. BRIDGE  polygon    → arbitrum    [WETH ]  rate=1.01587491  price $1,852.04→$1,883.00  ratio=1.016719  fee=0.080%+$0.30  time=120s
+  Search stats: expanded=491, generated=503
+
+──────────────────────────────────────────────────────────────────────
+  Dijkstra | Start: ('solana', 'SOL') | Portfolio: $5,000 | Max depth: 6
+──────────────────────────────────────────────────────────────────────
+  *** PROFITABLE PATH ***
+  Profit: $78.64  (+1.5728%)  Final value: $5,078.64
+  Path length: 7 nodes
+    1. SWAP    solana      SOL   → USDT   rate=0.99749980  dex_fee=0.25%  gas=$0.00
+    2. BRIDGE  solana     → polygon     [USDT ]  rate=0.99957814  price $1.00→$1.00  ratio=1.000228  fee=0.060%+$0.50  time=120s
+    3. SWAP    polygon     USDT  → WBTC   rate=0.99699800  dex_fee=0.30%  gas=$0.02
+    4. BRIDGE  polygon    → optimism    [WBTC ]  rate=1.00808000  price $63,497.78→$64,064.02  ratio=1.008917  fee=0.080%+$0.30  time=120s
+    5. SWAP    optimism    WBTC  → WETH   rate=0.99698000  dex_fee=0.30%  gas=$0.20
+    6. BRIDGE  optimism   → arbitrum    [WETH ]  rate=1.01665182  price $1,850.62→$1,883.00  ratio=1.017496  fee=0.080%+$0.30  time=120s
+  Search stats: expanded=476, generated=476
+
+──────────────────────────────────────────────────────────────────────
+  Dijkstra | Start: ('polygon', 'USDC') | Portfolio: $10,000 | Max depth: 6
+──────────────────────────────────────────────────────────────────────
+  *** PROFITABLE PATH ***
+  Profit: $228.52  (+2.2852%)  Final value: $10,228.52
+  Path length: 7 nodes
+    1. SWAP    polygon     USDC  → WETH   rate=0.99699800  dex_fee=0.30%  gas=$0.02
+    2. BRIDGE  polygon    → arbitrum    [WETH ]  rate=1.01587491  price $1,852.04→$1,883.00  ratio=1.016719  fee=0.080%+$0.30  time=120s
+    3. SWAP    arbitrum    WETH  → WBTC   rate=0.99698000  dex_fee=0.30%  gas=$0.20
+    4. BRIDGE  arbitrum   → optimism    [WBTC ]  rate=0.99938619  price $64,050.16→$64,064.02  ratio=1.000216  fee=0.080%+$0.30  time=120s
+    5. SWAP    optimism    WBTC  → WETH   rate=0.99698000  dex_fee=0.30%  gas=$0.20
+    6. BRIDGE  optimism   → arbitrum    [WETH ]  rate=1.01665182  price $1,850.62→$1,883.00  ratio=1.017496  fee=0.080%+$0.30  time=120s
+  Search stats: expanded=775, generated=846
+
+──────────────────────────────────────────────────────────────────────
+  Dijkstra | Start: ('ethereum', 'WBTC') | Portfolio: $30,000 | Max depth: 6
+──────────────────────────────────────────────────────────────────────
+  *** PROFITABLE PATH ***
+  Profit: $512.05  (+1.7068%)  Final value: $30,512.05
+  Path length: 7 nodes
+    1. SWAP    ethereum    WBTC  → WETH   rate=0.99650000  dex_fee=0.30%  gas=$5.00
+    2. BRIDGE  ethereum   → arbitrum    [WETH ]  rate=1.01063498  price $1,861.14→$1,883.00  ratio=1.011748  fee=0.060%+$5.00  time=180s
+    3. SWAP    arbitrum    WETH  → WBTC   rate=0.99698000  dex_fee=0.30%  gas=$0.20
+    4. BRIDGE  arbitrum   → optimism    [WBTC ]  rate=0.99938619  price $64,050.16→$64,064.02  ratio=1.000216  fee=0.080%+$0.30  time=120s
+    5. SWAP    optimism    WBTC  → WETH   rate=0.99698000  dex_fee=0.30%  gas=$0.20
+    6. BRIDGE  optimism   → arbitrum    [WETH ]  rate=1.01665182  price $1,850.62→$1,883.00  ratio=1.017496  fee=0.080%+$0.30  time=120s
+  Search stats: expanded=481, generated=517
+
+──────────────────────────────────────────────────────────────────────
+  Dijkstra | Start: ('optimism', 'WETH') | Portfolio: $15,000 | Max depth: 6
+──────────────────────────────────────────────────────────────────────
+  *** PROFITABLE PATH ***
+  Profit: $400.75  (+2.6717%)  Final value: $15,400.75
+  Path length: 6 nodes
+    1. BRIDGE  optimism   → arbitrum    [WETH ]  rate=1.01665182  price $1,850.62→$1,883.00  ratio=1.017496  fee=0.080%+$0.30  time=120s
+    2. SWAP    arbitrum    WETH  → WBTC   rate=0.99698000  dex_fee=0.30%  gas=$0.20
+    3. BRIDGE  arbitrum   → optimism    [WBTC ]  rate=0.99938619  price $64,050.16→$64,064.02  ratio=1.000216  fee=0.080%+$0.30  time=120s
+    4. SWAP    optimism    WBTC  → WETH   rate=0.99698000  dex_fee=0.30%  gas=$0.20
+    5. BRIDGE  optimism   → arbitrum    [WETH ]  rate=1.01665182  price $1,850.62→$1,883.00  ratio=1.017496  fee=0.080%+$0.30  time=120s
+  Search stats: expanded=459, generated=459
+
+──────────────────────────────────────────────────────────────────────
+  Dijkstra | Start: ('base', 'WETH') | Portfolio: $8,000 | Max depth: 6
+──────────────────────────────────────────────────────────────────────
+  *** PROFITABLE PATH ***
+  Profit: $118.48  (+1.4810%)  Final value: $8,118.48
+  Path length: 7 nodes
+    1. SWAP    base        WETH  → USDC   rate=0.99699500  dex_fee=0.30%  gas=$0.05
+    2. BRIDGE  base       → polygon     [USDC ]  rate=0.99918000  price $1.00→$1.00  ratio=1.000000  fee=0.080%+$0.20  time=120s
+    3. SWAP    polygon     USDC  → WBTC   rate=0.99699800  dex_fee=0.30%  gas=$0.02
+    4. BRIDGE  polygon    → optimism    [WBTC ]  rate=1.00808000  price $63,497.78→$64,064.02  ratio=1.008917  fee=0.080%+$0.30  time=120s
+    5. SWAP    optimism    WBTC  → WETH   rate=0.99698000  dex_fee=0.30%  gas=$0.20
+    6. BRIDGE  optimism   → arbitrum    [WETH ]  rate=1.01665182  price $1,850.62→$1,883.00  ratio=1.017496  fee=0.080%+$0.30  time=120s
+  Search stats: expanded=552, generated=552
+
+──────────────────────────────────────────────────────────────────────
+  Bellman-Ford (negative cycle detection) | Portfolio: $10,000
+──────────────────────────────────────────────────────────────────────
+  No negative cycles detected.
+
+  DEX total runtime: 0.2s
+
+
+
+████████████████████████████████████████████████████████████████████████████████
+  SUMMARY
+████████████████████████████████████████████████████████████████████████████████
+
+  CEX scenarios tested:  6
+  DEX scenarios tested:  8
+  CEX runtime:           40.2s
+  DEX runtime:           0.2s
+  Total runtime:         40.4s
+
+  Algorithms used:
+    1. Dijkstra (uniform-cost search / A* with h=0)
+       - Finds single best-profit path from a start node
+       - Optimal: guarantees shortest path in log-cost space
+       - Early exit after finding profit + 200-300 iterations
+    2. Bellman-Ford
+       - Detects ALL negative-weight cycles (arbitrage loops)
+       - Finds cycles regardless of starting node
+       - O(V*E) complexity
+
+  Graph cost model:
+    - Edge cost = -log(usd_rate)
+    - usd_rate = multiplicative factor on portfolio USD value
+    - Includes: trading/swap fees, gas costs, withdrawal/bridge fees
+    - Cross-exchange/chain price ratios baked into transfer/bridge edges
+    - Negative total cost = profitable cycle (product of rates > 1)

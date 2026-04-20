@@ -101,3 +101,8 @@ results/h2_constant_tests/*.txt
 # Streamlit background process files
 streamlit.log
 streamlit.pid
+
+# Secrets — NEVER commit
+.env
+.env.local
+.env.production
