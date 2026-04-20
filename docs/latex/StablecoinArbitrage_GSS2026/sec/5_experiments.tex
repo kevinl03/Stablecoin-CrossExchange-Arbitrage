@@ -4,7 +4,7 @@ We gather live market data from twelve major exchanges via CCXT\textsuperscript{
 
 \subsection{Results}
 
-Tables~\ref{tab:heuristic-compact} and~\ref{tab:graph_scaling} summarize heuristic performance. On the cached graph (30~start nodes), all A*-based methods achieve identical 56.7\% success; Bellman--Ford, 1-hop, and 2-hop baselines fail entirely. $h_2$ reduces expansions by \textbf{29\%} relative to Dijkstra while matching its profit within 1\%, suggesting slippage-aware guidance follows the same optimal routes with less wasted exploration. $h_1$ and $h_4$ expand 58--87\% \emph{more} nodes and find 30--33\% less profit, indicating their risk penalties overcompensate and divert search from structurally optimal paths.
+Tables~\ref{tab:heuristic-compact} and~\ref{tab:graph_scaling} summarize heuristic performance. Because $h_3$ is a multi-start search strategy that wraps an underlying heuristic rather than modifying per-node guidance, it is orthogonal to the single-start comparisons in these tables; all overnight experiments already use $k{=}3$ parallel starts (see Appendix). On the cached graph (30~start nodes), all A*-based methods achieve identical 56.7\% success; Bellman--Ford, 1-hop, and 2-hop baselines fail entirely. $h_2$ reduces expansions by \textbf{29\%} relative to Dijkstra while matching its profit within 1\%, suggesting slippage-aware guidance follows the same optimal routes with less wasted exploration. $h_1$ and $h_4$ expand 58--87\% \emph{more} nodes and find 30--33\% less profit, indicating their risk penalties overcompensate and divert search from structurally optimal paths.
 
 \begin{table*}[t]
 \centering

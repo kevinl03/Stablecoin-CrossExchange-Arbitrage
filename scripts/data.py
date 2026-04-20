@@ -32,7 +32,7 @@ STABLE_COINS = [
     "PYUSD",
     "USDP",   # Pax Dollar
     "GUSD",   # Gemini Dollar
-    "FRAX",   # Frax
+    # FRAX removed — depegged (~$0.46 as of Apr 2026), no longer a stablecoin
 ]
 
 # 3. For each coin+exchange, specify which market symbol to use.
