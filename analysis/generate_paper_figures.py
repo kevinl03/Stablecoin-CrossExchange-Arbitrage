@@ -27,7 +27,7 @@ import numpy as np
 # ── Paths ──────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = PROJECT_ROOT / "results"
-FIGURES_DIR = PROJECT_ROOT / "docs" / "latex" / "StablecoinArbitrage_CanadianAI2026" / "figures"
+FIGURES_DIR = PROJECT_ROOT / "docs" / "latex" / "StablecoinArbitrage_GSS2026" / "figures"
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Data files (latest timestamped run) ────────────────────────────────
@@ -77,8 +77,8 @@ HEURISTIC_LABELS = {
     "dijkstra": "Dijkstra (h=0)",
     "h1_liquidity": "H1: Liquidity",
     "h2_slippage": "H2: Slippage",
-    "parallel_baseline": "H3: Parallel",
-    "h3_chaincongestion_exchange_risk": "H4: Congestion/Risk",
+    "parallel_baseline": "Parallel Baseline",
+    "h3_chaincongestion_exchange_risk": "H3: Congestion/Risk",
     "3hop_enum": "3-Hop Baseline",
     "bellman_ford": "Bellman-Ford",
     "simple_1hop": "1-Hop Baseline",
@@ -102,7 +102,11 @@ def _load_jsonl(path: Path) -> list[dict]:
         for line in f:
             line = line.strip()
             if line:
-                recs.append(json.loads(line))
+                rec = json.loads(line)
+                h = rec.get("heuristic", "")
+                if h in HEURISTIC_LABEL_MAP:
+                    rec["heuristic"] = HEURISTIC_LABEL_MAP[h]
+                recs.append(rec)
     return recs
 
 def _save(fig, name: str):
