@@ -35,6 +35,7 @@ def parallel_search_from_random_starts(
     min_profit_usd: float = 0.0,
     heuristic: str = "h1_liquidity",  # Base heuristic to use for each search
     num_starts: int = 3,  # Number of random starting points
+    market_data=None,
 ) -> Optional[PlanResult]:
     """
     Run A* search from multiple random starting points in parallel.
@@ -52,7 +53,7 @@ def parallel_search_from_random_starts(
     """
     # Build graph to get available nodes
     # Pass portfolio size for accurate fee calculations
-    nodes, adj = build_graph(portfolio_size_usd=liquid_cash_usd)
+    nodes, adj = build_graph(portfolio_size_usd=liquid_cash_usd, market_data=market_data)
     if not nodes:
         return None
     
@@ -84,6 +85,7 @@ def parallel_search_from_random_starts(
                 max_time_sec=max_time_sec,
                 min_profit_usd=min_profit_usd,
                 heuristic=heuristic,
+                market_data=market_data,
             )
             return result
         except Exception:

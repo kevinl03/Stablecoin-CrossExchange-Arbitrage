@@ -38,7 +38,9 @@ _CACHE_TTL_SEC: float = 60.0  # Cache graph for 60 seconds
 STABLECOIN_PRICE_TOLERANCE = 0.05  # 5% tolerance: $0.95 - $1.05
 
 
-def fetch_price_snapshot() -> Tuple[Dict[NodeId, float], float]:
+def fetch_price_snapshot(
+    market_data=None,
+) -> Tuple[Dict[NodeId, float], float]:
     """
     Fetch a snapshot of USD-normalized prices for all (exchange, coin)
     pairs where we have a configured market in data.py.
@@ -47,10 +49,18 @@ def fetch_price_snapshot() -> Tuple[Dict[NodeId, float], float]:
     Exchanges that fail on the first attempt are skipped for all remaining
     coins to avoid long cumulative timeouts.
 
+    Args:
+        market_data: Optional MarketDataStore instance. When provided,
+                     prices are read from the store instead of calling CCXT.
+
     Returns:
         prices:    dict[(exchange, coin)] -> price_usd
         timestamp: unix time when snapshot was taken
     """
+    if market_data is not None:
+        prices = market_data.get_price_snapshot()
+        return prices, time.time()
+
     prices: Dict[NodeId, float] = {}
     snapshot_ts = time.time()
     failed_exchanges: set = set()
@@ -171,6 +181,7 @@ def _fetch_actual_trading_pair_rate(
 def _build_trade_edges(
     prices: Dict[NodeId, float],
     use_live_fees: bool = False,
+    market_data=None,
 ) -> Adjacency:
     """
     For each exchange, connect all coins listed there with trade edges.
@@ -396,6 +407,7 @@ def build_graph(
     force_refresh: bool = False,
     portfolio_size_usd: float = REFERENCE_NOTIONAL_USD,
     use_live_fees: bool = False,
+    market_data=None,
 ) -> Tuple[Dict[NodeId, Dict[str, Any]], Adjacency]:
     """
     Build the arbitrage graph.
@@ -409,6 +421,9 @@ def build_graph(
                            Defaults to REFERENCE_NOTIONAL_USD for backward compatibility.
         use_live_fees: If True, attempt to fetch live fees from CCXT exchanges.
                       Falls back to hardcoded fees if unavailable.
+        market_data: Optional MarketDataStore instance. When provided, prices
+                     are read from the store instead of calling CCXT, and the
+                     graph cache is bypassed (the store IS the cache).
     
     Returns:
         nodes:
@@ -423,19 +438,21 @@ def build_graph(
             adjacency list mapping node -> list of edge dicts.
     """
     global _CACHED_GRAPH, _CACHE_TIMESTAMP
-    
-    # Check cache validity
-    current_time = time.time()
-    if (
-        not force_refresh
-        and _CACHED_GRAPH is not None
-        and _CACHE_TIMESTAMP is not None
-        and (current_time - _CACHE_TIMESTAMP) < _CACHE_TTL_SEC
-    ):
-        return _CACHED_GRAPH
+
+    # When using the live market data store, always build fresh
+    # (the store already caches data from background workers).
+    if market_data is None:
+        current_time = time.time()
+        if (
+            not force_refresh
+            and _CACHED_GRAPH is not None
+            and _CACHE_TIMESTAMP is not None
+            and (current_time - _CACHE_TIMESTAMP) < _CACHE_TTL_SEC
+        ):
+            return _CACHED_GRAPH
     
     # Build fresh graph
-    prices, snapshot_ts = fetch_price_snapshot()
+    prices, snapshot_ts = fetch_price_snapshot(market_data=market_data)
 
     # Nodes with metadata (price + snapshot time)
     nodes: Dict[NodeId, Dict[str, Any]] = {
@@ -451,7 +468,9 @@ def build_graph(
     # Build edges
     adj: Adjacency = defaultdict(list)
 
-    trade_adj = _build_trade_edges(prices, use_live_fees=use_live_fees)
+    trade_adj = _build_trade_edges(
+        prices, use_live_fees=use_live_fees, market_data=market_data,
+    )
     transfer_adj = _build_transfer_edges(
         prices,
         portfolio_size_usd=portfolio_size_usd,
@@ -464,9 +483,10 @@ def build_graph(
     for node, edges in transfer_adj.items():
         adj[node].extend(edges)
 
-    # Update cache
-    _CACHED_GRAPH = (nodes, adj)
-    _CACHE_TIMESTAMP = current_time
+    # Update cache (only when not using market_data)
+    if market_data is None:
+        _CACHED_GRAPH = (nodes, adj)
+        _CACHE_TIMESTAMP = time.time()
 
     return nodes, adj
 

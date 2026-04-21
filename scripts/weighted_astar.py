@@ -163,6 +163,7 @@ def weighted_astar_best_path(
     min_profit_usd: float = 0.0,
     early_exit_after_profit: bool = True,  # Exit early when profitable path found
     early_exit_iterations: int = 100,  # Continue searching for better paths for N iterations after finding profit
+    market_data=None,
 ) -> Optional[PlanResult]:
     """
     Weighted A* search over the arbitrage graph that:
@@ -182,7 +183,7 @@ def weighted_astar_best_path(
 
     # Build graph (nodes: metadata; adj: adjacency list)
     # Pass portfolio size for accurate fee calculations
-    nodes, adj = build_graph(portfolio_size_usd=liquid_cash_usd)
+    nodes, adj = build_graph(portfolio_size_usd=liquid_cash_usd, market_data=market_data)
 
     if start_node not in nodes:
         raise ValueError(f"Start node {start_node} not present in graph.")

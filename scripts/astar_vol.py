@@ -142,6 +142,7 @@ def astar_best_path_with_liquidity(
     heuristic: str = "h1_liquidity",  # "h1_liquidity" or "h2_slippage"
     early_exit_after_profit: bool = True,  # Exit early when profitable path found
     early_exit_iterations: int = 100,  # Continue searching for better paths for N iterations after finding profit
+    market_data=None,
 ) -> Optional[PlanResult]:
     """
     A* search over the arbitrage graph that:
@@ -163,7 +164,7 @@ def astar_best_path_with_liquidity(
     """
     # Build graph (nodes: metadata; adj: adjacency list)
     # Pass portfolio size for accurate fee calculations
-    nodes, adj = build_graph(portfolio_size_usd=liquid_cash_usd)
+    nodes, adj = build_graph(portfolio_size_usd=liquid_cash_usd, market_data=market_data)
 
     if start_node not in nodes:
         raise ValueError(f"Start node {start_node} not present in graph.")
@@ -181,7 +182,8 @@ def astar_best_path_with_liquidity(
             exchange_name=start_node[0],
             coin=start_node[1],
             order_size_usd=liquid_cash_usd,
-            side="buy",  # Assume buying at start
+            side="buy",
+            market_data=market_data,
         )
         logger.info(f"Start node h2_slippage heuristic: {start_h:.6f}")
     elif heuristic == "h1_liquidity":
@@ -190,6 +192,7 @@ def astar_best_path_with_liquidity(
             coin=start_node[1],
             order_notional_usd=liquid_cash_usd,
             remaining_time_sec=max_time_sec,
+            market_data=market_data,
         )
         logger.info(f"Start node h1_liquidity heuristic: {start_h:.6f}")
     else:
@@ -309,14 +312,14 @@ def astar_best_path_with_liquidity(
 
             if heuristic == "h2_slippage":
                 from scripts.h2_slippage import slippage_heuristic_cost
-                # Determine side based on edge type (trade vs transfer)
                 edge_kind = edge.get("kind", "trade")
-                side = "buy" if edge_kind == "trade" else "buy"  # Default to buy
+                side = "buy" if edge_kind == "trade" else "buy"
                 h = slippage_heuristic_cost(
                     exchange_name=to_node[0],
                     coin=to_node[1],
                     order_size_usd=new_cash,
                     side=side,
+                    market_data=market_data,
                 )
                 logger.debug(
                     f"  h2_slippage at {to_node[0]}:{to_node[1]}: h={h:.6f} "
@@ -328,6 +331,7 @@ def astar_best_path_with_liquidity(
                     coin=to_node[1],
                     order_notional_usd=new_cash,
                     remaining_time_sec=remaining_time,
+                    market_data=market_data,
                 )
                 logger.debug(
                     f"  h1_liquidity at {to_node[0]}:{to_node[1]}: h={h:.6f} "

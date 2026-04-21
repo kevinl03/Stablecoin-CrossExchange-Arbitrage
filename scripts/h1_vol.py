@@ -41,6 +41,7 @@ _volume_cache: dict[tuple[str, str], tuple[float, Optional[float]]] = {}  # (exc
 def get_24h_quote_volume(
     exchange_name: str,
     market: str,
+    market_data=None,
 ) -> Optional[float]:
     """
     Fetch the 24h quote volume for a specific symbol on an exchange.
@@ -50,6 +51,8 @@ def get_24h_quote_volume(
     Args:
         exchange_name: "binance", "kraken", "kucoin", "bybit", ...
         market:        CCXT market symbol, e.g. "USDC/USDT", "USDT/USD"
+        market_data:   Optional MarketDataStore; when provided, volume is
+                       read from the store instead of calling CCXT.
 
     Returns:
         float | None:
@@ -58,7 +61,15 @@ def get_24h_quote_volume(
             - None if we cannot fetch a ticker or volume is missing.
     """
     import time
-    
+
+    if market_data is not None:
+        for c, ex_map in COIN_MARKETS.items():
+            if ex_map.get(exchange_name) == market:
+                vol = market_data.get_volume(exchange_name, c)
+                if vol is not None:
+                    return vol
+                break
+
     # Check cache first
     cache_key = (exchange_name, market)
     current_time = time.time()
@@ -97,6 +108,7 @@ def get_24h_quote_volume(
 def get_24h_quote_volume_for_coin(
     exchange_name: str,
     coin: str,
+    market_data=None,
 ) -> Optional[float]:
     """
     Convenience helper that uses COIN_MARKETS from data.py.
@@ -104,11 +116,17 @@ def get_24h_quote_volume_for_coin(
     Args:
         exchange_name: "binance", "kraken", "kucoin", "bybit", ...
         coin:          "USDT", "USDC", "DAI", ...
+        market_data:   Optional MarketDataStore.
 
     Returns:
         24h quote volume for the configured market of that coin
         on that exchange, or None if no market / volume.
     """
+    if market_data is not None:
+        vol = market_data.get_volume(exchange_name, coin)
+        if vol is not None:
+            return vol
+
     coin_cfg = COIN_MARKETS.get(coin, {})
     market = coin_cfg.get(exchange_name)
     if not market:
@@ -186,6 +204,7 @@ def estimate_liquidity_score_live(
     coin: str,
     order_notional_usd: float,
     time_window_sec: float,
+    market_data=None,
 ) -> Optional[float]:
     """
     High-level helper:
@@ -194,6 +213,9 @@ def estimate_liquidity_score_live(
       - Computes the liquidity score for the given order size and window.
 
     This is what you'll likely call from your path / heuristic code.
+
+    Args:
+        market_data: Optional MarketDataStore.
 
     Example:
         # want to trade 5,000 USDT within a 10-minute window on Binance
@@ -206,7 +228,7 @@ def estimate_liquidity_score_live(
         # score close to 1  => very liquid, safe
         # score close to 0  => illiquid, avoid this route
     """
-    vol_24h = get_24h_quote_volume_for_coin(exchange_name, coin)
+    vol_24h = get_24h_quote_volume_for_coin(exchange_name, coin, market_data=market_data)
     if vol_24h is None:
         return None
 
@@ -218,6 +240,7 @@ def volume_heuristic_cost(
     coin: str,
     order_notional_usd: float,
     remaining_time_sec: float,
+    market_data=None,
 ) -> float:
     """
     Heuristic h1(n) for node n = (exchange_name, coin).
@@ -254,6 +277,7 @@ def volume_heuristic_cost(
         coin=coin,
         order_notional_usd=order_notional_usd,
         time_window_sec=remaining_time_sec,
+        market_data=market_data,
     )
 
     # If no volume info, treat as very risky.

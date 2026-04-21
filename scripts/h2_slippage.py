@@ -40,6 +40,7 @@ def fetch_order_book(
     exchange_name: str,
     market: str,
     limit: int = 20,
+    market_data=None,
 ) -> Optional[dict]:
     """
     Fetch the order book for a specific symbol on an exchange.
@@ -50,11 +51,21 @@ def fetch_order_book(
         exchange_name: "binance", "kraken", "kucoin", "bybit", ...
         market:        CCXT market symbol, e.g. "USDC/USDT", "USDT/USD"
         limit:         Number of price levels to fetch (default: 20)
+        market_data:   Optional MarketDataStore; when provided, the order book
+                       is read from the store instead of calling CCXT.
 
     Returns:
         Order book dict with 'bids' and 'asks' lists, or None if error.
         Each bid/ask is [price, amount].
     """
+    if market_data is not None:
+        for c, ex_map in COIN_MARKETS.items():
+            if ex_map.get(exchange_name) == market:
+                ob = market_data.get_order_book(exchange_name, c)
+                if ob is not None:
+                    return ob
+                break
+
     # Check cache first
     cache_key = (exchange_name, market)
     current_time = time.time()
@@ -84,6 +95,7 @@ def fetch_order_book_for_coin(
     exchange_name: str,
     coin: str,
     limit: int = 20,
+    market_data=None,
 ) -> Optional[dict]:
     """
     Convenience helper that uses COIN_MARKETS from data.py.
@@ -92,11 +104,17 @@ def fetch_order_book_for_coin(
         exchange_name: "binance", "kraken", "kucoin", "bybit", ...
         coin:          "USDT", "USDC", "DAI", ...
         limit:         Number of price levels to fetch
+        market_data:   Optional MarketDataStore.
 
     Returns:
         Order book for the configured market of that coin
         on that exchange, or None if no market / order book.
     """
+    if market_data is not None:
+        ob = market_data.get_order_book(exchange_name, coin)
+        if ob is not None:
+            return ob
+
     coin_cfg = COIN_MARKETS.get(coin, {})
     market = coin_cfg.get(exchange_name)
     if not market:
@@ -219,6 +237,7 @@ def estimate_slippage_for_coin(
     coin: str,
     order_size_usd: float,
     side: str = "buy",
+    market_data=None,
 ) -> Optional[float]:
     """
     High-level helper to estimate slippage for a coin on an exchange.
@@ -228,16 +247,15 @@ def estimate_slippage_for_coin(
         coin:          Stablecoin symbol, e.g. "USDT", "USDC".
         order_size_usd: Order size in USD.
         side:          "buy" or "sell" (default: "buy").
+        market_data:   Optional MarketDataStore.
 
     Returns:
         Slippage in basis points (bps), or None if cannot compute.
     """
-    orderbook = fetch_order_book_for_coin(exchange_name, coin)
+    orderbook = fetch_order_book_for_coin(exchange_name, coin, market_data=market_data)
     if orderbook is None:
         return None
 
-    # For stablecoins, order_size_usd ≈ order_size_base (assuming ~$1 price)
-    # This is a simplification but reasonable for stablecoins
     order_size_base = order_size_usd
 
     return compute_slippage_bps(orderbook, order_size_base, side)
@@ -248,6 +266,7 @@ def slippage_heuristic_cost(
     coin: str,
     order_size_usd: float,
     side: str = "buy",
+    market_data=None,
 ) -> float:
     """
     Heuristic h2(n) for node n = (exchange_name, coin).
@@ -280,6 +299,7 @@ def slippage_heuristic_cost(
         coin=coin,
         order_size_usd=order_size_usd,
         side=side,
+        market_data=market_data,
     )
 
     # If no order book info, treat as very risky.

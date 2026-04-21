@@ -7,6 +7,7 @@ from __future__ import annotations
 import sys
 import logging
 import io
+import time
 from pathlib import Path
 from typing import Optional, Dict, List, Any, Tuple
 from collections import defaultdict
@@ -23,12 +24,13 @@ import networkx as nx            # type: ignore
 import pandas as pd              # type: ignore
 
 from scripts.graph import build_graph, _fetch_actual_trading_pair_rate
+from scripts.market_data_service import MarketDataService
 
 # ── DEV FLAG ─────────────────────────────────────────────────────
 # TODO: set back to False before pushing / merging to integration
 # When True the UI loads a cached JSON snapshot instead of hitting
 # live exchange APIs, making reloads instant during development.
-USE_CACHED_DATA = True
+USE_CACHED_DATA = False
 _SNAPSHOT_PATH = Path(__file__).with_name("graph_snapshot.json")
 from scripts.data import EXCHANGES
 from scripts.astar_vol import astar_best_path_with_liquidity, PlanResult, NodeId
@@ -109,6 +111,14 @@ def _load_snapshot() -> Tuple[Dict[NodeId, Dict[str, Any]], Dict[NodeId, list]]:
     return nodes, adj
 
 
+def _get_market_data():
+    """Return the MarketDataStore from session state, or None."""
+    svc = st.session_state.get("market_data_service")
+    if svc is not None and svc.running:
+        return svc.store
+    return None
+
+
 def build_nx_graph(show_all: bool = False):
     """
     Use build_graph() and convert to a NetworkX DiGraph.
@@ -119,13 +129,14 @@ def build_nx_graph(show_all: bool = False):
     Returns:
         (G, error_msg) where error_msg is None on success or a string describing the failure.
     """
+    market_data = _get_market_data()
     try:
         if USE_CACHED_DATA and _SNAPSHOT_PATH.exists():
             nodes, adj = _load_snapshot()
         elif show_all:
             nodes, adj = build_graph_unfiltered()
         else:
-            nodes, adj = build_graph()
+            nodes, adj = build_graph(market_data=market_data)
     except Exception as exc:
         return nx.DiGraph(), f"Failed to fetch exchange data: {exc}"
 
@@ -1209,32 +1220,35 @@ def run_search_and_format(
 
             result: Optional[PlanResult] = parallel_search_from_random_starts(
                 liquid_cash_usd=liquid_cash,
-                max_depth=4,  # Reduced from 6 to 4 for faster execution
+                max_depth=4,
                 max_time_sec=1800.0,
                 min_profit_usd=0.0,
-                heuristic=base_heuristic,  # Base heuristic for each parallel search
+                heuristic=base_heuristic,
                 num_starts=3,
+                market_data=_get_market_data(),
             )
 
         elif heuristic_name == "h3_chain_congestion":
             # Weighted A* with chain + exchange risk heuristic
             result = weighted_astar_best_path(
-            start_node=start_node,
-            liquid_cash_usd=liquid_cash,
-                max_depth=4,  # Reduced from 6 to 4 for faster execution
-            max_time_sec=1800.0,
-            min_profit_usd=0.0,
-        )
+                start_node=start_node,
+                liquid_cash_usd=liquid_cash,
+                max_depth=4,
+                max_time_sec=1800.0,
+                min_profit_usd=0.0,
+                market_data=_get_market_data(),
+            )
 
         else:
             # Standard single-start search for h1 / h2
             result = astar_best_path_with_liquidity(
                 start_node=start_node,
                 liquid_cash_usd=liquid_cash,
-                max_depth=4,  # Reduced from 6 to 4 for faster execution
+                max_depth=4,
                 max_time_sec=1800.0,
                 min_profit_usd=0.0,
-                heuristic=heuristic_name,  # Pass selected heuristic to A*
+                heuristic=heuristic_name,
+                market_data=_get_market_data(),
             )
 
         # Clean up handlers
@@ -1453,6 +1467,36 @@ def main():
     st.title("Stablecoin Cross-Exchange Arbitrage")
     st.caption("Live graph + heuristic selection + price updates")
 
+    # ── Market data service (parallel background fetch) ──────────
+    if not USE_CACHED_DATA and "market_data_service" not in st.session_state:
+        svc = MarketDataService(poll_interval=5.0, fetch_orderbooks=False)
+        svc.start()
+        st.session_state["market_data_service"] = svc
+        with st.spinner("Waiting for initial exchange data (background workers are fetching)..."):
+            svc.wait_for_initial_data(timeout=60.0)
+
+    # Show service status in sidebar
+    svc = st.session_state.get("market_data_service")
+    if svc is not None and svc.running:
+        with st.sidebar:
+            st.subheader("Market Data Service")
+            status = svc.store.get_exchange_status()
+            node_count = svc.store.node_count()
+            st.metric("Live nodes", node_count)
+            if status:
+                import datetime
+                rows = []
+                for ex_name, info in sorted(status.items()):
+                    last = info.get("last_update")
+                    age = f"{time.time() - last:.0f}s ago" if last else "—"
+                    errs = info.get("error_count", 0)
+                    rows.append({"Exchange": ex_name, "Last update": age, "Errors": errs})
+                st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+            if st.button("Stop service"):
+                svc.stop()
+                del st.session_state["market_data_service"]
+                st.rerun()
+
     # Session state: store the current NetworkX graph and search result text
     if "graph" not in st.session_state:
         with st.spinner("Fetching live data from exchanges (this may take up to a minute)..."):
@@ -1480,7 +1524,7 @@ def main():
 
     # Prepare list of starting wallets (exchange:coin)
     start_wallet_options = sorted(f"{ex}:{coin}" for (ex, coin) in G.nodes())
-    default_start = "binance:BUSD"
+    default_start = "kraken:TUSD"
     if default_start not in start_wallet_options and start_wallet_options:
         default_start = start_wallet_options[0]
 
@@ -1535,7 +1579,7 @@ def main():
             liquid_cash = st.number_input(
                 "Liquid cash (USD)",
                 min_value=0.0,
-                value=1000.0,
+                value=10000.0,
                 step=100.0,
                 help="Total capital available to allocate to a trade.",
             )
