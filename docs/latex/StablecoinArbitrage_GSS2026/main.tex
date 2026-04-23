@@ -46,7 +46,7 @@ stablecoin arbitrage, A* search, cross-exchange trading, execution-aware pathfin
 \begin{subfigure}[t]{0.48\textwidth}
     \centering
     \includegraphics[width=\textwidth]{figures/FullGraph}
-    \caption{Full arbitrage graph across 12 exchanges.}
+    \caption{Subgraph of the arbitrage network (9 of 12 exchanges shown).}
     \label{fig:full_graph}
 \end{subfigure}
 \hfill
@@ -57,7 +57,7 @@ stablecoin arbitrage, A* search, cross-exchange trading, execution-aware pathfin
     \label{fig:successful_path}
 \end{subfigure}
 \caption{
-(a) The stablecoin arbitrage graph: nodes are (exchange, coin) pairs with USD prices; solid edges are intra-exchange trades, light edges are cross-exchange transfers.
+(a) A subgraph of the stablecoin arbitrage graph across 9 of 12 exchanges: nodes are (exchange, coin) pairs with USD prices; solid edges are intra-exchange trades, light edges are cross-exchange transfers.
 (b) A profitable path: $\text{kraken:USDT} \to \text{kucoin:USDT} \to \text{kucoin:TUSD}$. The cross-exchange transfer has $r_1 = 1.0001$ and the intra-exchange trade $r_2 = 1.0018$, yielding $\approx 1.0019\times$ return (\$19 on \$10{,}000). Profitable paths need not form closed cycles. Note: the \$0.84 label visible on binance:FDUSD reflects a fractional stablecoin partially backed by non-USD assets, not a true exchange rate.
 }
 \label{fig:graph_and_path}
@@ -85,11 +85,5 @@ We thank Hang Ma for guidance on an earlier draft of this paper and Tania Pocrnj
 % ---------------- AI Disclosure ----------------
 \section*{Statement on the Use of AI}
 Claude (Anthropic) was used to assist with \LaTeX{} formatting and prose revision of author-written text. All technical content, experimental design, analysis, and conclusions are the sole work of the author. The author takes full responsibility for the accuracy and originality of all material in this paper.
-
-% ---------------- Appendix ----------------
-\newpage
-\appendix
-\section{Appendix}
-\input{sec/Appendix}
 
 \end{document}
