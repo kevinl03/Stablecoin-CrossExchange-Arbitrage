@@ -69,7 +69,7 @@ EARLY_EXIT_ITERS: int = 200                 # iterations to keep searching after
 HEURISTICS = [
     "h1_liquidity",
     "h2_slippage",
-    "h4_chaincongestion_exchange_risk",
+    "h3_chaincongestion_exchange_risk",
     "dijkstra",
     "3hop_enum",
 ]
@@ -125,7 +125,7 @@ def _run_search(
                 early_exit_after_profit=EARLY_EXIT,
                 early_exit_iterations=EARLY_EXIT_ITERS,
             )
-        elif heuristic == "h4_chaincongestion_exchange_risk":
+        elif heuristic == "h3_chaincongestion_exchange_risk":
             result = weighted_astar_best_path(
                 start_node=start_node,
                 liquid_cash_usd=cash_usd,

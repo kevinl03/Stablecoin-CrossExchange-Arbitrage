@@ -6,167 +6,106 @@ import contextlib
 from pathlib import Path
 from datetime import datetime, timezone
 
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 import pytest  # type: ignore
-from scripts.h3_parallel import parallel_search_from_random_starts
+import scripts.h3_chaincongestion_exchange_risk as h3  # noqa
 
 
-
-class DummyResult:
-    """Minimal PlanResult-like object used in tests."""
-    def __init__(self, final_cash_usd: float):
-        self.final_cash_usd = final_cash_usd
-        self.path = []      # not used by h3, but harmless
-        self.edges = []     # same here
+def _fake_fastest(sec: float):
+    def _inner(node):
+        return sec
+    return _inner
 
 
-def test_parallel_search_empty_graph(monkeypatch):
-    """If build_graph returns no nodes, we should get None."""
-
-    def fake_build_graph():
-        return {}, {}   # nodes, adj
-
-    # Patch build_graph inside scripts.h3_parallel
-    monkeypatch.setattr(
-        "scripts.h3_parallel.build_graph",
-        fake_build_graph,
-    )
-
-    result = parallel_search_from_random_starts(
-        liquid_cash_usd=1000.0,
-        max_depth=3,
-        max_time_sec=10.0,
-        min_profit_usd=0.0,
-        heuristic="h1_liquidity",
-        num_starts=3,
-    )
-
-    assert result is None
+def test_kickback_risk_zero_when_no_remaining_time(monkeypatch):
+    monkeypatch.setattr(h3, "_fastest_transfer_time_for_node", _fake_fastest(10.0))
+    assert h3.estimate_chain_kickback_risk_score("binance", "USDT", 0.0) == 0.0
+    assert h3.estimate_chain_kickback_risk_score("binance", "USDT", -5.0) == 0.0
 
 
-def test_parallel_search_picks_best_result(monkeypatch):
-    """
-    Given several starting nodes with different profits, the function
-    should return the one with the highest final_cash_usd.
-    """
-
-    # Fake graph with three nodes
-    nodes = {
-        ("ex1", "USDT"): {},
-        ("ex2", "USDT"): {},
-        ("ex3", "USDT"): {},
-    }
-
-    def fake_build_graph():
-        return nodes, {}
-
-    monkeypatch.setattr(
-        "scripts.h3_parallel.build_graph",
-        fake_build_graph,
-    )
-
-    # Make random.sample deterministic: pick the first k nodes
-    def fake_sample(population, k):
-        pop_list = list(population)
-        return pop_list[:k]
-
-    monkeypatch.setattr(
-        "scripts.h3_parallel.random.sample",
-        fake_sample,
-    )
-
-    # Fake A* results: ex2 is the best
-    def fake_astar(start_node, liquid_cash_usd, max_depth, max_time_sec,
-                   min_profit_usd, heuristic):
-        if start_node == ("ex1", "USDT"):
-            return DummyResult(liquid_cash_usd + 1.0)
-        if start_node == ("ex2", "USDT"):
-            return DummyResult(liquid_cash_usd + 5.0)
-        if start_node == ("ex3", "USDT"):
-            return DummyResult(liquid_cash_usd + 2.0)
-        return None
-
-    monkeypatch.setattr(
-        "scripts.h3_parallel.astar_best_path_with_liquidity",
-        fake_astar,
-    )
-
-    base_cash = 1000.0
-    result = parallel_search_from_random_starts(
-        liquid_cash_usd=base_cash,
-        max_depth=3,
-        max_time_sec=10.0,
-        min_profit_usd=0.0,
-        heuristic="h1_liquidity",
-        num_starts=3,
-    )
-
-    assert isinstance(result, DummyResult)
-    # Should pick ex2’s result with +5 profit
-    assert result.final_cash_usd == pytest.approx(base_cash + 5.0)
+def test_kickback_risk_zero_when_fastest_hop_slower_than_window(monkeypatch):
+    monkeypatch.setattr(h3, "_fastest_transfer_time_for_node", _fake_fastest(30.0))
+    assert h3.estimate_chain_kickback_risk_score("binance", "USDT", 20.0) == 0.0
 
 
-def test_parallel_search_respects_num_starts(monkeypatch):
-    """
-    If num_starts > number of nodes, we should only run as many searches
-    as there are nodes.
-    """
+def test_kickback_risk_between_zero_and_one(monkeypatch):
+    monkeypatch.setattr(h3, "_fastest_transfer_time_for_node", _fake_fastest(10.0))
+    score = h3.estimate_chain_kickback_risk_score("binance", "USDT", 20.0)
+    assert score == pytest.approx(0.5, rel=1e-6)
 
-    # Only two nodes in the graph
-    nodes = {
-        ("ex1", "USDT"): {},
-        ("ex2", "USDT"): {},
-    }
 
-    def fake_build_graph():
-        return nodes, {}
+def test_kickback_risk_clamped_to_one(monkeypatch):
+    monkeypatch.setattr(h3, "_fastest_transfer_time_for_node", _fake_fastest(0.0001))
+    score = h3.estimate_chain_kickback_risk_score("binance", "USDT", 10_000.0)
+    assert 0.0 <= score <= 1.0
+
+
+def test_kickback_risk_zero_when_no_transfer_info(monkeypatch):
+    monkeypatch.setattr(h3, "_fastest_transfer_time_for_node", lambda n: None)
+    assert h3.estimate_chain_kickback_risk_score("binance", "USDT", 60.0) == 0.0
+
+
+def test_chain_congestion_heuristic_uses_weight(monkeypatch):
+    monkeypatch.setattr(h3, "_fastest_transfer_time_for_node", _fake_fastest(10.0))
+    old_weight = h3.CHAIN_HEURISTIC_WEIGHT
+    h3.CHAIN_HEURISTIC_WEIGHT = 2.0
+    try:
+        assert h3.chain_congestion_heuristic_cost("binance", "USDT", 20.0) == pytest.approx(1.0)
+    finally:
+        h3.CHAIN_HEURISTIC_WEIGHT = old_weight
+
+
+def test_chain_congestion_heuristic_non_negative(monkeypatch):
+    monkeypatch.setattr(h3, "_fastest_transfer_time_for_node", _fake_fastest(10.0))
+    assert h3.chain_congestion_heuristic_cost("binance", "USDT", 20.0) >= 0.0
+
+
+def test_estimate_exchange_reliability_score_known_exchange():
+    assert h3.estimate_exchange_reliability_score("binance") == pytest.approx(0.9)
+
+
+def test_estimate_exchange_reliability_score_unknown_exchange():
+    assert h3.estimate_exchange_reliability_score("some_weird_exchange") == 0.0
+
+
+def test_exchange_risk_heuristic_cost_known_exchange():
+    assert h3.exchange_risk_heuristic_cost("binance") == pytest.approx(0.1)
+
+
+def test_exchange_risk_heuristic_cost_unknown_exchange_uses_fallback():
+    assert h3.exchange_risk_heuristic_cost("unknown_exch") == h3.UNKNOWN_EXCHANGE_PENALTY
+
+
+def test_exchange_risk_respects_weight():
+    old_weight = h3.EXCHANGE_HEURISTIC_WEIGHT
+    h3.EXCHANGE_HEURISTIC_WEIGHT = 2.0
+    try:
+        expected = (1 - 0.6) * 2.0  # kucoin = 0.6
+        assert h3.exchange_risk_heuristic_cost("kucoin") == pytest.approx(expected)
+    finally:
+        h3.EXCHANGE_HEURISTIC_WEIGHT = old_weight
+
+
+def test_chain_exchange_risk_heuristic_is_sum_of_parts(monkeypatch):
 
     monkeypatch.setattr(
-        "scripts.h3_parallel.build_graph",
-        fake_build_graph,
+        h3,
+        "chain_congestion_heuristic_cost",
+        lambda *args, **kwargs: 2.5,
     )
-
-    # Deterministic sample again
-    def fake_sample(population, k):
-        pop_list = list(population)
-        return pop_list[:k]
-
     monkeypatch.setattr(
-        "scripts.h3_parallel.random.sample",
-        fake_sample,
+        h3,
+        "exchange_risk_heuristic_cost",
+        lambda *args, **kwargs: 0.75,
     )
-
-    call_count = {"n": 0}
-
-    def fake_astar(start_node, liquid_cash_usd, max_depth, max_time_sec,
-                   min_profit_usd, heuristic):
-        call_count["n"] += 1
-        # Return some valid DummyResult so the search succeeds
-        return DummyResult(liquid_cash_usd + 1.0)
-
-    monkeypatch.setattr(
-        "scripts.h3_parallel.astar_best_path_with_liquidity",
-        fake_astar,
-    )
-
-    result = parallel_search_from_random_starts(
-        liquid_cash_usd=500.0,
-        max_depth=3,
-        max_time_sec=10.0,
-        min_profit_usd=0.0,
-        heuristic="h1_liquidity",
-        num_starts=5,   # ask for more than available nodes
-    )
-
-    # We only have 2 nodes, so A* should have been called twice
-    assert call_count["n"] == 2
-    assert isinstance(result, DummyResult)
+    assert h3.chain_exchange_risk_heuristic_cost("binance", "USDT", 100) == pytest.approx(3.25)
 
 
-def main() -> None:
+def main():
     results_dir = REPO_ROOT / "results"
     results_dir.mkdir(exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -175,20 +114,19 @@ def main() -> None:
     buf = io.StringIO()
 
     with contextlib.redirect_stdout(buf):
-        # Verbose pytest run on THIS file
+        # FULL VERBOSE MODE
         ret = pytest.main([
-            "-vv",
-            "--durations=0",
-            __file__,
+            "-vv",            # very verbose (prints each test)
+            "--durations=0",  # show timing for every test
+            __file__,         # run THIS file
         ])
 
     log_output = buf.getvalue()
 
-    # Show in terminal
-    print(log_output)
+    print(log_output)  # show in terminal
 
-    # Save to txt file with UTC timestamp
     with out_file.open("w", encoding="utf-8") as f:
+        # Use timezone-aware UTC to avoid deprecation warning
         f.write(f"Run at {datetime.now(timezone.utc).isoformat()}\n\n")
         f.write(log_output)
 

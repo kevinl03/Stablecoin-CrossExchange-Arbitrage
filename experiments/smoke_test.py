@@ -74,8 +74,8 @@ def test_core_imports():
         "scripts.three_hop_baseline",
         "scripts.h1_vol",
         "scripts.h2_slippage",
-        "scripts.h3_parallel",
-        "scripts.h4_chaincongestion_exchange_risk",
+        "scripts.parallel_baseline",
+        "scripts.h3_chaincongestion_exchange_risk",
         "scripts.transfer_time",
     ]
     failed = []
@@ -169,8 +169,8 @@ def test_h2_search():
     return "no profitable path (OK)"
 
 
-def test_h4_weighted_astar():
-    """Test H4 weighted A* search."""
+def test_h3_weighted_astar():
+    """Test H3 weighted A* search."""
     from scripts.graph import build_graph
     from scripts.weighted_astar import weighted_astar_best_path
 
@@ -364,7 +364,7 @@ def main():
         ("4. JSONL output/flush", test_jsonl_output),
         ("5. H1 liquidity search", test_h1_search),
         ("6. H2 slippage search", test_h2_search),
-        ("7. H4 weighted A* search", test_h4_weighted_astar),
+        ("7. H3 weighted A* search", test_h3_weighted_astar),
         ("8. Dijkstra baseline", test_dijkstra),
         ("9. 3-hop enumeration", test_3hop_enum),
         ("10. Import: overnight_multi_snapshot", test_experiment_import_overnight),
