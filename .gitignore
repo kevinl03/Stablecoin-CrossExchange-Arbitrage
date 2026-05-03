@@ -86,6 +86,12 @@ cython_debug/
 ehthumbs.db
 Thumbs.db
 
+# Environment / secrets
+.env
+
+# Cursor IDE
+.cursor/
+
 # Project specific
 results/h2_constant_tests/*.json
 results/h2_constant_tests/*.txt

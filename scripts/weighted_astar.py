@@ -1,5 +1,5 @@
 # ==========================================================
-# weighted_astar.py — Weighted A* using chain + exchange risk (h4+h5)
+# weighted_astar.py — Weighted A* using chain + exchange risk (h3)
 # ==========================================================
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from math import exp
 from typing import Any, Dict, List, Optional, Tuple
 
 from scripts.graph import build_graph
-from scripts.h4_chaincongestion_exchange_risk import (
+from scripts.h3_chaincongestion_exchange_risk import (
     estimate_chain_kickback_risk_score,
     chain_exchange_risk_heuristic_cost,
 )
@@ -192,7 +192,7 @@ def weighted_astar_best_path(
     start_state = SearchState(node=start_node, depth=0, elapsed_sec=0.0)
     start_g = 0.0
 
-    logger.info("Weighted A* search starting with chain+exchange risk heuristic (h4+h5)")
+    logger.info("Weighted A* search starting with chain+exchange risk heuristic (h3)")
     logger.info(
         f"Start node: {start_node}, liquid_cash: ${liquid_cash_usd:.2f}, "
         f"max_time_sec={max_time_sec}"
@@ -279,7 +279,7 @@ def weighted_astar_best_path(
                     )
                     
                     logger.info(
-                        "New best path found (Weighted A* h4+h5): "
+                        "New best path found (Weighted A* h3): "
                         f"profit=${profit:.2f}, path_length={len(path_nodes)}{cost_info}, "
                         f"path={' -> '.join(f'{ex}:{c}' for (ex, c) in path_nodes)}"
                     )
@@ -367,7 +367,7 @@ def weighted_astar_best_path(
 
     if best_result is None:
         logger.info(
-            f"Weighted A* (h4+h5) completed: No profitable path found "
+            f"Weighted A* (h3) completed: No profitable path found "
             f"(expanded={nodes_expanded}, generated={nodes_generated})"
         )
         return None
@@ -388,7 +388,7 @@ def weighted_astar_best_path(
     )
     
     logger.info(
-        "Weighted A* (h4+h5) completed: "
+        "Weighted A* (h3) completed: "
         f"Final profit=${best_result.profit_usd:.2f}, "
         f"path_length={len(best_result.path)}{cost_info}, "
         f"expanded={nodes_expanded}, generated={nodes_generated}, "

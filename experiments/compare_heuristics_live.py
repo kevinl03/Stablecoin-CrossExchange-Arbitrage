@@ -1,5 +1,5 @@
 # ==============================================================
-# compare_heuristics_live.py — quick experiments for h1, h2, h3, h4
+# compare_heuristics_live.py — quick experiments for h1, h2, h3, parallel_baseline
 # ==============================================================
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from scripts.astar_vol import (
     astar_best_path_with_liquidity,
     PlanResult as AStarPlanResult,
 )
-from scripts.h3_parallel import parallel_search_from_random_starts
+from scripts.parallel_baseline import parallel_search_from_random_starts
 from scripts.weighted_astar import (
     weighted_astar_best_path,
     PlanResult as WeightedPlanResult,
@@ -53,7 +53,7 @@ PlanLike = AStarPlanResult | WeightedPlanResult | BaselinePlanResult | BellmanFo
 QUICK_MAX_DEPTH: int = 4          # Reduced from 5 to 4 for faster execution
 QUICK_MAX_TIME_SEC: float = 60.0  # ≈ 1 minute cap per search (best-effort)
 QUICK_NUM_START_NODES: int = 3    # use at most 3 start nodes
-QUICK_NUM_STARTS_H3: int = 2      # parallel random starts for h3
+QUICK_NUM_STARTS_PARALLEL: int = 2      # parallel random starts for parallel_baseline
 QUICK_CASH_LEVELS: List[float] = [100.0, 1_000.0, 10_000.0]  # Test multiple portfolio sizes
 MAX_WORKERS: int = 8              # number of parallel threads for running searches
 
@@ -61,7 +61,7 @@ MAX_WORKERS: int = 8              # number of parallel threads for running searc
 @dataclass
 class ExperimentResult:
     heuristic: str
-    start_node: Optional[NodeId]  # None for h3_parallel
+    start_node: Optional[NodeId]  # None for parallel_baseline
     cash_usd: float
     final_cash_usd: Optional[float]
     profit_usd: Optional[float]
@@ -86,8 +86,8 @@ def run_single_search(
     Heuristic options:
       - "h1_liquidity"  -> astar_best_path_with_liquidity using h1
       - "h2_slippage"   -> astar_best_path_with_liquidity using h2
-      - "h4_chaincongestion_exchange_risk" -> weighted_astar_best_path (h4+h5)
-      - "h3_parallel"   -> parallel_search_from_random_starts (wrapper over A*)
+      - "h3_chaincongestion_exchange_risk" -> weighted_astar_best_path (h3)
+      - "parallel_baseline"   -> parallel_search_from_random_starts (wrapper over A*)
       - "dijkstra"      -> dijkstra_like_search (A* with h=0, no heuristic)
       - "2hop_max"      -> two_hop_max_depth_search (A* with h=0, max_depth=2)
       - "simple_1hop"   -> simple_1hop_arbitrage (naive 1-hop baseline)
@@ -100,7 +100,7 @@ def run_single_search(
     result: Optional[PlanLike] = None
 
     try:
-        if heuristic == "h3_parallel":
+        if heuristic == "parallel_baseline":
             # Parallel search from multiple random starts (internally uses A* with h1).
             random.seed(42)  # small bit of reproducibility
             result = parallel_search_from_random_starts(
@@ -109,7 +109,7 @@ def run_single_search(
                 max_time_sec=max_time_sec,
                 min_profit_usd=min_profit_usd,
                 heuristic="h1_liquidity",
-                num_starts=QUICK_NUM_STARTS_H3,
+                num_starts=QUICK_NUM_STARTS_PARALLEL,
             )
 
         elif heuristic in ("h1_liquidity", "h2_slippage"):
@@ -126,10 +126,10 @@ def run_single_search(
                 early_exit_iterations=100,  # Continue searching for 100 iterations after finding profit
             )
 
-        elif heuristic == "h4_chaincongestion_exchange_risk":
+        elif heuristic == "h3_chaincongestion_exchange_risk":
             if start_node is None:
-                raise ValueError("start_node must be provided for h4 searches")
-            # Weighted A* using chain + exchange risk heuristic (h4 + h5).
+                raise ValueError("start_node must be provided for h3 searches")
+            # Weighted A* using chain + exchange risk heuristic (h3).
             result = weighted_astar_best_path(
                 start_node=start_node,
                 liquid_cash_usd=cash_usd,
@@ -204,8 +204,8 @@ def run_single_search(
         else:
             raise ValueError(
                 f"Unknown heuristic: {heuristic}. Must be one of "
-                f"'h1_liquidity', 'h2_slippage', 'h3_parallel', "
-                f"'h4_chaincongestion_exchange_risk', 'dijkstra', '2hop_max', "
+                f"'h1_liquidity', 'h2_slippage', 'parallel_baseline', "
+                f"'h3_chaincongestion_exchange_risk', 'dijkstra', '2hop_max', "
                 f"'simple_1hop', 'simple_2hop', 'bellman_ford', '3hop_enum'."
             )
 
@@ -398,7 +398,7 @@ def main() -> None:
     nodes, _ = build_graph()
     log_and_write(f"Graph has {len(nodes)} nodes")
 
-    # Choose starting nodes for h1/h2/h4 experiments
+    # Choose starting nodes for h1/h2/h3 experiments
     start_nodes = pick_start_nodes(nodes)
     log_and_write("\nUsing start nodes:")
     for n in start_nodes:
@@ -418,9 +418,9 @@ def main() -> None:
         # Build list of all tasks to run in parallel
         tasks: List[Tuple[str, Optional[NodeId], float]] = []
         
-        # h1 + h2 + h4: run for each start node
+        # h1 + h2 + h3: run for each start node
         for start in start_nodes:
-            for h in ["h1_liquidity", "h2_slippage", "h4_chaincongestion_exchange_risk"]:
+            for h in ["h1_liquidity", "h2_slippage", "h3_chaincongestion_exchange_risk"]:
                 tasks.append((h, start, cash))
         
         # Baseline algorithms: run for each start node
@@ -428,8 +428,8 @@ def main() -> None:
             for h in ["dijkstra", "2hop_max", "simple_1hop", "simple_2hop", "bellman_ford", "3hop_enum"]:
                 tasks.append((h, start, cash))
         
-        # h3_parallel: start nodes are chosen inside the function
-        tasks.append(("h3_parallel", None, cash))
+        # parallel_baseline: start nodes are chosen inside the function
+        tasks.append(("parallel_baseline", None, cash))
         
         # Run all tasks in parallel
         def run_task(heuristic: str, start: Optional[NodeId], cash_val: float) -> ExperimentResult:

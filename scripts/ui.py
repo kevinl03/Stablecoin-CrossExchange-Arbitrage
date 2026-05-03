@@ -8,7 +8,7 @@ import sys
 import logging
 import io
 from pathlib import Path
-from typing import Optional, Dict, List, Any
+from typing import Optional, Dict, List, Any, Tuple
 from collections import defaultdict
 
 # Add project root (folder that CONTAINS "scripts") to path
@@ -16,12 +16,20 @@ project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+import json
 import streamlit as st           # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx            # type: ignore
 import pandas as pd              # type: ignore
 
 from scripts.graph import build_graph, _fetch_actual_trading_pair_rate
+
+# ── DEV FLAG ─────────────────────────────────────────────────────
+# TODO: set back to False before pushing / merging to integration
+# When True the UI loads a cached JSON snapshot instead of hitting
+# live exchange APIs, making reloads instant during development.
+USE_CACHED_DATA = True
+_SNAPSHOT_PATH = Path(__file__).with_name("graph_snapshot.json")
 from scripts.data import EXCHANGES
 from scripts.astar_vol import astar_best_path_with_liquidity, PlanResult, NodeId
 
@@ -36,7 +44,7 @@ from scripts.h2_slippage import (
     slippage_heuristic_cost,
     UNKNOWN_SLIPPAGE_PENALTY,
 )
-from scripts.h4_chaincongestion_exchange_risk import (
+from scripts.h3_chaincongestion_exchange_risk import (
     chain_congestion_heuristic_cost,
     exchange_risk_heuristic_cost,
     chain_exchange_risk_heuristic_cost,
@@ -53,10 +61,53 @@ logging.basicConfig(
     format="%(levelname)s: %(message)s"
 )
 
+# Light, pastel exchange colours.  Adjacent entries within each tier are
+# chosen to contrast on the hue wheel so neighbours look distinct.
+EXCHANGE_COLORS = {
+    "binance":   "#F6C344",   # warm yellow
+    "gateio":    "#7BA4F4",   # periwinkle blue
+    "kucoin":    "#5EC6A4",   # mint green
+    "bybit":     "#F2917C",   # salmon / coral
+    "okx":       "#A98ED6",   # soft lavender
+    "mexc":      "#7DD4E8",   # sky blue
+    "kraken":    "#C792D6",   # orchid purple
+    "bitget":    "#88D68A",   # spring green
+    "htx":       "#E8A76C",   # warm peach
+    "coinbase":  "#6BABF2",   # cornflower blue
+    "cryptocom": "#D6A0C4",   # dusty rose
+    "phemex":    "#C8E26C",   # lime / chartreuse
+}
+
+# Tier-1 (inner ring) vs tier-2 (outer ring).  Within each list the
+# ordering alternates warm/cool so ring-neighbours contrast.
+MAJOR_EXCHANGES = ["binance", "coinbase", "kraken", "bybit", "okx", "kucoin"]
+MINOR_EXCHANGES = ["gateio", "bitget", "mexc", "htx", "cryptocom", "phemex"]
+
 
 # --------------------------------------------------------------
 # Small helper: build a NetworkX graph and matplotlib figure
 # --------------------------------------------------------------
+
+def _parse_node_key(s: str) -> NodeId:
+    ex, coin = s.split("|", 1)
+    return (ex, coin)
+
+
+def _load_snapshot() -> Tuple[Dict[NodeId, Dict[str, Any]], Dict[NodeId, list]]:
+    """Load the offline JSON snapshot produced by dump_graph_snapshot.py."""
+    raw = json.loads(_SNAPSHOT_PATH.read_text())
+    nodes = {_parse_node_key(k): v for k, v in raw["nodes"].items()}
+    adj: Dict[NodeId, list] = {}
+    for k, edges in raw["adj"].items():
+        parsed_edges = []
+        for e in edges:
+            for field in ("from", "to"):
+                if isinstance(e.get(field), str) and "|" in e[field]:
+                    e[field] = _parse_node_key(e[field])
+            parsed_edges.append(e)
+        adj[_parse_node_key(k)] = parsed_edges
+    return nodes, adj
+
 
 def build_nx_graph(show_all: bool = False):
     """
@@ -64,15 +115,30 @@ def build_nx_graph(show_all: bool = False):
     
     Args:
         show_all: If True, build an unfiltered graph with all possible nodes/edges
+
+    Returns:
+        (G, error_msg) where error_msg is None on success or a string describing the failure.
     """
-    if show_all:
-        nodes, adj = build_graph_unfiltered()
-    else:
-        nodes, adj = build_graph()
+    try:
+        if USE_CACHED_DATA and _SNAPSHOT_PATH.exists():
+            nodes, adj = _load_snapshot()
+        elif show_all:
+            nodes, adj = build_graph_unfiltered()
+        else:
+            nodes, adj = build_graph()
+    except Exception as exc:
+        return nx.DiGraph(), f"Failed to fetch exchange data: {exc}"
+
+    if not nodes:
+        return nx.DiGraph(), (
+            "No exchange data could be retrieved. "
+            "This usually means your network is blocking cryptocurrency exchange APIs "
+            "(common on public wifi, campus, and corporate networks). "
+            "Try switching to a mobile hotspot or home network."
+        )
 
     G = nx.DiGraph()
 
-    # Add nodes
     for node_id, meta in nodes.items():
         ex, coin = node_id
         G.add_node(
@@ -83,7 +149,6 @@ def build_nx_graph(show_all: bool = False):
             snapshot_ts=meta["snapshot_ts"],
         )
 
-    # Add edges
     for from_node, edges in adj.items():
         for e in edges:
             kind = e.get("kind", "trade")
@@ -100,10 +165,10 @@ def build_nx_graph(show_all: bool = False):
                 withdraw_fee=e.get("withdrawal_fee_units"),
                 chain=e.get("chain"),
                 transfer_time_sec=e.get("transfer_time_sec", 0.0),
-                raw_edge=e,  # keep original dict if we ever need it
+                raw_edge=e,
             )
 
-    return G
+    return G, None
 
 
 def build_graph_unfiltered():
@@ -317,17 +382,10 @@ def make_paper_ready_figure(
     from matplotlib.patches import FancyArrowPatch
     import matplotlib.patches as mpatches
     
-    # Define distinct colors for each exchange
-    exchange_colors = {
-        "binance": "#FFD700",      # Bright gold
-        "kraken": "#9C27B0",       # Deep purple
-        "kucoin": "#00BCD4",       # Bright cyan
-        "bybit": "#E91E63",        # Bright pink/magenta
-        "coinbase": "#2196F3",     # Bright blue
-    }
+    exchange_colors = EXCHANGE_COLORS
     
-    # Group nodes by exchange
-    exchange_names = list(EXCHANGES.keys())
+    # Group nodes by exchange (use EXCHANGE_COLORS order for ring spacing)
+    exchange_names = list(EXCHANGE_COLORS.keys())
     node_groups = {ex: [] for ex in exchange_names}
     
     for node in G.nodes():
@@ -639,14 +697,7 @@ def make_path_only_figure(
     # Create subgraph
     subgraph = G.subgraph(path_nodes).copy()
     
-    # Define distinct colors for each exchange
-    exchange_colors = {
-        "binance": "#FFD700",      # Bright gold
-        "kraken": "#9C27B0",       # Deep purple
-        "kucoin": "#00BCD4",       # Bright cyan
-        "bybit": "#E91E63",        # Bright pink/magenta
-        "coinbase": "#2196F3",     # Bright blue
-    }
+    exchange_colors = EXCHANGE_COLORS
     
     # Create layout - use a curved 2D path for better visualization
     pos = {}
@@ -787,16 +838,9 @@ def make_graph_figure(
     """
     import math
     
-    # Define distinct colors for each exchange (maximally different for easy distinction)
-    exchange_colors = {
-        "binance": "#FFD700",      # Bright gold/yellow (distinct from orange)
-        "kraken": "#9C27B0",       # Deep purple
-        "kucoin": "#00BCD4",       # Bright cyan
-        "bybit": "#E91E63",        # Bright pink/magenta (very distinct from yellow/orange)
-        "coinbase": "#2196F3",     # Bright blue
-    }
+    exchange_colors = EXCHANGE_COLORS
     
-    exchange_names = list(EXCHANGES.keys())
+    exchange_names = list(EXCHANGE_COLORS.keys())
     node_colors = []
     node_labels = {}
     node_groups = {ex: [] for ex in exchange_names}
@@ -826,113 +870,136 @@ def make_graph_figure(
         
         node_labels[node] = f"{ex}:{coin}\n${price:.4f}"
         
-        # Highlight nodes in the path with a different color/border
         if node in highlight_nodes_set:
-            node_colors.append("#FF6B6B")  # Light red for highlighted nodes
+            node_colors.append("#FF6B6B")
         else:
-            node_colors.append(exchange_colors.get(ex, "#808080"))  # Gray for unknown exchanges
+            node_colors.append(exchange_colors.get(ex, "#808080"))
         
         node_groups[ex].append(node)
 
-    # Separate edges into regular and highlighted, build color/width maps
-    regular_edges = []
+    intra_edges = []
+    transfer_edges = []
     highlighted_edges = []
-    edge_color_map = {}  # Map (u, v) -> color
-    edge_width_map = {}  # Map (u, v) -> width
+    edge_color_map = {}
+    edge_width_map = {}
     
     for u, v in G.edges():
         u_ex = G.nodes[u]["exchange"]
         v_ex = G.nodes[v]["exchange"]
         edge_kind = G.edges[(u, v)].get("kind", "trade")
         
-        is_highlighted = (u, v) in highlight_edges_set
-        
-        if is_highlighted:
+        if (u, v) in highlight_edges_set:
             highlighted_edges.append((u, v))
-            # Bold red for highlighted path
-            edge_color_map[(u, v)] = "#D32F2F"  # Bright red
-            edge_width_map[(u, v)] = 4.0  # Thicker
+            edge_color_map[(u, v)] = "#D32F2F"
+            edge_width_map[(u, v)] = 4.0
+        elif u_ex != v_ex or edge_kind == "transfer":
+            transfer_edges.append((u, v))
+            edge_color_map[(u, v)] = "#BDBDBD"
+            edge_width_map[(u, v)] = 0.8
         else:
-            regular_edges.append((u, v))
-            if u_ex == v_ex:
-                # Intra-exchange edge (trade): use exchange color with transparency
-                edge_color = exchange_colors.get(u_ex, "#808080")
-                edge_color_map[(u, v)] = edge_color
-            else:
-                # Inter-exchange edge (transfer): use green for transfers
-                if edge_kind == "transfer":
-                    edge_color_map[(u, v)] = "#2E7D32"  # Dark green for transfers
-                else:
-                    edge_color_map[(u, v)] = "#1976D2"  # Blue for trades (shouldn't happen but safety)
-            edge_width_map[(u, v)] = 2.5  # Normal width
+            intra_edges.append((u, v))
+            edge_color_map[(u, v)] = exchange_colors.get(u_ex, "#808080")
+            edge_width_map[(u, v)] = 2.0
 
-    # Create circular clusters for each exchange
     pos = {}
-    num_exchanges = len([ex for ex in exchange_names if node_groups[ex]])
-    
+    active_exchanges = [ex for ex in exchange_names if node_groups[ex]]
+    num_exchanges = len(active_exchanges)
+
     if num_exchanges == 0:
-        # Fallback if no nodes
         pos = nx.spring_layout(G, seed=42, k=2.0)
     else:
-        # Arrange exchange clusters in a circle
-        cluster_radius = 3.0  # Distance from center to cluster centers
-        node_cluster_radius = 1.2  # Radius within each cluster for nodes
-        
-        for idx, ex in enumerate(exchange_names):
-            if not node_groups[ex]:
-                continue
-            
-            # Calculate cluster center position (arranged in a circle)
-            angle = 2 * math.pi * idx / num_exchanges
-            cluster_center_x = cluster_radius * math.cos(angle)
-            cluster_center_y = cluster_radius * math.sin(angle)
-            
-            # Position nodes in a circle within this cluster
-            nodes_in_exchange = sorted(node_groups[ex], key=lambda n: (G.nodes[n]["coin"], G.nodes[n]["price_usd"]))
-            num_nodes = len(nodes_in_exchange)
-            
-            for node_idx, node in enumerate(nodes_in_exchange):
-                if num_nodes == 1:
-                    # Single node at cluster center
-                    pos[node] = (cluster_center_x, cluster_center_y)
-                else:
-                    # Arrange nodes in a circle within the cluster
-                    node_angle = 2 * math.pi * node_idx / num_nodes
-                    node_x = cluster_center_x + node_cluster_radius * math.cos(node_angle)
-                    node_y = cluster_center_y + node_cluster_radius * math.sin(node_angle)
-                    pos[node] = (node_x, node_y)
+        min_node_gap = 1.4
 
-    fig, ax = plt.subplots(figsize=(14, 10))
+        cluster_radii = {}
+        for ex in active_exchanges:
+            n = len(node_groups[ex])
+            if n <= 1:
+                cluster_radii[ex] = 0.0
+            else:
+                cluster_radii[ex] = min_node_gap / (2 * math.sin(math.pi / n))
+
+        inner_tier = [ex for ex in MAJOR_EXCHANGES if ex in active_exchanges]
+        outer_tier = [ex for ex in MINOR_EXCHANGES if ex in active_exchanges]
+        leftover = [ex for ex in active_exchanges
+                     if ex not in inner_tier and ex not in outer_tier]
+        outer_tier.extend(leftover)
+
+        if not inner_tier:
+            inner_tier, outer_tier = outer_tier, []
+
+        max_cr = max(cluster_radii.values()) if cluster_radii else 0.0
+        pad = 0.5
+
+        n_inner = len(inner_tier)
+        if n_inner >= 2:
+            ring_inner = (max_cr + pad) / math.sin(math.pi / n_inner)
+        elif n_inner == 1:
+            ring_inner = 0.0
+        else:
+            ring_inner = 0.0
+
+        n_outer = len(outer_tier)
+        ring_outer = ring_inner + 2 * max_cr + 2.2 if n_outer else 0.0
+
+        def _place_ring(tier, ring_r, angle_offset=0.0):
+            n = len(tier)
+            for i, ex in enumerate(tier):
+                angle = 2 * math.pi * i / n + angle_offset
+                cx = ring_r * math.cos(angle)
+                cy = ring_r * math.sin(angle)
+                r = cluster_radii[ex]
+                nodes_sorted = sorted(
+                    node_groups[ex],
+                    key=lambda nd: (G.nodes[nd]["coin"], G.nodes[nd]["price_usd"]),
+                )
+                for ni, node in enumerate(nodes_sorted):
+                    if len(nodes_sorted) == 1:
+                        pos[node] = (cx, cy)
+                    else:
+                        a = 2 * math.pi * ni / len(nodes_sorted)
+                        pos[node] = (cx + r * math.cos(a), cy + r * math.sin(a))
+
+        _place_ring(inner_tier, ring_inner)
+        offset = math.pi / n_inner if n_inner else 0.0
+        _place_ring(outer_tier, ring_outer, angle_offset=offset)
+
+    fig, ax = plt.subplots(figsize=(18, 14))
     
-    # Draw regular edges first (so highlighted ones appear on top)
-    if regular_edges:
-        regular_colors = [edge_color_map.get((u, v), "#808080") for u, v in regular_edges]
-        regular_widths = [edge_width_map.get((u, v), 2.5) for u, v in regular_edges]
+    # Layer 1: inter-exchange transfers — light gray, thin, dotted, faint
+    if transfer_edges:
         nx.draw_networkx_edges(
-            G,
-            pos,
-            edgelist=regular_edges,
-            edge_color=regular_colors,
-            arrows=True,
-            arrowsize=18,
-            width=regular_widths,
-            alpha=0.8,
+            G, pos,
+            edgelist=transfer_edges,
+            edge_color=[edge_color_map[(u, v)] for u, v in transfer_edges],
+            arrows=True, arrowsize=8,
+            width=[edge_width_map[(u, v)] for u, v in transfer_edges],
+            alpha=0.25,
+            style="dotted",
             arrowstyle="->",
             ax=ax,
         )
-    
-    # Draw highlighted edges on top (bold red)
-    if highlighted_edges:
-        highlight_colors = [edge_color_map.get((u, v), "#D32F2F") for u, v in highlighted_edges]
-        highlight_widths = [edge_width_map.get((u, v), 4.0) for u, v in highlighted_edges]
+
+    # Layer 2: intra-exchange trades — solid, exchange-coloured
+    if intra_edges:
         nx.draw_networkx_edges(
-            G,
-            pos,
+            G, pos,
+            edgelist=intra_edges,
+            edge_color=[edge_color_map[(u, v)] for u, v in intra_edges],
+            arrows=True, arrowsize=16,
+            width=[edge_width_map[(u, v)] for u, v in intra_edges],
+            alpha=0.7,
+            arrowstyle="->",
+            ax=ax,
+        )
+
+    # Layer 3: highlighted path — bold red, on top
+    if highlighted_edges:
+        nx.draw_networkx_edges(
+            G, pos,
             edgelist=highlighted_edges,
-            edge_color=highlight_colors,
-            arrows=True,
-            arrowsize=22,
-            width=highlight_widths,
+            edge_color=[edge_color_map[(u, v)] for u, v in highlighted_edges],
+            arrows=True, arrowsize=22,
+            width=[edge_width_map[(u, v)] for u, v in highlighted_edges],
             alpha=1.0,
             arrowstyle="->",
             ax=ax,
@@ -948,33 +1015,32 @@ def make_graph_figure(
             G,
             pos,
             nodelist=regular_nodes,
-            node_size=800,
+            node_size=2800,
             node_color=regular_node_colors,
-            edgecolors="black",
-            linewidths=2.0,
+            edgecolors="white",
+            linewidths=1.5,
             ax=ax,
         )
     
     if highlighted_nodes:
-        # Highlighted nodes: larger, red border, white fill
         nx.draw_networkx_nodes(
             G,
             pos,
             nodelist=highlighted_nodes,
-            node_size=1200,  # Larger
-            node_color="#FFE0E0",  # Light red fill
-            edgecolors="#D32F2F",  # Red border
-            linewidths=3.5,  # Thicker border
+            node_size=3400,
+            node_color="#FFE0E0",
+            edgecolors="#D32F2F",
+            linewidths=3.0,
             ax=ax,
         )
     
-    # Draw labels
     nx.draw_networkx_labels(
         G,
         pos,
         labels=node_labels,
-        font_size=8,
+        font_size=6.5,
         font_weight="bold",
+        font_color="#222222",
         ax=ax,
     )
     
@@ -1014,14 +1080,31 @@ def make_graph_figure(
                 ax=ax,
             )
 
-    ax.set_title("Stablecoin Arbitrage Graph\nNodes clustered by exchange (colored by exchange) | Intra-exchange edges = exchange color, Inter-exchange edges = green", 
-                 fontsize=12, fontweight="bold")
+    import matplotlib.lines as mlines
+    legend_handles = [
+        mlines.Line2D([], [], color="#888888", linewidth=2.0,
+                       label="Intra-exchange trade"),
+        mlines.Line2D([], [], color="#BDBDBD", linewidth=1.0, linestyle="dotted",
+                       label="Cross-exchange transfer"),
+        mlines.Line2D([], [], color="#D32F2F", linewidth=3.5,
+                       label="Profitable path"),
+    ]
+    ax.legend(
+        handles=legend_handles,
+        loc="center",
+        frameon=True,
+        fancybox=True,
+        shadow=False,
+        fontsize=10,
+        framealpha=0.85,
+        edgecolor="#CCCCCC",
+        facecolor="white",
+    )
+
+    title = "Stablecoin Arbitrage Graph"
     if highlight_path:
-        ax.set_title(
-            "Stablecoin Arbitrage Graph (Highlighted Path in Red)\n"
-            "Nodes clustered by exchange (colored by exchange) | Intra-exchange edges = exchange color, Inter-exchange edges = green",
-            fontsize=12, fontweight="bold"
-        )
+        title += "  (profitable path in red)"
+    ax.set_title(title, fontsize=13, fontweight="bold")
     ax.axis("off")
     fig.tight_layout()
 
@@ -1077,10 +1160,10 @@ def run_search_and_format(
 
     # Get loggers for search modules
     astar_logger = logging.getLogger("scripts.astar_vol")
-    h3_parallel_logger = logging.getLogger("scripts.h3_parallel")
+    parallel_baseline_logger = logging.getLogger("scripts.parallel_baseline")
     weighted_logger = logging.getLogger("scripts.weighted_astar")
 
-    for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+    for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
         lg.addHandler(handler)
         lg.setLevel(logging.INFO)
 
@@ -1090,7 +1173,7 @@ def run_search_and_format(
         streamlit_handler = StreamlitLogHandler(status_container)
         streamlit_handler.setLevel(logging.INFO)
         streamlit_handler.setFormatter(logging.Formatter("%(message)s"))
-        for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+        for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
             lg.addHandler(streamlit_handler)
 
     try:
@@ -1098,23 +1181,23 @@ def run_search_and_format(
         if heuristic_name not in [
             "h1_liquidity",
             "h2_slippage",
-            "h3_parallel",
-            "h4_chain_congestion",
+            "parallel_baseline",
+            "h3_chain_congestion",
         ]:
             if streamlit_handler:
-                for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+                for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
                     lg.removeHandler(streamlit_handler)
-            for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+            for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
                 lg.removeHandler(handler)
             return (
                 f"Invalid heuristic: {heuristic_name}. "
                 "Must be 'h1_liquidity', 'h2_slippage', "
-                "'h3_parallel', or 'h4_chain_congestion'."
+                "'parallel_baseline', or 'h3_chain_congestion'."
             )
 
         # Handle parallel search heuristic
-        if heuristic_name == "h3_parallel":
-            from scripts.h3_parallel import parallel_search_from_random_starts
+        if heuristic_name == "parallel_baseline":
+            from scripts.parallel_baseline import parallel_search_from_random_starts
 
             if streamlit_handler:
                 streamlit_handler.container.text(
@@ -1133,7 +1216,7 @@ def run_search_and_format(
                 num_starts=3,
             )
 
-        elif heuristic_name == "h4_chain_congestion":
+        elif heuristic_name == "h3_chain_congestion":
             # Weighted A* with chain + exchange risk heuristic
             result = weighted_astar_best_path(
             start_node=start_node,
@@ -1156,21 +1239,21 @@ def run_search_and_format(
 
         # Clean up handlers
         if streamlit_handler:
-            for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+            for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
                 lg.removeHandler(streamlit_handler)
-        for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+        for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
             lg.removeHandler(handler)
 
     except Exception as e:
         if streamlit_handler:
-            for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+            for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
                 lg.removeHandler(streamlit_handler)
-        for lg in (astar_logger, h3_parallel_logger, weighted_logger):
+        for lg in (astar_logger, parallel_baseline_logger, weighted_logger):
             lg.removeHandler(handler)
         return f"Error while running search: {e}", None
 
     if result is None:
-        if heuristic_name == "h3_parallel":
+        if heuristic_name == "parallel_baseline":
             return (
                 "No profitable path found from any of the 3 random starting points "
                 f"with {liquid_cash:.2f} USD using parallel search.",
@@ -1189,12 +1272,12 @@ def run_search_and_format(
     route_str = " -> ".join(f"{ex}:{c}" for (ex, c) in result.path)
 
     lines: list[str] = []
-    if heuristic_name == "h3_parallel":
+    if heuristic_name == "parallel_baseline":
         lines.append(
             "Max profitable current trade (Parallel search from 3 random starts):"
         )
         lines.append("Note: Searched from 3 random starting points in parallel")
-    elif heuristic_name == "h4_chain_congestion":
+    elif heuristic_name == "h3_chain_congestion":
         lines.append(
             "Max profitable current trade (Weighted A* with chain + exchange risk):"
         )
@@ -1219,7 +1302,7 @@ def run_search_and_format(
     current_cash = liquid_cash
     remaining_time = 1800.0  # max_time_sec from search call
 
-    if heuristic_name == "h3_parallel":
+    if heuristic_name == "parallel_baseline":
         lines.append(
             "Per-node heuristic values are omitted for parallel search "
             "(multiple A* runs with a base heuristic)."
@@ -1271,7 +1354,7 @@ def run_search_and_format(
                     f"    Slippage: {label} [penalty={h2_val:.4f}]"
                 )
 
-            elif heuristic_name == "h4_chain_congestion":
+            elif heuristic_name == "h3_chain_congestion":
                 # Chain kickback risk
                 h_chain = chain_congestion_heuristic_cost(
                     exchange_name=exchange,
@@ -1372,13 +1455,26 @@ def main():
 
     # Session state: store the current NetworkX graph and search result text
     if "graph" not in st.session_state:
-        st.session_state["graph"] = build_nx_graph(show_all=False)
+        with st.spinner("Fetching live data from exchanges (this may take up to a minute)..."):
+            G, err = build_nx_graph(show_all=True)
+        st.session_state["graph"] = G
+        if err:
+            st.session_state["network_error"] = err
     if "best_trade_text" not in st.session_state:
         st.session_state["best_trade_text"] = "Click **Run search** to compute a path."
     if "show_all" not in st.session_state:
-        st.session_state["show_all"] = False
+        st.session_state["show_all"] = True
     if "last_search_result" not in st.session_state:
         st.session_state["last_search_result"] = None
+
+    if st.session_state.get("network_error"):
+        st.error(st.session_state["network_error"])
+        st.info(
+            "**Troubleshooting:**\n"
+            "- Switch to a mobile hotspot or home wifi\n"
+            "- Use a VPN that allows exchange traffic\n"
+            "- Click **Update price** below once you're on a working network"
+        )
 
     G: nx.DiGraph = st.session_state["graph"]
 
@@ -1404,27 +1500,33 @@ def main():
             # Toggle for showing all nodes/edges (unfiltered)
             show_all = st.checkbox(
                 "Show all nodes & edges (unfiltered)",
-                value=st.session_state.get("show_all", False),
+                value=st.session_state.get("show_all", True),
                 help="If enabled, shows all nodes and edges including those filtered out by price tolerance, portfolio size checks, etc."
             )
             
             # Rebuild graph if checkbox state changed
             if show_all != st.session_state.get("show_all", False):
                 st.session_state["show_all"] = show_all
-                st.session_state["graph"] = build_nx_graph(show_all=show_all)
-                G = st.session_state["graph"]
-                # Refresh start wallet options in case node set changed
+                G, err = build_nx_graph(show_all=show_all)
+                st.session_state["graph"] = G
+                st.session_state["network_error"] = err
+                if err:
+                    st.error(err)
                 start_wallet_options[:] = sorted(
                     f"{ex}:{coin}" for (ex, coin) in G.nodes()
                 )
 
             # Update prices -> rebuild the graph
             if st.button("Update price"):
-                st.session_state["graph"] = build_nx_graph(show_all=show_all)
-                G = st.session_state["graph"]
-                st.success("Prices updated and graph rebuilt.")
+                with st.spinner("Fetching live data from exchanges..."):
+                    G, err = build_nx_graph(show_all=show_all)
+                st.session_state["graph"] = G
+                st.session_state["network_error"] = err
+                if err:
+                    st.error(err)
+                else:
+                    st.success("Prices updated and graph rebuilt.")
 
-                # Refresh start wallet options in case node set changed
                 start_wallet_options[:] = sorted(
                     f"{ex}:{coin}" for (ex, coin) in G.nodes()
                 )
@@ -1444,14 +1546,14 @@ def main():
                 [
                     "h1_liquidity",        # volume-based heuristic
                     "h2_slippage",         # order-book slippage heuristic
-                    "h3_parallel",         # parallel search from random starts
-                    "h4_chain_congestion", # Weighted A* using chain + exchange risk
+                    "parallel_baseline",         # parallel search from random starts
+                    "h3_chain_congestion", # Weighted A* using chain + exchange risk
                 ],
                 help="Select which heuristic h(n) to use in the search.",
             )
 
             # Start wallet selection (only hidden for parallel search)
-            if heuristic != "h3_parallel":
+            if heuristic != "parallel_baseline":
                 start_wallet = st.selectbox(
                     "Starting wallet (exchange:coin)",
                     options=start_wallet_options,
@@ -1538,15 +1640,13 @@ def main():
 
         st.markdown(
             """
-            **Edge colours**
+            **Edge legend**
 
-            • Blue — Trade edge (intra-exchange swap), cost includes taker fee.  
-            • Green — Transfer edge (cross-exchange), cost includes withdrawal fee on the chosen chain.  
-
-                Edge costs (negative log of effective rate) are still used internally by A*,
-                but are hidden here to keep the visualization readable.
-                """
-            )
+            • **Solid (exchange colour)** — Intra-exchange trade (swap), cost includes taker fee.  
+            • **Dotted gray** — Cross-exchange transfer, cost includes withdrawal fee.  
+            • **Bold red** — Profitable arbitrage path found by the search.
+            """
+        )
 
     # ---------------- Tab 2: Live Prices ----------------
     with tab_prices:
@@ -1558,9 +1658,14 @@ def main():
 
         # Optional: allow refresh here as well
         if st.button("Refresh prices", key="refresh_prices_tab"):
-            st.session_state["graph"] = build_nx_graph(show_all=st.session_state.get("show_all", False))
-            G = st.session_state["graph"]
-            st.success("Prices refreshed.")
+            with st.spinner("Fetching live data from exchanges..."):
+                G, err = build_nx_graph(show_all=st.session_state.get("show_all", False))
+            st.session_state["graph"] = G
+            st.session_state["network_error"] = err
+            if err:
+                st.error(err)
+            else:
+                st.success("Prices refreshed.")
 
         price_rows = []
         for node in G.nodes():
@@ -1708,12 +1813,12 @@ This is the graph over which the A\\* / Weighted A\\* search runs.
 3. **Heuristic**  
    - `h1_liquidity` – prefers routes with high trading volume / good liquidity.  
    - `h2_slippage` – penalizes routes where large orders would move the price a lot.  
-   - `h3_parallel` – runs several A\\* searches in parallel from random starting nodes.  
-   - `h4_chain_congestion` – Weighted A\\* that also penalizes fast / risky chains and less reliable exchanges.
+   - `parallel_baseline` – runs several A\\* searches in parallel from random starting nodes.  
+   - `h3_chain_congestion` – Weighted A\\* that also penalizes fast / risky chains and less reliable exchanges.
 
 4. **Starting wallet (exchange:coin)**  
    - Where your funds are assumed to live **before** you start the route.  
-   - For `h3_parallel` this is hidden; the algorithm chooses random starts instead.
+   - For `parallel_baseline` this is hidden; the algorithm chooses random starts instead.
 
 5. **Run search**  
    - Launches the selected search algorithm.  
@@ -1794,7 +1899,7 @@ These are exactly the fees that are baked into the **green transfer edges** on t
   - Try running the same starting wallet and cash with different heuristics
     to see how the route changes.  
   - `h1_liquidity` is usually the safest baseline;  
-    `h4_chain_congestion` is more conservative about infrastructure risk.
+    `h3_chain_congestion` is more conservative about infrastructure risk.
 
 - Remember: this UI is **simulation only**.  
   It does not place real orders or transfers funds.

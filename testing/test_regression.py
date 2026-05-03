@@ -242,7 +242,7 @@ class TestAStarSearch:
         assert abs(result.final_cash_usd - (10_000 + result.profit_usd)) < 0.01
 
 
-# ── 6. Weighted A* / h4 on toy graph ────────────────────────────────
+# ── 6. Weighted A* / h3 on toy graph ────────────────────────────────
 
 class TestWeightedAStarSearch:
     def test_weighted_astar_finds_path(self):

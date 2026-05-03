@@ -69,7 +69,7 @@ HEURISTICS = [
     "dijkstra",            # baseline: h=0
     "h1_liquidity",        # volume/liquidity heuristic
     "h2_slippage",         # order-book slippage heuristic
-    "h4_chaincongestion_exchange_risk",  # chain+exchange risk
+    "h3_chaincongestion_exchange_risk",  # chain+exchange risk
     "3hop_enum",           # brute-force baseline
 ]
 
@@ -95,7 +95,7 @@ def _run_search_cached(
                 early_exit_after_profit=EARLY_EXIT,
                 early_exit_iterations=EARLY_EXIT_ITERS,
             )
-        elif heuristic == "h4_chaincongestion_exchange_risk":
+        elif heuristic == "h3_chaincongestion_exchange_risk":
             result = weighted_astar_best_path(
                 start_node=start_node,
                 liquid_cash_usd=cash_usd,

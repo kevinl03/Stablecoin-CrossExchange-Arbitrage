@@ -1,5 +1,5 @@
 # ======================================================================
-# monte_carlo_heuristics.py — Monte Carlo experiments for h1, h2, h3, h4
+# monte_carlo_heuristics.py — Monte Carlo experiments for h1, h2, h3, parallel_baseline
 # ======================================================================
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from scripts.astar_vol import (
     astar_best_path_with_liquidity,
     PlanResult as AStarPlanResult,
 )
-from scripts.h3_parallel import parallel_search_from_random_starts
+from scripts.parallel_baseline import parallel_search_from_random_starts
 from scripts.weighted_astar import (
     weighted_astar_best_path,
     PlanResult as WeightedPlanResult,
@@ -56,7 +56,7 @@ PlanLike = AStarPlanResult | WeightedPlanResult | BaselinePlanResult | BellmanFo
 MC_MAX_DEPTH: int = 5          # shallower search than 6
 MC_MAX_TIME_SEC: float = 60.0  # cap per search (seconds)
 MC_NUM_TRIALS: int = 500       # trials per heuristic for statistical significance
-MC_NUM_STARTS_H3: int = 3      # parallel random starts for h3
+MC_NUM_STARTS_PARALLEL: int = 3      # parallel random starts for parallel_baseline
 MC_CASH_LEVELS = [100.0, 1_000.0, 10_000.0, 50_000.0, 100_000.0]
 
 
@@ -67,7 +67,7 @@ MC_CASH_LEVELS = [100.0, 1_000.0, 10_000.0, 50_000.0, 100_000.0]
 @dataclass
 class MonteCarloResult:
     heuristic: str
-    start_node: Optional[NodeId]        # None for h3_parallel
+    start_node: Optional[NodeId]        # None for parallel_baseline
     cash_usd: float
     final_cash_usd: Optional[float]
     profit_usd: Optional[float]
@@ -97,8 +97,8 @@ def run_single_search(
     Heuristic options:
       - "h1_liquidity"  -> astar_best_path_with_liquidity using h1
       - "h2_slippage"   -> astar_best_path_with_liquidity using h2
-      - "h4_chaincongestion_exchange_risk" -> weighted_astar_best_path (h4+h5)
-      - "h3_parallel"   -> parallel_search_from_random_starts (wrapper over A*)
+      - "h3_chaincongestion_exchange_risk" -> weighted_astar_best_path (h3)
+      - "parallel_baseline"   -> parallel_search_from_random_starts (wrapper over A*)
       - "simple_1hop"   -> simple_1hop_arbitrage (naive 1-hop baseline)
       - "simple_2hop"   -> simple_2hop_arbitrage (naive 2-hop baseline)
       - "bellman_ford"  -> bellman_ford_arbitrage (negative cycle detection, related research baseline)
@@ -108,7 +108,7 @@ def run_single_search(
     result: Optional[PlanLike] = None
 
     try:
-        if heuristic == "h3_parallel":
+        if heuristic == "parallel_baseline":
             # Parallel search from multiple random starts (meta-heuristic).
             result = parallel_search_from_random_starts(
                 liquid_cash_usd=cash_usd,
@@ -116,7 +116,7 @@ def run_single_search(
                 max_time_sec=max_time_sec,
                 min_profit_usd=min_profit_usd,
                 heuristic="h1_liquidity",  # base heuristic for inner A*
-                num_starts=MC_NUM_STARTS_H3,
+                num_starts=MC_NUM_STARTS_PARALLEL,
             )
 
         elif heuristic in ("h1_liquidity", "h2_slippage"):
@@ -131,10 +131,10 @@ def run_single_search(
                 heuristic=heuristic,
             )
 
-        elif heuristic == "h4_chaincongestion_exchange_risk":
+        elif heuristic == "h3_chaincongestion_exchange_risk":
             if start_node is None:
-                raise ValueError("start_node must be provided for h4 searches")
-            # Weighted A* for chain + exchange risk (h4 + h5)
+                raise ValueError("start_node must be provided for h3 searches")
+            # Weighted A* for chain + exchange risk (h3)
             result = weighted_astar_best_path(
                 start_node=start_node,
                 liquid_cash_usd=cash_usd,
@@ -186,8 +186,8 @@ def run_single_search(
         else:
             raise ValueError(
                 f"Unknown heuristic: {heuristic}. Must be one of "
-                f"'h1_liquidity', 'h2_slippage', 'h4_chaincongestion_exchange_risk', "
-                f"'h3_parallel', 'simple_1hop', 'simple_2hop', 'bellman_ford', '3hop_enum'."
+                f"'h1_liquidity', 'h2_slippage', 'h3_chaincongestion_exchange_risk', "
+                f"'parallel_baseline', 'simple_1hop', 'simple_2hop', 'bellman_ford', '3hop_enum'."
             )
 
     except Exception as e:
@@ -226,7 +226,7 @@ def run_single_search(
 
 
 # ----------------------------------------------------------------------
-# Helper: pick random start node for h1/h2/h4
+# Helper: pick random start node for h1/h2/h3
 # ----------------------------------------------------------------------
 
 def pick_random_start_node(nodes: Dict[NodeId, dict]) -> NodeId:
@@ -267,8 +267,8 @@ def main():
     HEURISTICS = [
         "h1_liquidity",
         "h2_slippage",
-        "h4_chaincongestion_exchange_risk",
-        "h3_parallel",
+        "h3_chaincongestion_exchange_risk",
+        "parallel_baseline",
         "simple_1hop",
         "simple_2hop",
         "bellman_ford",
@@ -281,7 +281,7 @@ def main():
     jsonl_fout = jsonl_path.open("w", encoding="utf-8")
 
     with out_path.open("w", encoding="utf-8") as f:
-        f.write("Monte Carlo experiments for h1, h2, h3, h4 (quick mode)\n")
+        f.write("Monte Carlo experiments for h1, h2, h3, parallel_baseline (quick mode)\n")
         f.write("=======================================================\n\n")
         f.write(f"Number of nodes in graph: {num_nodes}\n")
         f.write(f"Cash levels: {CASH_LEVELS}\n")
@@ -299,11 +299,11 @@ def main():
             for trial_idx in range(1, NUM_TRIALS + 1):
                 cash = random.choice(CASH_LEVELS)
 
-                if h in ("h1_liquidity", "h2_slippage", "h4_chaincongestion_exchange_risk", 
+                if h in ("h1_liquidity", "h2_slippage", "h3_chaincongestion_exchange_risk", 
                          "simple_1hop", "simple_2hop", "bellman_ford", "3hop_enum"):
                     start = pick_random_start_node(nodes)
                 else:
-                    start = None  # h3_parallel chooses its own starts
+                    start = None  # parallel_baseline chooses its own starts
 
                 print(f"[{h}] Trial {trial_idx}/{NUM_TRIALS} — cash=${cash:,.2f}")
                 try:

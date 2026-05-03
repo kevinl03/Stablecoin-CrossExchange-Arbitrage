@@ -1,0 +1,116 @@
+\subsection{Hyperparameter Configuration}
+\label{sec:hyperparams}
+
+Table~\ref{tab:hyperparams} lists all hyperparameters used in the heuristic functions and search algorithms. Values are fixed across all experiments.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Hyperparameters and their values.}
+\label{tab:hyperparams}
+\begin{tabular}{llc}
+\toprule
+\textbf{Parameter} & \textbf{Description} & \textbf{Value} \\
+\midrule
+\multicolumn{3}{l}{\textit{H1 -- Liquidity Heuristic}} \\
+$\lambda_{\text{liq}}$ & Liquidity penalty weight & 1.0 \\
+Unknown penalty & No-data fallback cost & 5.0 \\
+Cache TTL & Volume cache lifetime & 60\,s \\
+\midrule
+\multicolumn{3}{l}{\textit{H2 -- Slippage Heuristic}} \\
+$\lambda_{\text{slip}}$ & Slippage penalty weight & 0.5 \\
+$\theta$ & Slippage tolerance & 10\,bps \\
+Unknown penalty & No-data fallback cost & 50.0 \\
+Cache TTL & Order-book cache lifetime & 30\,s \\
+\midrule
+\multicolumn{3}{l}{\textit{H3 -- Chain/Exchange Risk}} \\
+$\lambda_{\text{chain}}$ & Chain risk penalty weight & 1.0 \\
+$\lambda_{\text{exchange}}$ & Exchange risk penalty weight & 1.0 \\
+$w_{\min}$ & Min Weighted A* weight & 1.0 \\
+$w_{\max}$ & Max Weighted A* weight & 3.0 \\
+\midrule
+\multicolumn{3}{l}{\textit{Search Parameters}} \\
+Max depth & Maximum path hops & 6 \\
+$T_{\max}$ & Arbitrage time window & 1800\,s \\
+Early exit iter. & Iters after first profit & 200 \\
+$k$ (Parallel) & Multi-start parallel runs & 3 \\
+User overhead & Execution latency per hop & 45\,s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Chain transfer times.}
+Transfer-time estimates are drawn from documented blockchain finality times plus typical exchange processing delays: Solana $\approx$~1\,s, BNB Chain $\approx$~4\,s, Polygon $\approx$~5\,s, Tron $\approx$~30\,s, Arbitrum/Base $\approx$~120\,s, Ethereum L1 $\approx$~600\,s. These are used by $h_3$ to compute chain reliability penalties and by the transfer-time model to assess path time-feasibility.
+
+\subsection{Sensitivity Analysis}
+\label{sec:sensitivity_appendix}
+
+\paragraph{$h_2$ slippage parameters.}
+A joint sweep of $(\lambda_{\text{slip}}, \theta)$ across 100~configurations shows a broad plateau of high performance at moderate values ($\lambda_{\text{slip}} \in [0.3, 1.0]$, $\theta \in [5, 20]$\,bps), confirming $h_2$ is not sensitive to precise tuning (Figure~\ref{fig:sens_h2}).
+
+\paragraph{Order size.}
+Profit scales linearly from \$0.09 at \$100 to \$86.18 at \$100k, with constant 80\% success rate (Figure~\ref{fig:sens_order}).
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig13_sensitivity_h2_heatmap.png}
+    \caption{$h_2$: success rate across $(\lambda_{\text{slip}}, \theta)$ grid.}
+    \label{fig:sens_h2}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig14_sensitivity_order_size.png}
+    \caption{Profit vs.\ order size (\$100--\$100k).}
+    \label{fig:sens_order}
+\end{subfigure}
+\caption{(a) $h_2$ is robust across a wide parameter range. (b) Profit scales linearly with order size; success rate is constant.}
+\label{fig:sensitivity_grid}
+\end{figure}
+
+\subsection{Additional Experimental Results}
+\label{sec:additional_results}
+
+\paragraph{Heuristic comparison: expansions and compute time.}
+Figure~\ref{fig:app_expansion_time} compares mean node expansions and compute time across all heuristics on the cached graph. $h_2$ consistently achieves the fewest expansions, while $h_3$ matches Dijkstra-class latency due to pre-computed scores requiring zero API calls.
+
+\begin{figure}[h]
+\centering
+\begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig01_node_expansion_bar.png}
+    \caption{Mean node expansions by heuristic.}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig02_compute_time_bar.png}
+    \caption{Mean compute time by heuristic.}
+\end{subfigure}
+\caption{Heuristic comparison on cached graph (30~start nodes, 3~cash levels).}
+\label{fig:app_expansion_time}
+\end{figure}
+
+\paragraph{Quote staleness.}
+Re-evaluating discovered paths against fresh market data after delays of 5--300\,s (270 measurements), \textbf{99.6\%} remain profitable up to 120\,s; only at 300\,s does a single path lose profitability (98\% survival), demonstrating strong structural persistence of stablecoin arbitrage paths.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Quote staleness: path survival and profit change.}
+\label{tab:staleness}
+\begin{tabular}{rcrc}
+\toprule
+\textbf{Delay (s)} & \textbf{Paths} & \textbf{Profitable} & \textbf{Mean Decay (\%)} \\
+\midrule
+   5 & 45 & 100\% & $-64.6$ \\
+  10 & 45 & 100\% & $-67.0$ \\
+  30 & 45 & 100\% & $-71.6$ \\
+  60 & 45 & 100\% & $-72.7$ \\
+ 120 & 45 & 100\% & $-72.4$ \\
+ 300 & 45 &  98\% & $-55.0$ \\
+\bottomrule
+\end{tabular}
+\end{table}

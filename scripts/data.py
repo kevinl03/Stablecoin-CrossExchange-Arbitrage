@@ -1,22 +1,24 @@
 import ccxt
 from math import isnan  # not strictly needed now, but harmless to keep
 
+EXCHANGE_TIMEOUT_MS = 5000
+
 # 1. Exchanges — expanded to 12 for larger graph coverage
 #    CCXT Pro (async websocket) features are available via ccxt.pro;
 #    here we use the synchronous REST API for snapshot-based experiments.
 EXCHANGES = {
-    "binance": ccxt.binance(),
-    "kraken": ccxt.kraken(),
-    "kucoin": ccxt.kucoin(),
-    "bybit": ccxt.bybit(),
-    "okx": ccxt.okx(),
-    "gateio": ccxt.gateio(),
-    "bitget": ccxt.bitget(),
-    "mexc": ccxt.mexc(),
-    "htx": ccxt.htx(),           # formerly Huobi
-    "coinbase": ccxt.coinbase(),
-    "cryptocom": ccxt.cryptocom(),
-    "phemex": ccxt.phemex(),
+    "binance": ccxt.binance({"timeout": EXCHANGE_TIMEOUT_MS}),
+    "kraken": ccxt.kraken({"timeout": EXCHANGE_TIMEOUT_MS}),
+    "kucoin": ccxt.kucoin({"timeout": EXCHANGE_TIMEOUT_MS}),
+    "bybit": ccxt.bybit({"timeout": EXCHANGE_TIMEOUT_MS}),
+    "okx": ccxt.okx({"timeout": EXCHANGE_TIMEOUT_MS}),
+    "gateio": ccxt.gateio({"timeout": EXCHANGE_TIMEOUT_MS}),
+    "bitget": ccxt.bitget({"timeout": EXCHANGE_TIMEOUT_MS}),
+    "mexc": ccxt.mexc({"timeout": EXCHANGE_TIMEOUT_MS}),
+    "htx": ccxt.htx({"timeout": EXCHANGE_TIMEOUT_MS}),
+    "coinbase": ccxt.coinbase({"timeout": EXCHANGE_TIMEOUT_MS}),
+    "cryptocom": ccxt.cryptocom({"timeout": EXCHANGE_TIMEOUT_MS}),
+    "phemex": ccxt.phemex({"timeout": EXCHANGE_TIMEOUT_MS}),
 }
 
 # 2. Top 10 common stablecoins we’ll track
@@ -30,7 +32,7 @@ STABLE_COINS = [
     "PYUSD",
     "USDP",   # Pax Dollar
     "GUSD",   # Gemini Dollar
-    "FRAX",   # Frax
+    # FRAX removed — depegged (~$0.46 as of Apr 2026), no longer a stablecoin
 ]
 
 # 3. For each coin+exchange, specify which market symbol to use.
