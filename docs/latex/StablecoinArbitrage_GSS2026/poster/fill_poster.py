@@ -1,6 +1,14 @@
 """
-Fill the Canadian AI 2026 poster template (36x24 landscape) with paper content
-and embed key figures so the panels do not look empty.
+Fill the Canadian AI 2026 poster template (CdnAI2026_poster_landscape_36x24.pptx)
+with paper content and embed several figures.
+
+Page size: 36 x 24 inches (landscape, EMU 32918400 x 21945600).
+Layout (kept from template): four quadrant panels around a tall central callout,
+plus the CAIAC and sponsor logos.
+
+Run from the repo root:
+
+    python3 docs/latex/StablecoinArbitrage_GSS2026/poster/fill_poster.py
 
 Output: docs/latex/StablecoinArbitrage_GSS2026/poster/poster_filled.pptx
 """
@@ -17,61 +25,69 @@ SRC = ROOT / "CdnAI2026_poster_landscape_36x24.pptx"
 DST = ROOT / "poster_filled.pptx"
 WORK = Path("/tmp/cdnai_poster_fill")
 
-# Figures live in the CAIAC2026 folder; the GSS2026 figures dir is a symlink.
+# Figures live in CAIAC2026/figures (GSS2026/figures is a symlink there).
 FIGS = ROOT.parents[1] / "StablecoinArbitrage_CAIAC2026" / "figures"
 
-EMU_PER_INCH = 914400
+# Slide canvas: 36 x 24 inches.  EMU = English Metric Unit (914400 / inch).
+SLIDE_W_EMU = 36 * 914400  # 32_918_400
+SLIDE_H_EMU = 24 * 914400  # 21_945_600
 
 
-# ---------- content ----------
+# ============================================================
+# Content
+# ============================================================
 
 TITLE = "Execution-Aware A* Search for Cross-Exchange Stablecoin Arbitrage"
 AUTHORS = "Kevin Litvin    \u2014    Simon Fraser University"
 
-# In document order: top-left, bottom-left, top-right, bottom-right
+# Document order: top-left, bottom-left, top-right, bottom-right.
 SECTION_TITLES = [
-    "Motivation",
-    "Other Heuristics & Baselines",
+    "Motivation & Problem",
+    "Heuristics & Baselines",
     "Setup & Dataset",
-    "Results",
+    "Results & Robustness",
 ]
 
 SECTION_BODIES: list[list[str]] = [
-    # 1. Motivation (top-left)
+    # 1. Motivation & Problem (top-left)
     [
-        "Cross-exchange stablecoin arbitrage exploits price gaps across centralized exchanges (CEX).",
-        "Existing approaches detect negative cycles but ignore execution costs (fees, slippage, transfer delays, venue risk).",
+        "Cross-exchange stablecoin arbitrage exploits price gaps between centralized exchanges (CEX).",
+        "Existing work focuses on negative-cycle detection: it finds opportunities but ignores execution costs.",
+        "Real costs matter: trading fees, withdrawal/gas fees, order-book slippage, blockchain transfer time, and venue reliability.",
         "Stablecoins (>$300B market cap) are USD-pegged, so cross-venue routing has a clean USD objective.",
-        "Goal: plan executable, profitable trade-and-transfer paths in real time.",
-        "Key questions: which heuristics help? how do they shape A* expansions and profit?",
+        "Goal: plan executable, profitable trade-and-transfer paths under live market conditions.",
+        "Research questions: which heuristics help? how do they shape A* expansions vs. profit?",
     ],
-    # 2. Other Heuristics & Baselines (bottom-left)
+    # 2. Heuristics & Baselines (bottom-left)
     [
-        "h_1 (liquidity): penalize shallow books from 24h volume, order size, and time remaining.",
-        "h_3 (chain congestion + reliability): chain transfer time + static venue reliability score.",
-        "Parallel multi-start: k=3 random A* launches; gains robustness, not per-search expansions.",
-        "Baselines: Dijkstra (h=0), Bellman-Ford, and 1-/2-hop enumeration.",
-        "All heuristics act as guidance penalties (not admissible lower bounds).",
+        "Three guidance heuristics, each capturing a distinct execution risk dimension.",
+        "h_1 (liquidity): penalize shallow books from 24h volume, order size, and remaining time window.",
+        "h_3 (chain congestion + reliability): chain transfer time plus a static venue reliability score.",
+        "Parallel multi-start (k=3): random A* launches; trades robustness for repeated cost.",
+        "Baselines: Dijkstra (h=0), Bellman-Ford negative-cycle, 1-hop, and 2-hop enumeration.",
+        "All heuristics act as guidance penalties, not admissible lower bounds.",
     ],
     # 3. Setup & Dataset (top-right)
     [
         "12 CEX via CCXT: Binance, Kraken, KuCoin, Bybit, OKX, Gate.io, Bitget, MEXC, HTX, Coinbase, Crypto.com, Phemex.",
-        "9 stablecoin symbols; nodes = (exchange, coin); edges = intra-exchange trades + same-coin transfers.",
-        "Cached graphs up to 41 nodes / 864 edges; live snapshots every 5 minutes.",
+        "9 stablecoin symbols across the venues (USDT, USDC, DAI, TUSD, FDUSD, BUSD, PYUSD, USDP, GUSD).",
+        "Nodes = (exchange, coin); edges = intra-exchange trades and same-coin cross-exchange transfers.",
+        "Graphs grow from 4 to 12 exchanges; cached snapshots up to 41 nodes / 864 edges.",
         "8-hour overnight campaign with 7,200 search instances across heuristics and order sizes.",
         "Edge weights w(e) = -log(effective_rate(e)) absorb fees, slippage, gas, and chain delay.",
     ],
-    # 4. Results (bottom-right)
+    # 4. Results & Robustness (bottom-right)
     [
-        "h_2 expands 29% fewer nodes than Dijkstra while matching profit within 1% ($10k, cached).",
-        "h_1 and h_3 expand 58-87% more nodes and earn 30-33% less profit: penalties over-steer search.",
+        "h_2 expands 29% fewer nodes than Dijkstra while matching profit within 1% (cached, $10k).",
+        "h_1 and h_3 expand 58-87% MORE nodes and earn 30-33% LESS profit: penalties over-steer search.",
         "Overnight (7,200 runs): every A*-based run finds a profitable path.",
         "Quote staleness: 99.6% of paths remain profitable up to 120 s of delay.",
+        "Slippage-aware guidance follows the same optimal routes with less wasted exploration.",
     ],
 ]
 
-# Mini results table for the Results panel.
-RESULTS_TABLE_HEADER = "Heuristic    Succ.   Profit    Exp.    \u0394"
+# Mini results table for the Results panel (monospaced).
+RESULTS_TABLE_HEADER = "Heuristic     Succ.   Profit    Exp.    \u0394"
 RESULTS_TABLE_ROWS = [
     "Dijkstra      56.7%   $10.01    359     ---",
     "h_2 (slip.)   56.7%   $9.91     256     -29%",
@@ -82,70 +98,94 @@ RESULTS_TABLE_ROWS = [
 CALLOUT_TITLE = "Method: Execution-Aware A* Search"
 CALLOUT_BULLETS = [
     "Directed graph G=(V,E). Nodes are (exchange, stablecoin); edges are intra-exchange trades and cross-exchange transfers (same coin).",
-    "Edge weight w(e) = -log r(e). Effective rate r(e) absorbs taker fees, withdrawal/gas fees, transfer time, and exchange-reliability risk.",
-    "Open-path goal: any node with final USD value > start. No closed cycle required.",
-    "A* with f(n) = g(n) + h(n). h is a domain guidance penalty.",
-    "Novel slippage heuristic h_2 = lambda * max(0, slippage_bps - theta), with slippage from live order-book VWAP vs. mid-price.",
-    "h_2 prunes high-impact routes early while keeping low-impact ones: same profit, fewer expansions.",
+    "Edge weight w(e) = -log r(e). Effective rate r(e) bundles taker fees, withdrawal/gas fees, transfer time, and exchange-reliability risk.",
+    "Open-path goal: any node where final USD value > start. No closed cycle required (USD-pegged stablecoins).",
+    "A* search with f(n) = g(n) + h(n). h is a domain guidance penalty, not an admissible lower bound.",
 ]
 
+# Stand-alone equation block (centered, larger font) shown right under the bullets.
+CALLOUT_EQUATIONS = [
+    "w(e) = -log r(e),    f(n) = g(n) + h(n)",
+    "h_2 = lambda_slip * max(0, slippage_bps - theta)",
+    "slippage_bps = (VWAP(Q) - P_mid) / P_mid * 10000",
+]
+
+CALLOUT_TAKEAWAY = (
+    "Slippage-aware guidance prunes high-impact routes early, keeps low-impact "
+    "ones intact: same profit as Dijkstra with 29% fewer expansions."
+)
+
 FOOTER_LINE_1 = "github.com/kevinl03/Stablecoin-CrossExchange-Arbitrage"
-FOOTER_LINE_2 = "Canadian AI 2026  |  GSS Paper ID 306"
+FOOTER_LINE_2 = "Canadian AI 2026  |  GSS Paper ID 306  |  36 x 24 in"
 
 
-# ---------- image placements (absolute slide EMU) ----------
+# ============================================================
+# Image placements (absolute slide EMU; tuned for the panel boxes)
+# ============================================================
 
 IMAGE_PLACEMENTS = [
-    # central callout — graph + profitable path stacked beneath bullets
+    # ---- top-left (Motivation) ------------------------------------------------
+    {
+        "src": FIGS / "fig04_success_rate.png",
+        "x": 1_400_000,  "y": 7_500_000,
+        "cx": 8_900_000, "cy": 2_200_000,
+        "caption": "Success rate by heuristic",
+    },
+    # ---- bottom-left (Heuristics & Baselines) --------------------------------
+    {
+        "src": FIGS / "fig01_node_expansion_bar.png",
+        "x": 1_400_000,  "y": 14_300_000,
+        "cx": 8_900_000, "cy": 2_200_000,
+        "caption": "Node expansions per heuristic (cached graph)",
+    },
+    # ---- top-right (Setup & Dataset) -----------------------------------------
+    {
+        "src": FIGS / "fig08_graph_scaling_expansions.png",
+        "x": 22_400_000, "y": 7_500_000,
+        "cx": 8_900_000, "cy": 2_200_000,
+        "caption": "Expansions vs. graph size (4-12 exchanges)",
+    },
+    # ---- bottom-right (Results & Robustness) ---------------------------------
+    {
+        "src": FIGS / "fig11_overnight_heuristic_comparison.png",
+        "x": 22_400_000, "y": 14_300_000,
+        "cx": 8_900_000, "cy": 2_200_000,
+        "caption": "Overnight (7,200 runs): profit, success, expansions",
+    },
+    # ---- centre callout ------------------------------------------------------
     {
         "src": FIGS / "FullGraph.png",
-        "x": 11_300_000,
-        "y": 11_300_000,
-        "cx": 9_500_000,
-        "cy": 4_700_000,
+        "x": 11_300_000, "y": 13_400_000,
+        "cx": 9_500_000, "cy": 3_900_000,
+        "caption": "Stablecoin arbitrage graph (subset of 12 venues)",
     },
     {
         "src": FIGS / "CameraReadySuccesfulPathProfit.png",
-        "x": 11_300_000,
-        "y": 16_400_000,
-        "cx": 9_500_000,
-        "cy": 4_700_000,
-    },
-    # top-right (Setup & Dataset) — graph scaling chart
-    {
-        "src": FIGS / "fig08_graph_scaling_expansions.png",
-        "x": 22_100_000,
-        "y": 7_000_000,
-        "cx": 9_500_000,
-        "cy": 2_700_000,
-    },
-    # bottom-right (Results) — overnight comparison
-    {
-        "src": FIGS / "fig11_overnight_heuristic_comparison.png",
-        "x": 22_100_000,
-        "y": 13_700_000,
-        "cx": 9_500_000,
-        "cy": 2_700_000,
+        "x": 11_300_000, "y": 17_500_000,
+        "cx": 9_500_000, "cy": 3_700_000,
+        "caption": "A profitable path: kraken:USDT -> kucoin:USDT -> kucoin:TUSD",
     },
 ]
 
 
-# ---------- helpers ----------
+# ============================================================
+# XML helpers
+# ============================================================
 
 
 def xml_escape(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def make_bullet_para(text: str, sz: int = 3060) -> str:
+def make_bullet_para(text: str, sz: int = 2800) -> str:
     t = xml_escape(text)
     return (
         '<a:p>'
         '<a:pPr marL="285750" indent="-285750">'
-        f'<a:buSzPts val="{sz + 140}"/>'
+        f'<a:buSzPts val="{sz + 200}"/>'
         '<a:buChar char="\u2022"/>'
         '</a:pPr>'
-        '<a:r><a:rPr lang="en-US" sz="' + str(sz) + '" dirty="0">'
+        f'<a:r><a:rPr lang="en-US" sz="{sz}" dirty="0">'
         '<a:solidFill><a:schemeClr val="dk1"/></a:solidFill>'
         '<a:latin typeface="Times"/><a:ea typeface="Times"/>'
         '<a:cs typeface="Times"/><a:sym typeface="Times"/></a:rPr>'
@@ -154,19 +194,53 @@ def make_bullet_para(text: str, sz: int = 3060) -> str:
     )
 
 
-def make_mono_para(text: str, sz: int = 2400, bold: bool = False) -> str:
-    """Monospace-ish run for a small results 'table' (uses Courier New)."""
+def make_mono_para(text: str, sz: int = 2200, bold: bool = False) -> str:
     t = xml_escape(text)
     b = ' b="1"' if bold else ''
     return (
-        '<a:p>'
-        '<a:pPr><a:buNone/></a:pPr>'
+        '<a:p><a:pPr><a:buNone/></a:pPr>'
         f'<a:r><a:rPr lang="en-US" sz="{sz}"{b} dirty="0">'
         '<a:solidFill><a:schemeClr val="dk1"/></a:solidFill>'
         '<a:latin typeface="Courier New"/><a:ea typeface="Courier New"/>'
         '<a:cs typeface="Courier New"/><a:sym typeface="Courier New"/></a:rPr>'
-        f'<a:t>{t}</a:t></a:r>'
-        '</a:p>'
+        f'<a:t>{t}</a:t></a:r></a:p>'
+    )
+
+
+def make_centered_emph(text: str, sz: int = 2600, color: str = "0070C0") -> str:
+    t = xml_escape(text)
+    return (
+        '<a:p><a:pPr algn="ctr"><a:buNone/></a:pPr>'
+        f'<a:r><a:rPr lang="en-US" sz="{sz}" b="1" i="1" dirty="0">'
+        f'<a:solidFill><a:srgbClr val="{color}"/></a:solidFill>'
+        '<a:latin typeface="Times"/><a:ea typeface="Times"/>'
+        '<a:cs typeface="Times"/><a:sym typeface="Times"/></a:rPr>'
+        f'<a:t>{t}</a:t></a:r></a:p>'
+    )
+
+
+def make_caption_box(text: str, x: int, y: int, cx: int, cy: int, shape_id: int) -> str:
+    """Small italic caption above an image (text box, not part of any group)."""
+    t = xml_escape(text)
+    return (
+        '<p:sp><p:nvSpPr>'
+        f'<p:cNvPr id="{shape_id}" name="Caption {shape_id}"/>'
+        '<p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>'
+        '<p:spPr>'
+        f'<a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+        '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+        '<a:noFill/><a:ln><a:noFill/></a:ln>'
+        '</p:spPr>'
+        '<p:txBody>'
+        '<a:bodyPr wrap="square" anchor="ctr" anchorCtr="0"><a:noAutofit/></a:bodyPr>'
+        '<a:lstStyle/>'
+        '<a:p><a:pPr algn="ctr"><a:buNone/></a:pPr>'
+        '<a:r><a:rPr lang="en-US" sz="1900" i="1" dirty="0">'
+        '<a:solidFill><a:srgbClr val="555555"/></a:solidFill>'
+        '<a:latin typeface="Times"/><a:ea typeface="Times"/>'
+        '<a:cs typeface="Times"/><a:sym typeface="Times"/></a:rPr>'
+        f'<a:t>{t}</a:t></a:r></a:p>'
+        '</p:txBody></p:sp>'
     )
 
 
@@ -207,7 +281,9 @@ def make_pic_xml(rid: str, name: str, x: int, y: int, cx: int, cy: int, shape_id
     )
 
 
-# ---------- main ----------
+# ============================================================
+# Main
+# ============================================================
 
 
 def fill():
@@ -252,26 +328,29 @@ def fill():
         f"<a:t>{xml_escape(CALLOUT_TITLE)}</a:t>",
     )
 
-    # 4. Bodies for the 4 standard sections.
+    # 4. Bodies for the four standard sections
     for i, bullets in enumerate(SECTION_BODIES):
-        body_xml = "".join(make_bullet_para(b) for b in bullets)
-
-        # Append the small monospace results table to the Results panel.
+        body_xml = "".join(make_bullet_para(b, sz=2700) for b in bullets)
+        # mini results "table" appended inside the Results panel
         if i == 3:
             body_xml += '<a:p><a:pPr><a:buNone/></a:pPr><a:endParaRPr sz="1200"/></a:p>'
-            body_xml += make_mono_para(RESULTS_TABLE_HEADER, sz=2400, bold=True)
+            body_xml += make_mono_para(RESULTS_TABLE_HEADER, sz=2200, bold=True)
             for row in RESULTS_TABLE_ROWS:
-                body_xml += make_mono_para(row, sz=2400)
-
+                body_xml += make_mono_para(row, sz=2200)
         xml = replace_first_paragraph(xml, "Some text and visuals here \u2026", body_xml)
 
-    # 5. Callout body bullets
+    # 5. Callout body: bullets + equation block + takeaway line
     callout_first_para = (
         '<a:p><a:pPr><a:buSzPts val="1400"/></a:pPr>'
         '<a:endParaRPr sz="1339"/></a:p>'
     )
-    callout_body_xml = "".join(make_bullet_para(b, sz=2800) for b in CALLOUT_BULLETS)
-    xml = replace_first(xml, callout_first_para, callout_body_xml)
+    callout_xml = "".join(make_bullet_para(b, sz=2700) for b in CALLOUT_BULLETS)
+    callout_xml += '<a:p><a:pPr><a:buNone/></a:pPr><a:endParaRPr sz="1200"/></a:p>'
+    for eq in CALLOUT_EQUATIONS:
+        callout_xml += make_mono_para(eq, sz=2400, bold=True)
+    callout_xml += '<a:p><a:pPr><a:buNone/></a:pPr><a:endParaRPr sz="1200"/></a:p>'
+    callout_xml += make_centered_emph(CALLOUT_TAKEAWAY, sz=2400)
+    xml = replace_first(xml, callout_first_para, callout_xml)
 
     # 6. Footer
     xml = replace_first(
@@ -285,18 +364,31 @@ def fill():
         xml_escape(FOOTER_LINE_2),
     )
 
-    # 7. Embed images: copy media + add relationships + insert <p:pic> elements
+    # 7. Embed images + add captions
     existing_rids = set(re.findall(r'Id="(rId\d+)"', rels))
     next_rid_num = max(int(r[3:]) for r in existing_rids) + 1
     existing_media = {p.name for p in media_dir.iterdir() if p.is_file()}
 
     pic_xml_blocks: list[str] = []
+    next_shape_id = 200
+
     for k, place in enumerate(IMAGE_PLACEMENTS):
-        src_path = place["src"]
+        src_path: Path = place["src"]
         if not src_path.exists():
             print(f"warn: missing figure {src_path}, skipping")
             continue
-        # unique target name
+
+        # caption ABOVE the image (small italic line)
+        cap_text = place.get("caption")
+        if cap_text:
+            cap_h = 360_000  # ~0.4 inch
+            cap_y = max(0, place["y"] - cap_h)
+            pic_xml_blocks.append(
+                make_caption_box(cap_text, place["x"], cap_y, place["cx"], cap_h, next_shape_id)
+            )
+            next_shape_id += 1
+
+        # copy media file
         media_name = f"poster_image{k+1}.png"
         i = 1
         while media_name in existing_media:
@@ -305,6 +397,7 @@ def fill():
         existing_media.add(media_name)
         shutil.copy(src_path, media_dir / media_name)
 
+        # add relationship
         rid = f"rId{next_rid_num}"
         next_rid_num += 1
         rels = rels.replace(
@@ -315,6 +408,8 @@ def fill():
                 f'Target="../media/{media_name}"/></Relationships>'
             ),
         )
+
+        # picture element
         pic_xml_blocks.append(
             make_pic_xml(
                 rid=rid,
@@ -323,19 +418,18 @@ def fill():
                 y=place["y"],
                 cx=place["cx"],
                 cy=place["cy"],
-                shape_id=200 + k,
+                shape_id=next_shape_id,
             )
         )
+        next_shape_id += 1
 
-    # Insert all pictures right before the closing </p:spTree>
     if pic_xml_blocks:
-        injection = "".join(pic_xml_blocks)
-        xml = xml.replace("</p:spTree>", injection + "</p:spTree>", 1)
+        xml = xml.replace("</p:spTree>", "".join(pic_xml_blocks) + "</p:spTree>", 1)
 
-    # write outputs
     slide_xml_path.write_text(xml, encoding="utf-8")
     rels_path.write_text(rels, encoding="utf-8")
 
+    # zip up
     if DST.exists():
         DST.unlink()
     with zipfile.ZipFile(DST, "w", zipfile.ZIP_DEFLATED) as zout:
