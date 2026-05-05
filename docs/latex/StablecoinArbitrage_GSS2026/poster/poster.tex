@@ -1,0 +1,116 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Academic poster — Execution-Aware A* Stablecoin Arbitrage
+% Build (from poster/): tectonic poster.tex
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[12pt]{article}
+\usepackage[margin=12mm, paperwidth=90cm, paperheight=120cm]{geometry}
+\usepackage{graphicx}
+\usepackage{multicol}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage[T1]{fontenc}
+
+\setlength{\columnsep}{18mm}
+\setlength{\multicolsep}{6mm}
+\setlist[itemize]{noitemsep, topsep=2pt, leftmargin=14pt}
+
+\definecolor{bannerbg}{RGB}{30,58,95}
+\definecolor{bannerfg}{RGB}{255,255,255}
+\definecolor{accent}{RGB}{180,60,40}
+
+\newcommand{\posterheading}[1]{\par\vspace{2mm}{\Large\bfseries\color{accent}#1}\par\vspace{2mm}}
+
+\begin{document}
+\thispagestyle{empty}
+
+% ---------- Banner ----------
+\noindent\colorbox{bannerbg}{\parbox{\dimexpr\linewidth-2\fboxsep}{
+\vspace{10mm}
+\begin{center}
+{\Huge\bfseries\color{bannerfg}Execution-Aware A* Search for Cross-Exchange Stablecoin Arbitrage}\\[6mm]
+{\LARGE\color{bannerfg}Kevin Litvin \quad\textbar\quad Simon Fraser University}\\[4mm]
+{\large\color{bannerfg}Canadian AI Graduate Student Symposium 2026 \quad\textbullet\quad Extended Abstract / Poster}\\[3mm]
+{\normalsize\color{bannerfg}\url{https://github.com/kevinl03/Stablecoin-CrossExchange-Arbitrage}}
+\end{center}
+\vspace{8mm}
+}}
+
+\vspace{6mm}
+
+\begin{multicols}{3}
+
+\posterheading{Motivation}
+Prior arbitrage work stresses \emph{detecting} negative cycles, not \emph{executing} trades under fees, slippage, chain latency, and venue risk. Stablecoins ($>$ \$300B market cap) are ideal for cross-exchange routing because USD-pegged balances define a consistent notion of profit across venues.
+
+\posterheading{Contribution}
+\begin{itemize}
+\item Cast stablecoin arbitrage as \textbf{A*} pathfinding on a \textbf{weighted directed graph} whose edges bundle realistic execution rates (trades + transfers).
+\item Three \textbf{domain guidance} penalties $h_1$ (liquidity), $h_2$ (order-book slippage), $h_3$ (congestion/reliability) in $f\!=\!g\!+\!h$ (penalties, not admissible lower bounds), plus a parallel multi-start baseline.
+\item Empirical study on a \textbf{CEX stablecoin dataset} (12 exchanges, live CCXT feeds), with cached graphs, scaling, an 8-hour campaign, and quote-staleness checks.
+\end{itemize}
+
+\posterheading{Graph model}
+Nodes: \textbf{(exchange, stablecoin)}. Edges: \textbf{intra-exchange trades} and \textbf{cross-exchange transfers} of the \emph{same} symbol. Weight
+\(
+w(e) = -\log r(e)
+\)
+for effective rate $r(e)$ (fees, slippage, gas, delay, risk baked in). \textbf{Open goal:} any node with final USD value $>$ start; \textbf{no} requirement to return to the start token.
+
+\columnbreak
+
+\posterheading{Heuristics (summary)}
+\begin{itemize}
+\item $h_1$: penalize illiquid books (24h volume vs.\ order size and time left).
+\item $h_2$: \textbf{slippage} from live depth / VWAP vs.\ mid; key result below.
+\item $h_3$: chain time + static exchange reliability; uses weighted A* where needed.
+\end{itemize}
+Slippage:
+\(
+h_2 = \lambda_{\text{slip}} \max\{0, \text{slippage}_{\text{bps}} - \theta\}
+\).
+
+\posterheading{Key numbers (cached graph, \$10k)}
+\begin{center}\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Method & Succ. & Profit & Exp.\\
+\midrule
+Dijkstra / $h{=}0$ & 56.7\% & \$10.01 & 359\\
+$h_2$ (slippage) & 56.7\% & \$9.91 & \textbf{256}\\
+$h_1$ & 56.7\% & \$6.72 & 568\\
+$h_3$ & 56.7\% & \$7.06 & 673\\
+\bottomrule
+\end{tabular}
+\end{center}
+$h_2$ expands \textbf{29\% fewer} nodes than Dijkstra with profit within \textbf{1\%}. Overnight campaign (\textbf{7,200} instances): every A*-based run finds a profitable path; staleness: \textbf{99.6\%} still profitable up to 120\,s under delayed re-quotes.
+
+\vspace{3mm}
+\begin{center}
+\includegraphics[width=\linewidth]{../figures/fig08_graph_scaling_expansions.png}\\[2mm]
+\small Node expansions vs.\ graph size (Dijkstra vs.\ penalty heuristics).
+\end{center}
+
+\columnbreak
+
+\posterheading{Illustration}
+\begin{center}
+\includegraphics[width=0.92\linewidth]{../figures/FullGraph}\\[3mm]
+\tiny Subgraph (9 of 12 exchanges): trades (solid), transfers (light).
+\end{center}
+
+\vspace{2mm}
+\begin{center}
+\includegraphics[width=0.92\linewidth]{../figures/CameraReadySuccesfulPathProfit}\\[2mm]
+\tiny Example path: kraken:USDT $\to$ kucoin:USDT $\to$ kucoin:TUSD.
+\end{center}
+
+\posterheading{Takeaway}
+\textbf{$h_2$ (slippage)} best tracks optimal routes while pruning search. Liquidity and congestion penalties can \emph{over}-steer and hurt profit on the cached graph. Future: async order-book prefetch; DEX/AMM extensions.
+
+\vfill\null
+\end{multicols}
+
+\end{document}
