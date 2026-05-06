@@ -1,15 +1,15 @@
 """
-Fill the Canadian AI 2026 poster template (CdnAI2026_poster_landscape_36x24.pptx)
-with paper content and embed key figures.
+Fill the CAIAC 2026 poster template (CdnAI2026_poster_landscape_36x24.pptx).
 
-3-column "Three-Column Flow" layout:
-  Col 1 (Left):   Context & Motivation  /  Four Execution Challenges
-  Col 2 (Centre): Technical Core — graph model, heuristics, equations, profitable-path diagram
-  Col 3 (Right):  Results & The "Win"  /  Scaling & Future Work
+Design philosophy: MINIMAL TEXT, MAXIMUM VISUALS.
+  Left col:   "$300B+" hook stat  +  arbitrage network graph
+  Centre:     Problem formulation (2 lines) + large rendered equations + profitable-path image
+  Right top:  "29%" killer stat + node-expansion bar chart
+  Right bot:  QR code (GitHub + video demo) + future work
 
-Page size: 36 × 24 inches (landscape, EMU 32 918 400 × 21 945 600).
+Page: 36 × 24 inches landscape (EMU 32 918 400 × 21 945 600).
 
-Run from the repo root:
+Run from repo root:
     python3 docs/latex/StablecoinArbitrage_GSS2026/poster/fill_poster.py
 
 Output: docs/latex/StablecoinArbitrage_GSS2026/poster/poster_filled.pptx
@@ -18,274 +18,223 @@ from __future__ import annotations
 
 import re
 import shutil
+import sys
 import zipfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[0]
+ROOT = Path(__file__).resolve().parents[0]           # .../poster/
+REPO = ROOT.parents[3]                               # repo root
+
+# Ensure venv packages (qrcode, etc.) are importable even without `source activate`
+_venv_pkg = REPO / "venv312" / "lib" / "python3.12" / "site-packages"
+if _venv_pkg.exists() and str(_venv_pkg) not in sys.path:
+    sys.path.insert(0, str(_venv_pkg))
+
 SRC  = ROOT / "CdnAI2026_poster_landscape_36x24.pptx"
 DST  = ROOT / "poster_filled.pptx"
 WORK = Path("/tmp/cdnai_poster_fill")
+TMP  = Path("/tmp/cdnai_poster_assets")   # equation PNGs, QR code
 
-# Figures live in CAIAC2026/figures (GSS2026/figures is a symlink there).
-FIGS = ROOT.parents[1] / "StablecoinArbitrage_CAIAC2026" / "figures"
-EQ_TMP = Path("/tmp/cdnai_poster_equations")   # rendered equation PNGs
+# Figures live in CAIAC2026/figures (symlinked from GSS2026/figures)
+FIGS = REPO / "docs" / "latex" / "StablecoinArbitrage_CAIAC2026" / "figures"
 
-# Slide canvas: 36 × 24 inches.  1 inch = 914 400 EMU.
-SLIDE_W = 36 * 914_400   # 32 918 400
-SLIDE_H = 24 * 914_400   # 21 945 600
-
-# SFU red and accent colours for injected text only
-# (we do NOT globally replace the template's red to avoid affecting the footer/logos)
-SFU_RED = "CC0633"
-DARK    = "1A1A2E"
-GREY    = "555555"
-BLUE    = "0057A8"
+# Colours (injected text only; we leave template colours untouched)
+SFU_RED  = "CC0633"
+DARK     = "#1A1A2E"
+BLUE_HEX = "#0057A8"
+GREY_HEX = "#555555"
+LIGHT_BG = "#F2F2F7"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Content
+# Panel text  (very short — images carry the message)
 # ─────────────────────────────────────────────────────────────────────────────
 
 TITLE   = "Execution-Aware A* Search for Cross-Exchange Stablecoin Arbitrage"
 AUTHORS = "Kevin Litvin  —  Simon Fraser University"
 
 SECTION_TITLES = [
-    "Context & Motivation",        # top-left
-    "Four Execution Challenges",   # bottom-left
-    "Results & Impact",            # top-right
-    "Scaling & Future Work",       # bottom-right
+    "The $300 B Opportunity",    # top-left
+    "Arbitrage Network",         # bottom-left
+    "Key Results",               # top-right
+    "Code & Demo",               # bottom-right
 ]
 
-# ── Column 1, top: abstract / motivation ──────────────────────────────────────
-COL1_TOP: list[str] = [
-    "Cross-exchange stablecoin arbitrage exploits price discrepancies across "
-    "centralized exchanges — a $300 B+ market.",
-    "Prior work uses negative-cycle detection to find opportunities, but ignores "
-    "EXECUTION: fees, slippage, withdrawal delays, and venue reliability.",
-    "We shift focus: compute trade-and-transfer paths that remain profitable after "
-    "ALL real-world costs are applied.",
-    "Stablecoins are ideal: USD-pegged assets with a clean scalar profit objective "
-    "across 12 major exchanges and 9 coin symbols.",
-    "We model the problem as weighted directed graph search and run 7,200 overnight "
-    "search instances comparing A* heuristics vs. Dijkstra.",
-    "Code + data: github.com/kevinl03/Stablecoin-CrossExchange-Arbitrage",
+# Top-left: three short punchy lines
+COL1_TOP = [
+    "$300 Billion+ stablecoin market — persistent price gaps across exchanges",
+    "Novel proprietary CEX dataset: 12 exchanges \u00b7 9 stablecoins \u00b7 7,200 search instances",
+    "Execution-unaware methods miss real profit: fees, slippage, gas, latency & reliability all matter",
 ]
 
-# ── Column 1, bottom: four execution challenges ───────────────────────────────
-COL1_BOT: list[str] = [
-    "The shift: from OPPORTUNITY DETECTION to EXECUTION FEASIBILITY.",
-    "① LIQUIDITY — Insufficient order-book depth causes partial fills and adverse "
-    "price impact at the quoted rate.",
-    "② SLIPPAGE — Large orders shift the VWAP above mid-price; the effective rate r(e) "
-    "captures this via slippage_bps.",
-    "③ LATENCY — Blockchain transfers take minutes to hours; market prices can move "
-    "against the open leg while funds are in transit.",
-    "④ RELIABILITY — Exchange downtime, withdrawal halts, and API failures can derail "
-    "planned routes mid-execution.",
-    "Together these factors mean opportunity-detection methods overstate real profit "
-    "by up to 40% in live conditions.",
+# Bottom-left: single caption (image fills the rest)
+COL1_BOT = [
+    "Subgraph of the stablecoin arbitrage network (9 of 12 exchanges). "
+    "Nodes = (exchange, coin); solid edges = intra-exchange trades; "
+    "light edges = cross-exchange transfers.",
 ]
 
-# ── Column 2, centre callout: technical core ─────────────────────────────────
+# Centre callout: three concise setup lines (equations are rendered images below)
 CALLOUT_TITLE = "Method: Execution-Aware A* Search"
-
-CALLOUT_BULLETS: list[str] = [
-    "GRAPH MODEL — Nodes are (exchange, stablecoin) pairs. Intra-exchange edges are "
-    "trades; inter-exchange edges are same-coin cross-venue transfers.",
-    "EDGE WEIGHT — w(e) = -log r(e). Effective rate r(e) bundles taker fees, "
-    "gas/withdrawal costs, chain-transfer time, and venue-reliability discount.",
-    "GOAL — Any node where USD value exceeds the start amount (stablecoins are "
-    "USD-pegged: no closed cycle required).",
-    "SEARCH — A* with f(n) = g(n) + h(n). Each heuristic is a domain-specific "
-    "guidance penalty, not an admissible lower bound.",
+CALLOUT_LINES = [
+    "Weighted directed graph: nodes = (exchange, stablecoin) pairs",
+    "Edge weight w(e) = \u2212log r(e) bundles fees, slippage, gas, latency & reliability",
+    "A* finds executable paths maximising USD profit under real-world constraints",
 ]
 
-CALLOUT_HEURISTICS: list[str] = [
-    "h\u2081  (Liquidity)    Penalise shallow 24-h order books relative to order size.",
-    "h\u2082  (Slippage)  \u2605  NOVEL: prunes high market-impact routes early, preserving "
-    "low-impact paths at equal profit.",
-    "h\u2083  (Chain)       Chain-congestion time + static venue-reliability penalty.",
+# Top-right: headline stat + two supporting lines
+COL3_TOP = [
+    "h\u2082 achieves the same profit as Dijkstra in all 7,200 overnight instances",
+    "99.6% of discovered paths remain profitable after 120 s of quote delay",
+    "h\u2081 and h\u2083 expand 58\u201387% more nodes and earn 30\u201333% less profit",
 ]
 
-CALLOUT_TAKEAWAY = (
-    "h\u2082 achieves the same profit as Dijkstra with 29% fewer node expansions — "
-    "verified across 7,200 overnight instances on a unique CEX stablecoin dataset."
-)
-
-# Equations rendered as PNG (see render_equations()); text here is only for
-# matplotlib mathtext — NOT embedded verbatim.
-EQUATION_STRINGS = [
-    r"$w(e) = -\log\, r(e)$",
-    r"$f(n) = g(n) + h(n)$",
-    r"$h_2 = \lambda \cdot \max\!\left(0,\; \mathrm{slippage}_{bps} - \theta\right)$",
-]
-
-# ── Column 3, top: results ─────────────────────────────────────────────────────
-COL3_TOP: list[str] = [
-    "Every A*-based run across 7,200 overnight instances finds a profitable path.",
-    "Quote staleness: 99.6% of paths remain profitable up to 120 s of quote delay.",
-    "h\u2081 and h\u2083 expand 58-87% MORE nodes and earn 30-33% LESS profit: "
-    "aggressive penalties over-steer search.",
-]
-
-RESULTS_TABLE_HEADER = "Heuristic    Profit    Expansions  \u0394Exp"
-RESULTS_TABLE_ROWS = [
-    "Dijkstra     $10.01    359         ---",
-    "h\u2082 Slippage  $9.91     256         -29%  \u2605",
-    "h\u2081 Liq.      $6.72     568        +58%",
-    "h\u2083 Chain     $7.06     673        +87%",
-    "Multi-start  $9.88     3\u00d7359       ---",
-]
-
-# ── Column 3, bottom: scaling & future work ───────────────────────────────────
-COL3_BOT: list[str] = [
-    "Graph scaling (4 \u2192 12 exchanges): h\u2082 maintains its expansion advantage at every "
-    "graph size — the gap widens as the graph grows.",
-    "h\u2082 is robust to order-size variation ($1k \u2013 $100k): the slippage penalty keeps "
-    "search focused on liquid, low-impact paths.",
-    "Overnight stability: profit stays consistent across 7,200 runs with minimal "
-    "variance — the A* framework is stable under live market conditions.",
-    "FUTURE: asynchronous order-book pre-fetching to eliminate quote staleness.",
-    "FUTURE: extension to DEX/AMM markets (Uniswap, Curve) with continuous "
-    "pricing — replacing discrete fee tables with AMM invariants.",
+# Bottom-right: QR label + future work (image fills most of the space)
+COL3_BOT = [
+    "Scan for source code and video demo.",
+    "Future work: asynchronous order-book pre-fetching; extension to "
+    "DEX / AMM markets (Uniswap, Curve) with continuous pricing invariants.",
 ]
 
 FOOTER_LINE_1 = "github.com/kevinl03/Stablecoin-CrossExchange-Arbitrage"
-FOOTER_LINE_2 = "Canadian AI 2026  |  GSS Paper  |  Poster: 36 \u00d7 24 in"
+FOOTER_LINE_2 = "Canadian AI 2026  |  GSS Paper  |  36 \u00d7 24 in"
+
+# GitHub URL encoded in the QR code
+QR_URL = "https://github.com/kevinl03/Stablecoin-CrossExchange-Arbitrage"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Image placements  (absolute slide EMU coordinates)
+# Equations rendered as PNG via matplotlib mathtext
 # ─────────────────────────────────────────────────────────────────────────────
-# Column safe-zones (from template XML group transforms):
-#   Left col:   x ~  1 200 000, cx ~ 9 200 000, top-y ~ 4 000 000
-#   Centre col: x ~ 11 350 000, cx ~ 9 200 000, top-y ~ 4 000 000
-#   Right col:  x ~ 22 200 000, cx ~ 9 200 000, top-y ~ 4 000 000
-#   Footer bar: y ~ 19 891 689  →  all images must end before y = 19 700 000.
-#
-# Equation images are added programmatically in build_equation_placements().
 
-def _ar(name: str) -> float:
-    """Natural pixel aspect ratio (w/h) from the known table."""
-    table = {
-        "CameraReadySuccesfulPathProfit.png": 2158 / 1274,
-        "fig04_success_rate.png":             2558 / 1553,
-        "fig08_graph_scaling_expansions.png": 2119 / 1477,
-        "fig01_node_expansion_bar.png":       2119 / 1519,
-    }
-    return table.get(name, 1.6)
-
-
-# Aspect-ratio-correct cx for a given cy:
-def _cx(name: str, cy: int) -> int:
-    return int(cy * _ar(name))
-
-
-# Aspect-ratio-correct cy for a given cx:
-def _cy(name: str, cx: int) -> int:
-    return int(cx / _ar(name))
-
-
-_F = FIGS   # shorthand
-
-IMAGE_PLACEMENTS = [
-    # ── Col 1 bottom — success-rate bar (fills whitespace) ────────────────────
-    # y=13_500_000 → end 13_500_000+5_575_757=19_075_757 < footer 19_891_689 ✓
-    {
-        "src": _F / "fig04_success_rate.png",
-        "x":  1_200_000, "y": 13_500_000,
-        "cx": 9_200_000, "cy": _cy("fig04_success_rate.png", 9_200_000),
-        "caption": "Fig. 3 — Success rate and profit by heuristic",
-    },
-    # ── Col 3 top — node expansion bar chart ──────────────────────────────────
-    {
-        "src": _F / "fig01_node_expansion_bar.png",
-        "x":  22_200_000, "y": 8_700_000,
-        "cx":  9_200_000, "cy": 2_500_000,
-        "caption": "Fig. 2a — Node expansions per heuristic (cached graph, $10 k order)",
-    },
-    # ── Col 3 bottom — graph scaling (4 → 12 exchanges) ─────────────────────
-    {
-        "src": _F / "fig08_graph_scaling_expansions.png",
-        "x":  22_200_000, "y": 13_700_000,
-        "cx":  9_200_000, "cy": 2_600_000,
-        "caption": "Fig. 2b — Expansions vs. graph size (4 → 12 exchanges)",
-    },
-    # ── Col 2 centre — main visual: the profitable path ───────────────────────
-    #   Natural AR 1.69; placed BELOW equations (see y below).
-    #   Equations occupy y ≈ 10 700 000 – 13 050 000; path starts at 13 300 000.
-    {
-        "src": _F / "CameraReadySuccesfulPathProfit.png",
-        "x":  11_350_000, "y": 13_500_000,
-        "cx":  9_200_000, "cy": _cy("CameraReadySuccesfulPathProfit.png", 9_200_000),
-        "caption": "Fig. 1b — Discovered profitable path: Kraken \u2192 KuCoin \u2192 KuCoin (USDT \u2192 TUSD)",
-    },
+# (label, LaTeX string, figsize-height, fontsize)
+EQUATIONS = [
+    # Main cost function — wide single line
+    ("main",
+     r"$w(e) = -\log r(e)\qquad f(n) = g(n) + h(n)$",
+     1.3, 38),
+    # Three heuristics
+    ("h1",
+     r"$h_1 = \beta \cdot \max\!\left(0,\;1 - \dfrac{V_{24h}}{Q_{order}}\right)$  "
+     r"  (Liquidity depth)",
+     1.35, 34),
+    ("h2",
+     r"$h_2 = \lambda \cdot \max\!\left(0,\; S_{bps} - \theta\right)$"
+     r"  \quad  (Slippage  $\bigstar$ novel)",
+     1.35, 34),
+    ("h3",
+     r"$h_3 = \gamma \cdot \left(t_{chain} + \rho_{venue}\right)$"
+     r"  \qquad\quad  (Chain + Reliability)",
+     1.35, 34),
 ]
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Equation rendering (matplotlib mathtext → transparent PNG)
-# ─────────────────────────────────────────────────────────────────────────────
-
-def render_equations() -> list[Path]:
-    """Render each equation as a high-DPI PNG with a white background.
-    Returns the list of paths in equation order."""
+def render_assets() -> dict[str, Path]:
+    """Render equation PNGs and the QR code. Returns {name: path}."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
 
-    EQ_TMP.mkdir(parents=True, exist_ok=True)
-    paths: list[Path] = []
+    TMP.mkdir(parents=True, exist_ok=True)
+    paths: dict[str, Path] = {}
 
-    for i, latex in enumerate(EQUATION_STRINGS):
-        fig = plt.figure(figsize=(9.5, 0.85))
-        fig.patch.set_facecolor("#F2F2F7")   # very light grey box
-
-        # Thin border via a patch
+    for name, latex, fig_h, fsize in EQUATIONS:
+        fig = plt.figure(figsize=(9.6, fig_h))
+        fig.patch.set_facecolor(LIGHT_BG)
         ax = fig.add_axes([0, 0, 1, 1])
         ax.set_axis_off()
+        # Rounded border in SFU red
         rect = mpatches.FancyBboxPatch(
-            (0.005, 0.05), 0.99, 0.90,
+            (0.008, 0.06), 0.984, 0.88,
             boxstyle="round,pad=0.02",
-            linewidth=1.5,
-            edgecolor="#CC0633",
-            facecolor="#F2F2F7",
+            linewidth=2,
+            edgecolor="#" + SFU_RED,
+            facecolor=LIGHT_BG,
             transform=ax.transAxes,
         )
         ax.add_patch(rect)
-        ax.text(
-            0.5, 0.5, latex,
-            transform=ax.transAxes,
-            ha="center", va="center",
-            fontsize=28, color="#1A1A2E",
-        )
-        p = EQ_TMP / f"eq{i+1}.png"
+        ax.text(0.5, 0.5, latex,
+                transform=ax.transAxes,
+                ha="center", va="center",
+                fontsize=fsize, color=DARK)
+        p = TMP / f"eq_{name}.png"
         fig.savefig(p, dpi=220, bbox_inches="tight",
-                    facecolor="#F2F2F7", edgecolor="none", pad_inches=0.05)
+                    facecolor=LIGHT_BG, edgecolor="none", pad_inches=0.04)
         plt.close(fig)
-        paths.append(p)
+        paths[f"eq_{name}"] = p
+        print(f"  rendered {p.name}")
+
+    # QR code
+    try:
+        import qrcode as _qr
+        qr = _qr.QRCode(
+            error_correction=_qr.constants.ERROR_CORRECT_H,
+            box_size=12, border=3,
+        )
+        qr.add_data(QR_URL)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="#1A1A2E", back_color="white")
+        p = TMP / "qr_github.png"
+        img.save(p)
+        paths["qr"] = p
+        print(f"  rendered {p.name}")
+    except Exception as e:
+        print(f"  warn: QR code skipped ({e})")
 
     return paths
 
 
-def build_equation_placements(eq_paths: list[Path]) -> list[dict]:
-    """Return image-placement dicts for the three equation PNGs in the centre column."""
-    placements = []
-    x  = 11_350_000
-    cy = 820_000          # ≈ 0.9" per equation row
-    gap = 100_000
-    y0 = 10_600_000       # start just below estimated end of callout text
+# ─────────────────────────────────────────────────────────────────────────────
+# Natural aspect ratio helpers
+# (All image cx/cy are computed from source pixel dimensions so nothing stretches)
+# ─────────────────────────────────────────────────────────────────────────────
 
-    for i, p in enumerate(eq_paths):
-        y = y0 + i * (cy + gap)
-        placements.append({
-            "src": p,
-            "x": x, "y": y,
-            "cx": 9_200_000, "cy": cy,
-            "caption": None,
-        })
-    return placements
+_NATURAL_AR: dict[str, float] = {
+    "CameraReadySuccesfulPathProfit.png": 2158 / 1274,   # 1.694
+    "FullGraph.png":                      1926 / 1542,   # 1.249
+    "fig01_node_expansion_bar.png":       2119 / 1519,   # 1.395
+    "fig08_graph_scaling_expansions.png": 2119 / 1477,   # 1.435
+    "fig04_success_rate.png":             2558 / 1553,   # 1.647
+}
+
+
+def natural_cy(fname: str, cx: int) -> int:
+    return int(cx / _NATURAL_AR.get(fname, 1.6))
+
+
+def natural_cx(fname: str, cy: int) -> int:
+    return int(cy * _NATURAL_AR.get(fname, 1.6))
+
+
+def center_x(col_x: int, col_cx: int, img_cx: int) -> int:
+    return col_x + (col_cx - img_cx) // 2
+
+
+# Column anchor x and full width
+COL_L_X, COL_C_X, COL_R_X = 1_200_000, 11_350_000, 22_200_000
+COL_CX = 9_200_000   # available width for images in each column
+FOOTER_Y = 19_891_689  # first pixel of the footer bar — images must end above this
+
+
+def _place(src_name: str, x: int, y: int, cx: int,
+           caption: str | None = None) -> dict:
+    cy = natural_cy(src_name, cx)
+    assert y + cy < FOOTER_Y, (
+        f"{src_name} would overflow footer: {y+cy} >= {FOOTER_Y}"
+    )
+    return {"src": FIGS / src_name, "x": x, "y": y, "cx": cx, "cy": cy,
+            "caption": caption}
+
+
+def _place_asset(key: str, assets: dict[str, Path],
+                 x: int, y: int, cx: int, cy: int,
+                 caption: str | None = None) -> dict | None:
+    p = assets.get(key)
+    if p is None or not p.exists():
+        return None
+    assert y + cy < FOOTER_Y, f"{key} would overflow footer: {y+cy} >= {FOOTER_Y}"
+    return {"src": p, "x": x, "y": y, "cx": cx, "cy": cy, "caption": caption}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -297,55 +246,75 @@ def xml_escape(s: str) -> str:
 
 
 def _run(text: str, sz: int, bold: bool = False, italic: bool = False,
-         color: str | None = None, face: str = "Arial") -> str:
+         color: str | None = None) -> str:
     b = ' b="1"' if bold else ""
     i = ' i="1"' if italic else ""
     fill = (
         f'<a:solidFill><a:srgbClr val="{color}"/></a:solidFill>'
-        if color else
-        '<a:solidFill><a:schemeClr val="dk1"/></a:solidFill>'
+        if color
+        else '<a:solidFill><a:schemeClr val="dk1"/></a:solidFill>'
     )
     return (
         f'<a:r><a:rPr lang="en-US" sz="{sz}"{b}{i} dirty="0">'
-        f'{fill}<a:latin typeface="{face}"/>'
+        f'{fill}<a:latin typeface="Arial"/>'
         f'</a:rPr><a:t>{xml_escape(text)}</a:t></a:r>'
     )
 
 
-def make_bullet_para(text: str, sz: int = 2400,
-                     bold: bool = False, color: str | None = None) -> str:
-    r = _run(text, sz, bold=bold, color=color)
+def make_bullet(text: str, sz: int = 2400, color: str | None = None) -> str:
     return (
         '<a:p>'
         '<a:pPr marL="342900" indent="-342900">'
         '<a:buFont typeface="Arial"/><a:buChar char="\u2022"/>'
         '</a:pPr>'
-        f'{r}</a:p>'
+        f'{_run(text, sz, color=color)}'
+        '</a:p>'
     )
 
 
-def make_plain_para(text: str, sz: int = 2400, bold: bool = False,
-                    italic: bool = False, align: str = "l",
-                    color: str | None = None, face: str = "Arial") -> str:
+def make_plain(text: str, sz: int = 2400, bold: bool = False,
+               italic: bool = False, align: str = "l",
+               color: str | None = None) -> str:
     algn = f' algn="{align}"' if align != "l" else ""
-    r = _run(text, sz, bold=bold, italic=italic, color=color, face=face)
-    return f'<a:p><a:pPr{algn}><a:buNone/></a:pPr>{r}</a:p>'
+    return (
+        f'<a:p><a:pPr{algn}><a:buNone/></a:pPr>'
+        f'{_run(text, sz, bold=bold, italic=italic, color=color)}'
+        f'</a:p>'
+    )
 
 
-def make_mono_para(text: str, sz: int = 2000, bold: bool = False) -> str:
-    return make_plain_para(text, sz=sz, bold=bold, face="Courier New")
-
-
-def make_spacer(sz: int = 1200) -> str:
+def spacer(sz: int = 1000) -> str:
     return f'<a:p><a:pPr><a:buNone/></a:pPr><a:endParaRPr sz="{sz}"/></a:p>'
 
 
-def make_caption_box(text: str, x: int, y: int,
-                     cx: int, cy: int, sid: int) -> str:
+def make_caption(text: str, x: int, y: int, cx: int, cy: int, sid: int) -> str:
     t = xml_escape(text)
     return (
         f'<p:sp><p:nvSpPr>'
-        f'<p:cNvPr id="{sid}" name="Caption{sid}"/>'
+        f'<p:cNvPr id="{sid}" name="Cap{sid}"/>'
+        f'<p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>'
+        f'<p:spPr>'
+        f'<a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+        f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+        f'<a:noFill/><a:ln><a:noFill/></a:ln>'
+        f'</p:spPr>'
+        f'<p:txBody><a:bodyPr wrap="square" anchor="ctr"/><a:lstStyle/>'
+        f'<a:p><a:pPr algn="ctr"><a:buNone/></a:pPr>'
+        f'<a:r><a:rPr lang="en-US" sz="1700" i="1" dirty="0">'
+        f'<a:solidFill><a:srgbClr val="555555"/></a:solidFill>'
+        f'<a:latin typeface="Arial"/></a:rPr>'
+        f'<a:t>{t}</a:t></a:r></a:p>'
+        f'</p:txBody></p:sp>'
+    )
+
+
+def make_label(text: str, x: int, y: int, cx: int, cy: int, sid: int,
+               sz: int = 2800, color: str = SFU_RED, bold: bool = True,
+               align: str = "ctr") -> str:
+    """Free-floating text box for section sub-labels."""
+    return (
+        f'<p:sp><p:nvSpPr>'
+        f'<p:cNvPr id="{sid}" name="Lbl{sid}"/>'
         f'<p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>'
         f'<p:spPr>'
         f'<a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
@@ -353,41 +322,10 @@ def make_caption_box(text: str, x: int, y: int,
         f'<a:noFill/><a:ln><a:noFill/></a:ln>'
         f'</p:spPr>'
         f'<p:txBody>'
-        f'<a:bodyPr wrap="square" anchor="ctr"/><a:lstStyle/>'
-        f'<a:p><a:pPr algn="ctr"><a:buNone/></a:pPr>'
-        f'<a:r><a:rPr lang="en-US" sz="1700" i="1" dirty="0">'
-        f'<a:solidFill><a:srgbClr val="{GREY}"/></a:solidFill>'
-        f'<a:latin typeface="Arial"/></a:rPr>'
-        f'<a:t>{t}</a:t></a:r></a:p>'
-        f'</p:txBody></p:sp>'
-    )
-
-
-def make_label_box(text: str, x: int, y: int,
-                   cx: int, cy: int, sid: int,
-                   sz: int = 2600, color: str = SFU_RED,
-                   border: bool = False) -> str:
-    """Floating text box — used for section sub-labels injected as shapes."""
-    border_xml = (
-        f'<a:ln w="19050">'
-        f'<a:solidFill><a:srgbClr val="{color}"/></a:solidFill></a:ln>'
-        if border else
-        '<a:ln><a:noFill/></a:ln>'
-    )
-    return (
-        f'<p:sp><p:nvSpPr>'
-        f'<p:cNvPr id="{sid}" name="Label{sid}"/>'
-        f'<p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>'
-        f'<p:spPr>'
-        f'<a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
-        f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
-        f'<a:noFill/>{border_xml}'
-        f'</p:spPr>'
-        f'<p:txBody>'
         f'<a:bodyPr wrap="square" anchor="ctr" anchorCtr="1"/>'
         f'<a:lstStyle/>'
-        f'<a:p><a:pPr algn="ctr"><a:buNone/></a:pPr>'
-        f'<a:r><a:rPr lang="en-US" sz="{sz}" b="1" dirty="0">'
+        f'<a:p><a:pPr algn="{align}"><a:buNone/></a:pPr>'
+        f'<a:r><a:rPr lang="en-US" sz="{sz}" b="{"1" if bold else "0"}" dirty="0">'
         f'<a:solidFill><a:srgbClr val="{color}"/></a:solidFill>'
         f'<a:latin typeface="Arial"/></a:rPr>'
         f'<a:t>{xml_escape(text)}</a:t></a:r></a:p>'
@@ -395,14 +333,13 @@ def make_label_box(text: str, x: int, y: int,
     )
 
 
-def make_pic_xml(rid: str, name: str,
-                 x: int, y: int, cx: int, cy: int, sid: int) -> str:
-    # No noChangeAspect lock — fillRect stretches the image to fill cx×cy exactly.
+def make_pic(rid: str, name: str, x: int, y: int,
+             cx: int, cy: int, sid: int) -> str:
+    """Picture element with no aspect-ratio lock (fillRect fills cx×cy exactly)."""
     return (
         f'<p:pic><p:nvPicPr>'
         f'<p:cNvPr id="{sid}" name="{name}"/>'
-        f'<p:cNvPicPr/>'
-        f'<p:nvPr/></p:nvPicPr>'
+        f'<p:cNvPicPr/><p:nvPr/></p:nvPicPr>'
         f'<p:blipFill><a:blip r:embed="{rid}"/>'
         f'<a:stretch><a:fillRect/></a:stretch></p:blipFill>'
         f'<p:spPr><a:xfrm>'
@@ -418,12 +355,11 @@ def replace_first(xml: str, old: str, new: str) -> str:
     return xml.replace(old, new, 1)
 
 
-def replace_first_paragraph(xml: str, inner_text: str, new_paras: str) -> str:
-    """Replace the complete <a:p>…</a:p> that contains <a:t>inner_text</a:t>."""
-    target = f"<a:t>{inner_text}</a:t>"
+def replace_first_paragraph(xml: str, inner: str, new_paras: str) -> str:
+    target = f"<a:t>{inner}</a:t>"
     idx = xml.find(target)
     if idx < 0:
-        raise RuntimeError(f"paragraph text not found: {inner_text!r}")
+        raise RuntimeError(f"paragraph text not found: {inner!r}")
     p_open  = xml.rfind("<a:p>", 0, idx)
     p_close = xml.find("</a:p>", idx) + len("</a:p>")
     return xml[:p_open] + new_paras + xml[p_close:]
@@ -434,12 +370,10 @@ def replace_first_paragraph(xml: str, inner_text: str, new_paras: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def fill() -> None:
-    # ── Step 0: pre-render equations ─────────────────────────────────────────
-    print("rendering equations …")
-    eq_paths = render_equations()
-    all_placements = build_equation_placements(eq_paths) + IMAGE_PLACEMENTS
+    print("step 1/4 — rendering equations & QR code …")
+    assets = render_assets()
 
-    # ── Step 1: unzip template ────────────────────────────────────────────────
+    print("step 2/4 — unpacking template …")
     if WORK.exists():
         shutil.rmtree(WORK)
     WORK.mkdir(parents=True)
@@ -454,167 +388,226 @@ def fill() -> None:
     xml  = slide_path.read_text(encoding="utf-8")
     rels = rels_path.read_text(encoding="utf-8")
 
-    # NOTE: We do NOT globally replace template colours here to avoid accidentally
-    # recolouring footer icons, logos, and other template elements.
-
-    # ── Step 2: title & authors ───────────────────────────────────────────────
-    xml = replace_first(
-        xml,
+    # ── Title & authors ────────────────────────────────────────────────────────
+    xml = replace_first(xml,
         "Project Title: an Exciting Project with Even More Exciting Results",
-        xml_escape(TITLE),
-    )
-    xml = replace_first(
-        xml,
+        xml_escape(TITLE))
+    xml = replace_first(xml,
         "Author Author, Author Author, Author Author, Author Author, and Author Author",
-        xml_escape(AUTHORS),
-    )
+        xml_escape(AUTHORS))
 
-    # ── Step 3: section titles (document order: TL, BL, TR, BR) ──────────────
+    # ── Section title bars ────────────────────────────────────────────────────
     for title in SECTION_TITLES:
-        xml = replace_first(
-            xml,
+        xml = replace_first(xml,
             "<a:t>SECTION TITLE</a:t>",
-            f"<a:t>{xml_escape(title)}</a:t>",
-        )
+            f"<a:t>{xml_escape(title)}</a:t>")
 
-    # ── Step 4: centre callout title ──────────────────────────────────────────
-    xml = replace_first(
-        xml,
+    # ── Centre callout title ──────────────────────────────────────────────────
+    xml = replace_first(xml,
         "<a:t>CALLOUT TITLE / SECTION TITLE</a:t>",
-        f"<a:t>{xml_escape(CALLOUT_TITLE)}</a:t>",
-    )
+        f"<a:t>{xml_escape(CALLOUT_TITLE)}</a:t>")
 
-    # ── Step 5: panel bodies (TL → BL → TR → BR) ─────────────────────────────
+    # ── Panel bodies (order TL → BL → TR → BR) ───────────────────────────────
 
-    # Panel 1 — top-left: Context & Motivation
-    body_tl = "".join(make_bullet_para(b, sz=2400) for b in COL1_TOP)
+    # TL: hook stat text (large first line injected as floating box; here just 2 supporting lines)
+    body_tl = "".join(make_bullet(t, sz=2400) for t in COL1_TOP)
     xml = replace_first_paragraph(xml, "Some text and visuals here \u2026", body_tl)
 
-    # Panel 2 — bottom-left: Four Execution Challenges
-    body_bl = (
-        make_plain_para(
-            "The shift: OPPORTUNITY DETECTION \u2192 EXECUTION FEASIBILITY",
-            sz=2500, bold=True, color=SFU_RED,
-        )
-        + make_spacer(1000)
-        + "".join(make_bullet_para(b, sz=2400) for b in COL1_BOT[1:])
-    )
+    # BL: single caption line; the network image fills the rest
+    body_bl = make_plain(COL1_BOT[0], sz=2200, italic=True)
     xml = replace_first_paragraph(xml, "Some text and visuals here \u2026", body_bl)
 
-    # Panel 3 — top-right: Results & Impact
+    # TR: killer stat headline + supporting bullets
     body_tr = (
-        make_plain_para(
-            "\u2605  h\u2082 reduces node expansions by 29%"
-            " while matching Dijkstra\u2019s profit  \u2605",
-            sz=3000, bold=True, align="ctr", color=SFU_RED,
-        )
-        + make_spacer(800)
-        + "".join(make_bullet_para(b, sz=2400) for b in COL3_TOP)
-        + make_spacer(800)
-        + make_mono_para(RESULTS_TABLE_HEADER, sz=1900, bold=True)
-        + make_mono_para("\u2500" * 46, sz=1900)
-        + "".join(make_mono_para(row, sz=1900) for row in RESULTS_TABLE_ROWS)
+        make_plain("\u2605  29% Fewer Node Expansions  \u2605",
+                   sz=4200, bold=True, align="ctr", color=SFU_RED)
+        + make_plain("Same profit as Dijkstra across all 7,200 instances",
+                     sz=2600, bold=True, align="ctr")
+        + spacer(800)
+        + "".join(make_bullet(t, sz=2300) for t in COL3_TOP)
     )
     xml = replace_first_paragraph(xml, "Some text and visuals here \u2026", body_tr)
 
-    # Panel 4 — bottom-right: Scaling & Future Work
-    body_br = "".join(make_bullet_para(b, sz=2400) for b in COL3_BOT)
+    # BR: QR label + future work
+    body_br = (
+        make_plain(COL3_BOT[0], sz=2800, bold=True, align="ctr", color=SFU_RED)
+        + spacer(600)
+        + make_bullet(COL3_BOT[1], sz=2300)
+    )
     xml = replace_first_paragraph(xml, "Some text and visuals here \u2026", body_br)
 
-    # ── Step 6: centre callout body ───────────────────────────────────────────
-    # Equations are rendered as images below; text only has bullets + heuristics + takeaway.
+    # ── Centre callout body: 3 concise lines then equations (as images below) ──
     callout_first_para = (
         '<a:p><a:pPr><a:buSzPts val="1400"/></a:pPr>'
         '<a:endParaRPr sz="1339"/></a:p>'
     )
     callout_xml = (
-        "".join(make_bullet_para(b, sz=2400) for b in CALLOUT_BULLETS)
-        + make_spacer(900)
-        + make_plain_para("Heuristics", sz=2700, bold=True, color=SFU_RED)
-        + "".join(make_bullet_para(h, sz=2400) for h in CALLOUT_HEURISTICS)
-        + make_spacer(900)
-        + make_plain_para("Key Equations  \u25bc", sz=2700, bold=True, color=SFU_RED)
-        + make_spacer(900)
-        + make_plain_para(CALLOUT_TAKEAWAY, sz=2300, italic=True,
-                          align="ctr", color=BLUE)
+        "".join(make_bullet(t, sz=2400) for t in CALLOUT_LINES)
+        + spacer(800)
+        + make_plain("Cost function and three novel heuristics \u25bc",
+                     sz=2700, bold=True, color=SFU_RED, align="ctr")
     )
     xml = replace_first(xml, callout_first_para, callout_xml)
 
-    # ── Step 7: footer ────────────────────────────────────────────────────────
-    xml = replace_first(
-        xml,
+    # ── Footer ─────────────────────────────────────────────────────────────────
+    xml = replace_first(xml,
         "[Footer: links, additional logos (e.g., funding),",
-        xml_escape(FOOTER_LINE_1),
-    )
-    xml = replace_first(
-        xml,
+        xml_escape(FOOTER_LINE_1))
+    xml = replace_first(xml,
         "QR codes etc., remove box if not needed]",
-        xml_escape(FOOTER_LINE_2),
-    )
+        xml_escape(FOOTER_LINE_2))
 
-    # ── Step 8: inject "KEY EQUATIONS" label above equations in centre column ─
-    extra_shapes: list[str] = [
-        make_label_box(
-            "Key Cost Equations",
-            x=11_350_000, y=10_300_000, cx=9_200_000, cy=500_000,
-            sid=290, sz=2700, color=SFU_RED, border=False,
-        )
-    ]
+    print("step 3/4 — placing images …")
 
-    # ── Step 9: embed images ──────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────
+    # Build all shapes to inject
+    # ─────────────────────────────────────────────────────────────────────────
+    shapes: list[str] = []     # XML fragments to append before </p:spTree>
+    sid = 300                  # shape-id counter (avoid collision with template)
+
+    # Relationship helpers
     existing_rids  = set(re.findall(r'Id="(rId\d+)"', rels))
-    next_rid       = max(int(r[3:]) for r in existing_rids) + 1
+    next_rid_num   = max(int(r[3:]) for r in existing_rids) + 1
     existing_media: set[str] = {p.name for p in media_dir.iterdir() if p.is_file()}
-    next_sid = 300
+    media_counter  = [0]
 
-    for k, place in enumerate(all_placements):
-        src: Path = place["src"]
-        if not src.exists():
-            print(f"  warn: missing {src.name}, skipping")
-            continue
-
-        # caption BELOW the image (only if specified)
-        cap = place.get("caption")
-        if cap:
-            cap_h = 380_000
-            cap_y = place["y"] + place["cy"] + 40_000
-            extra_shapes.append(
-                make_caption_box(cap, place["x"], cap_y, place["cx"], cap_h, next_sid)
-            )
-            next_sid += 1
-
-        # copy media
-        media_name = f"poster_fig{k+1}.png"
-        i = 1
+    def _embed(src: Path) -> str:
+        """Copy src into media dir and add a relationship; return the rId."""
+        nonlocal next_rid_num
+        mc = media_counter[0]
+        media_counter[0] += 1
+        media_name = f"pi_{mc}_{src.name}"
         while media_name in existing_media:
-            media_name = f"poster_fig{k+1}_{i}.png"
-            i += 1
+            mc += 1
+            media_name = f"pi_{mc}_{src.name}"
         existing_media.add(media_name)
         shutil.copy(src, media_dir / media_name)
-
-        # relationship
-        rid = f"rId{next_rid}"
-        next_rid += 1
+        rid = f"rId{next_rid_num}"
+        next_rid_num += 1
+        nonlocal rels
         rels = rels.replace(
             "</Relationships>",
-            (
-                f'<Relationship Id="{rid}" '
-                f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
-                f'Target="../media/{media_name}"/></Relationships>'
-            ),
+            f'<Relationship Id="{rid}" '
+            f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
+            f'Target="../media/{media_name}"/></Relationships>',
         )
+        return rid
 
-        extra_shapes.append(
-            make_pic_xml(rid, src.stem,
-                         place["x"], place["y"], place["cx"], place["cy"], next_sid)
-        )
-        next_sid += 1
+    def add_pic(src: Path, x: int, y: int, cx: int, cy: int,
+                caption: str | None = None) -> None:
+        nonlocal sid
+        if not src.exists():
+            print(f"  skip (missing): {src.name}")
+            return
+        rid = _embed(src)
+        shapes.append(make_pic(rid, src.stem, x, y, cx, cy, sid))
+        sid += 1
+        if caption:
+            cap_y = y + cy + 35_000
+            shapes.append(make_caption(caption, x, cap_y, cx, 370_000, sid))
+            sid += 1
 
-    if extra_shapes:
-        xml = xml.replace("</p:spTree>",
-                          "".join(extra_shapes) + "</p:spTree>", 1)
+    def add_label(text: str, x: int, y: int, cx: int, cy: int,
+                  **kw) -> None:
+        nonlocal sid
+        shapes.append(make_label(text, x, y, cx, cy, sid, **kw))
+        sid += 1
 
-    # ── Step 10: write output ─────────────────────────────────────────────────
+    # ── Injected "$300 B+" stat in top-left panel ─────────────────────────────
+    add_label("$300 Billion+",
+              x=COL_L_X, y=4_200_000, cx=COL_CX, cy=1_350_000,
+              sz=8000, color=SFU_RED, bold=True)
+    add_label("Global Stablecoin Market Cap",
+              x=COL_L_X, y=5_650_000, cx=COL_CX, cy=700_000,
+              sz=3000, color="333333", bold=False)
+    add_label("Novel Proprietary Dataset",
+              x=COL_L_X, y=6_500_000, cx=COL_CX, cy=600_000,
+              sz=2800, color=SFU_RED, bold=True)
+    add_label("12 Exchanges  \u00b7  9 Stablecoins  \u00b7  7,200 Search Instances",
+              x=COL_L_X, y=7_150_000, cx=COL_CX, cy=600_000,
+              sz=2500, color="333333", bold=False)
+
+    # ── FullGraph in bottom-left (natural AR = 1.249) ─────────────────────────
+    # cx=COL_CX=9,200,000 → cy=9,200,000/1.249=7,366,693; y=11,800,000 → end=19,166,693 ✓
+    fg_cx = COL_CX
+    fg_cy = natural_cy("FullGraph.png", fg_cx)
+    fg_y  = FOOTER_Y - fg_cy - 350_000   # flush near footer
+    add_pic(FIGS / "FullGraph.png",
+            x=COL_L_X, y=fg_y, cx=fg_cx, cy=fg_cy,
+            caption="Stablecoin arbitrage graph: 9 of 12 exchanges shown")
+
+    # ── Centre column: equation images ────────────────────────────────────────
+    eq_labels = {
+        "eq_main": None,                          # no extra label (title already says it)
+        "eq_h1":   None,
+        "eq_h2":   None,
+        "eq_h3":   None,
+    }
+    eq_cx = COL_CX
+    eq_order = ["eq_main", "eq_h1", "eq_h2", "eq_h3"]
+    eq_heights = [1_100_000, 1_050_000, 1_050_000, 1_050_000]   # cy per equation
+    eq_gap     = 120_000
+    eq_y_start = 7_200_000
+
+    # "3 Novel Heuristics" sub-label (between main formula and h1/h2/h3)
+    add_label("3 Novel Heuristics (below)",
+              x=COL_C_X, y=eq_y_start + eq_heights[0] + eq_gap,
+              cx=eq_cx, cy=500_000,
+              sz=2700, color=SFU_RED, bold=True)
+
+    eq_y = eq_y_start
+    for i, key in enumerate(eq_order):
+        p = assets.get(key)
+        if p and p.exists():
+            add_pic(p, x=COL_C_X, y=eq_y, cx=eq_cx, cy=eq_heights[i])
+        # After main formula, skip the sub-label height
+        if i == 0:
+            eq_y += eq_heights[i] + eq_gap + 500_000 + eq_gap   # +label space
+        else:
+            eq_y += eq_heights[i] + eq_gap
+
+    # ── Centre column: profitable path image (the main visual) ───────────────
+    path_y = eq_y + 200_000
+    path_cx = COL_CX
+    path_cy = natural_cy("CameraReadySuccesfulPathProfit.png", path_cx)
+    if path_y + path_cy >= FOOTER_Y:
+        # If not enough room at full width, reduce width
+        path_cy = FOOTER_Y - path_y - 400_000
+        path_cx = natural_cx("CameraReadySuccesfulPathProfit.png", path_cy)
+        path_cx = min(path_cx, COL_CX)
+        path_cy = natural_cy("CameraReadySuccesfulPathProfit.png", path_cx)
+    cx_off = center_x(COL_C_X, COL_CX, path_cx)
+    add_pic(FIGS / "CameraReadySuccesfulPathProfit.png",
+            x=cx_off, y=path_y, cx=path_cx, cy=path_cy,
+            caption="Fig. 1b — A profitable path: Kraken \u2192 KuCoin (USDT \u2192 TUSD)")
+
+    # ── Right top: node-expansion bar chart ───────────────────────────────────
+    # Constrain to top-right panel height so it doesn't overlap the QR code.
+    # Top panel content runs ~y=4,000,000 to ~10,700,000; chart starts at y=7,500,000.
+    bar_y  = 7_500_000
+    bar_cy = 3_100_000                                         # ≈ 3.4" — fits top panel
+    bar_cx = natural_cx("fig01_node_expansion_bar.png", bar_cy)   # maintain AR (≈ 4.3M)
+    bar_x  = center_x(COL_R_X, COL_CX, bar_cx)                # centre in column
+    add_pic(FIGS / "fig01_node_expansion_bar.png",
+            x=bar_x, y=bar_y, cx=bar_cx, cy=bar_cy,
+            caption="Fig. 2a — Node expansions per heuristic (cached graph, $10 k order)")
+
+    # ── Right bottom: QR code (large, centered) ───────────────────────────────
+    qr_p = assets.get("qr")
+    if qr_p and qr_p.exists():
+        qr_size = 4_800_000   # ~5.25" square
+        qr_x = center_x(COL_R_X, COL_CX, qr_size)
+        qr_y = FOOTER_Y - qr_size - 1_200_000   # near-bottom, above footer
+        add_pic(qr_p, x=qr_x, y=qr_y, cx=qr_size, cy=qr_size,
+                caption="Scan for source code & video demo")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Inject all shapes
+    # ─────────────────────────────────────────────────────────────────────────
+    if shapes:
+        xml = xml.replace("</p:spTree>", "".join(shapes) + "</p:spTree>", 1)
+
+    print("step 4/4 — writing output …")
     slide_path.write_text(xml, encoding="utf-8")
     rels_path.write_text(rels, encoding="utf-8")
 
@@ -625,7 +618,7 @@ def fill() -> None:
             if path.is_file():
                 zout.write(path, path.relative_to(WORK))
 
-    print(f"wrote {DST}")
+    print(f"wrote {DST}  ({DST.stat().st_size / 1e6:.2f} MB)")
 
 
 if __name__ == "__main__":
