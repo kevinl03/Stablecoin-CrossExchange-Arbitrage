@@ -54,25 +54,41 @@ TITLE   = "Execution-Aware A* Search for Cross-Exchange Stablecoin Arbitrage"
 AUTHORS = "Kevin Litvin  —  Simon Fraser University"
 
 SECTION_TITLES = [
-    "The $300 B Opportunity",    # top-left
-    "Arbitrage Network",         # bottom-left
-    "Key Results",               # top-right
-    "Code & Demo",               # bottom-right
+    "Abstract: the $300B Opportunity",   # top-left
+    "Arbitrage Network",                 # bottom-left
+    "Key Results",                       # top-right
+    "Code & Demo",                       # bottom-right
 ]
 
-# Top-left: three short punchy lines
-COL1_TOP = [
-    "$300 Billion+ stablecoin market — persistent price gaps across exchanges",
-    "Novel proprietary CEX dataset: 12 exchanges \u00b7 9 stablecoins \u00b7 7,200 search instances",
-    "Execution-unaware methods miss real profit: fees, slippage, gas, latency & reliability all matter",
-]
+# Top-left: abstract sentences (paper-accurate, concise)
+# Based on the paper abstract and intro.
+COL1_TOP_ABSTRACT = (
+    "Cross-exchange cryptocurrency arbitrage profits from price discrepancies across venues, "
+    "yet existing approaches use negative-cycle detection that targets opportunity identification "
+    "rather than execution feasibility. We introduce an execution-aware pathfinding framework "
+    "using A* search with domain-specific heuristics, applied to stablecoins \u2014 an asset class "
+    "exceeding $300\u202fB in market cap that bridges cryptocurrency and fiat currency."
+)
+COL1_TOP_DATASET = (
+    "We collect live market data from 12 major centralized exchanges (CEX) via CCXT, covering "
+    "9 stablecoin symbols (USDT, USDC, DAI, TUSD, FDUSD, and more). The problem is modelled as "
+    "a weighted directed graph of up to 41\u202fnodes and 864\u202fedges where each node is an "
+    "(exchange, stablecoin) pair and each edge encodes real-world costs: trading fees, order-book "
+    "slippage, gas, transfer delays, and exchange reliability. This constitutes a novel proprietary "
+    "CEX stablecoin dataset evaluated over 7,200 search instances."
+)
 
-# Bottom-left: single caption (image fills the rest)
-COL1_BOT = [
-    "Subgraph of the stablecoin arbitrage network (9 of 12 exchanges). "
+# Bottom-left: caption + 2 explanatory sentences from the paper
+COL1_BOT_CAPTION = (
+    "Subgraph of the stablecoin arbitrage network (9 of 12 exchanges shown). "
     "Nodes = (exchange, coin); solid edges = intra-exchange trades; "
-    "light edges = cross-exchange transfers.",
-]
+    "light edges = same-coin cross-exchange transfers."
+)
+COL1_BOT_EXPLAIN = (
+    "Each intra-exchange edge represents a spot trade and carries a taker fee, order-book slippage "
+    "penalty, and venue reliability discount. Each cross-exchange edge represents a stablecoin "
+    "withdrawal and carries a gas fee plus an estimated blockchain-confirmation latency."
+)
 
 # Centre callout: three concise setup lines (equations are rendered images below)
 CALLOUT_TITLE = "Method: Execution-Aware A* Search"
@@ -392,6 +408,8 @@ def fill() -> None:
     xml = replace_first(xml,
         "Project Title: an Exciting Project with Even More Exciting Results",
         xml_escape(TITLE))
+    # Reduce title font from 5737 (~57pt) to 5000 (~50pt) — one step smaller
+    xml = xml.replace('sz="5737"', 'sz="5000"', 1)
     xml = replace_first(xml,
         "Author Author, Author Author, Author Author, Author Author, and Author Author",
         xml_escape(AUTHORS))
@@ -409,12 +427,20 @@ def fill() -> None:
 
     # ── Panel bodies (order TL → BL → TR → BR) ───────────────────────────────
 
-    # TL: hook stat text (large first line injected as floating box; here just 2 supporting lines)
-    body_tl = "".join(make_bullet(t, sz=2400) for t in COL1_TOP)
+    # TL: abstract paragraph + dataset paragraph (no floating stat boxes)
+    body_tl = (
+        make_plain(COL1_TOP_ABSTRACT, sz=2400)
+        + spacer(900)
+        + make_plain(COL1_TOP_DATASET, sz=2400)
+    )
     xml = replace_first_paragraph(xml, "Some text and visuals here \u2026", body_tl)
 
-    # BL: single caption line; the network image fills the rest
-    body_bl = make_plain(COL1_BOT[0], sz=2200, italic=True)
+    # BL: caption + two explanatory sentences from the paper
+    body_bl = (
+        make_plain(COL1_BOT_CAPTION, sz=2200, italic=True)
+        + spacer(700)
+        + make_plain(COL1_BOT_EXPLAIN, sz=2200)
+    )
     xml = replace_first_paragraph(xml, "Some text and visuals here \u2026", body_bl)
 
     # TR: killer stat headline + supporting bullets
@@ -513,19 +539,7 @@ def fill() -> None:
         shapes.append(make_label(text, x, y, cx, cy, sid, **kw))
         sid += 1
 
-    # ── Injected "$300 B+" stat in top-left panel ─────────────────────────────
-    add_label("$300 Billion+",
-              x=COL_L_X, y=4_200_000, cx=COL_CX, cy=1_350_000,
-              sz=8000, color=SFU_RED, bold=True)
-    add_label("Global Stablecoin Market Cap",
-              x=COL_L_X, y=5_650_000, cx=COL_CX, cy=700_000,
-              sz=3000, color="333333", bold=False)
-    add_label("Novel Proprietary Dataset",
-              x=COL_L_X, y=6_500_000, cx=COL_CX, cy=600_000,
-              sz=2800, color=SFU_RED, bold=True)
-    add_label("12 Exchanges  \u00b7  9 Stablecoins  \u00b7  7,200 Search Instances",
-              x=COL_L_X, y=7_150_000, cx=COL_CX, cy=600_000,
-              sz=2500, color="333333", bold=False)
+    # (No floating stat boxes in the left column — abstract text fills the panel body)
 
     # ── FullGraph in bottom-left (natural AR = 1.249) ─────────────────────────
     # cx=COL_CX=9,200,000 → cy=9,200,000/1.249=7,366,693; y=11,800,000 → end=19,166,693 ✓
