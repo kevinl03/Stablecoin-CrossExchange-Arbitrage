@@ -125,66 +125,13 @@ QR_URL = "https://github.com/kevinl03/Stablecoin-CrossExchange-Arbitrage"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Equations rendered as PNG via matplotlib mathtext
+# QR code only (equations are now native PowerPoint OMML shapes, not images)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# (label, LaTeX string, figsize-height, fontsize)
-EQUATIONS = [
-    # Main cost function — wide single line
-    ("main",
-     r"$w(e) = -\log r(e)\qquad f(n) = g(n) + h(n)$",
-     1.3, 38),
-    # Three heuristics
-    ("h1",
-     r"$h_1 = \beta \cdot \max\!\left(0,\;1 - \dfrac{V_{24h}}{Q_{order}}\right)$  "
-     r"  (Liquidity depth)",
-     1.35, 34),
-    ("h2",
-     r"$h_2 = \lambda \cdot \max\!\left(0,\; S_{bps} - \theta\right)$"
-     r"  \quad  (Slippage  $\bigstar$ novel)",
-     1.35, 34),
-    ("h3",
-     r"$h_3 = \gamma \cdot \left(t_{chain} + \rho_{venue}\right)$"
-     r"  \qquad\quad  (Chain + Reliability)",
-     1.35, 34),
-]
-
-
 def render_assets() -> dict[str, Path]:
-    """Render equation PNGs and the QR code. Returns {name: path}."""
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as mpatches
-
+    """Render the QR code PNG. Returns {name: path}."""
     TMP.mkdir(parents=True, exist_ok=True)
     paths: dict[str, Path] = {}
-
-    for name, latex, fig_h, fsize in EQUATIONS:
-        fig = plt.figure(figsize=(9.6, fig_h))
-        fig.patch.set_facecolor(LIGHT_BG)
-        ax = fig.add_axes([0, 0, 1, 1])
-        ax.set_axis_off()
-        # Rounded border in SFU red
-        rect = mpatches.FancyBboxPatch(
-            (0.008, 0.06), 0.984, 0.88,
-            boxstyle="round,pad=0.02",
-            linewidth=2,
-            edgecolor="#" + SFU_RED,
-            facecolor=LIGHT_BG,
-            transform=ax.transAxes,
-        )
-        ax.add_patch(rect)
-        ax.text(0.5, 0.5, latex,
-                transform=ax.transAxes,
-                ha="center", va="center",
-                fontsize=fsize, color=DARK)
-        p = TMP / f"eq_{name}.png"
-        fig.savefig(p, dpi=220, bbox_inches="tight",
-                    facecolor=LIGHT_BG, edgecolor="none", pad_inches=0.04)
-        plt.close(fig)
-        paths[f"eq_{name}"] = p
-        print(f"  rendered {p.name}")
 
     # QR code
     try:
@@ -370,6 +317,113 @@ def make_pic(rid: str, name: str, x: int, y: int,
     )
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Office Math Markup Language (OMML) — native PowerPoint equation shapes
+# ─────────────────────────────────────────────────────────────────────────────
+
+_NS_A14 = 'xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main"'
+_NS_M   = 'xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"'
+
+
+def _mr(t: str, sty: str = "i") -> str:
+    """Single OMML math run (italic by default)."""
+    return (f'<m:r><m:rPr><m:sty m:val="{sty}"/></m:rPr>'
+            f'<m:t>{xml_escape(t)}</m:t></m:r>')
+
+def _mp(t: str) -> str: return _mr(t, "p")   # plain / upright
+def _mi(t: str) -> str: return _mr(t, "i")   # italic
+
+
+def _msub(base: str, sub: str) -> str:
+    """OMML subscript: base_sub."""
+    return (f'<m:sSub><m:sSubPr><m:ctrlPr/></m:sSubPr>'
+            f'<m:e>{base}</m:e><m:sub>{sub}</m:sub></m:sSub>')
+
+
+# ── Pre-built OMML blocks ────────────────────────────────────────────────────
+# U+2212 = minus sign, U+22C5 = dot operator, U+03B2/BB/B8/B3/C1 = Greek
+
+_EQ_W = (                      # w(e) = −log r(e)
+    _mi("w") + _mp("(") + _mi("e") + _mp(") = \u2212") +
+    _mp("log\u2009") + _mi("r") + _mp("(") + _mi("e") + _mp(")")
+)
+_EQ_FN = (                     # f(n) = g(n) + h(n)
+    _mi("f") + _mp("(") + _mi("n") + _mp(") = ") +
+    _mi("g") + _mp("(") + _mi("n") + _mp(") + ") +
+    _mi("h") + _mp("(") + _mi("n") + _mp(")")
+)
+_EQ_H1 = (                     # h_1 = β · max(0, 1 − V_24h / Q_ord)
+    _msub(_mi("h"), _mp("1")) + _mp(" = ") +
+    _mi("\u03b2") + _mp(" \u22c5 max(0, 1\u2212") +
+    _msub(_mi("V"), _mp("24h")) + _mp("/") +
+    _msub(_mi("Q"), _mp("ord")) + _mp(")")
+)
+_EQ_H2 = (                     # h_2 = λ · max(0, S_bps − θ)
+    _msub(_mi("h"), _mp("2")) + _mp(" = ") +
+    _mi("\u03bb") + _mp(" \u22c5 max(0, ") +
+    _msub(_mi("S"), _mp("bps")) + _mp(" \u2212 ") +
+    _mi("\u03b8") + _mp(")")
+)
+_EQ_H3 = (                     # h_3 = γ · (t_chain + ρ_venue)
+    _msub(_mi("h"), _mp("3")) + _mp(" = ") +
+    _mi("\u03b3") + _mp(" \u22c5 (") +
+    _msub(_mi("t"), _mp("chain")) + _mp(" + ") +
+    _msub(_mi("\u03c1"), _mp("venue")) + _mp(")")
+)
+
+
+def make_eq_box(math_blocks: list[str], label: str | None,
+                x: int, y: int, cx: int, cy: int, sid: int,
+                sz: int = 2800) -> str:
+    """PowerPoint text-box shape with one or more OMML equation blocks
+    and an optional italic label paragraph below the math."""
+    math_paras = ""
+    for block in math_blocks:
+        math_paras += (
+            f'<a:p>'
+            f'<a:pPr algn="ctr"><a:buNone/>'
+            f'<a:defRPr sz="{sz}"><a:latin typeface="Cambria Math"/></a:defRPr>'
+            f'</a:pPr>'
+            f'<a14:m {_NS_A14}>'
+            f'<m:oMathPara {_NS_M}>'
+            f'<m:oMathParaPr><m:jc m:val="ctr"/></m:oMathParaPr>'
+            f'<m:oMath>{block}</m:oMath>'
+            f'</m:oMathPara></a14:m>'
+            f'</a:p>'
+        )
+
+    label_para = ""
+    if label:
+        is_star = "\u2605" in label
+        lcolor  = SFU_RED if is_star else "555555"
+        lbold   = "1"     if is_star else "0"
+        label_para = (
+            f'<a:p><a:pPr algn="ctr"><a:buNone/></a:pPr>'
+            f'<a:r><a:rPr lang="en-US" sz="2100" i="1" b="{lbold}" dirty="0">'
+            f'<a:solidFill><a:srgbClr val="{lcolor}"/></a:solidFill>'
+            f'<a:latin typeface="Arial"/></a:rPr>'
+            f'<a:t>{xml_escape(label)}</a:t></a:r></a:p>'
+        )
+
+    return (
+        f'<p:sp><p:nvSpPr>'
+        f'<p:cNvPr id="{sid}" name="MathEq{sid}"/>'
+        f'<p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>'
+        f'<p:spPr>'
+        f'<a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
+        f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
+        f'<a:solidFill><a:srgbClr val="F2F2F7"/></a:solidFill>'
+        f'<a:ln w="19050">'
+        f'<a:solidFill><a:srgbClr val="{SFU_RED}"/></a:solidFill></a:ln>'
+        f'</p:spPr>'
+        f'<p:txBody>'
+        f'<a:bodyPr wrap="square" anchor="ctr" anchorCtr="1"/>'
+        f'<a:lstStyle/>'
+        f'{math_paras}{label_para}'
+        f'</p:txBody></p:sp>'
+    )
+
+
 def replace_first(xml: str, old: str, new: str) -> str:
     if old not in xml:
         raise RuntimeError(f"placeholder not found: {old!r}")
@@ -544,6 +598,12 @@ def fill() -> None:
         shapes.append(make_label(text, x, y, cx, cy, sid, **kw))
         sid += 1
 
+    def add_eq_box(math_blocks: list[str], label: str | None,
+                   x: int, y: int, cx: int, cy: int, sz: int = 2800) -> None:
+        nonlocal sid
+        shapes.append(make_eq_box(math_blocks, label, x, y, cx, cy, sid, sz=sz))
+        sid += 1
+
     # (No floating stat boxes in the left column — abstract text fills the panel body)
 
     # ── FullGraph in bottom-left: pushed down to within ~1 mm of footer ──────
@@ -556,12 +616,10 @@ def fill() -> None:
             x=COL_L_X, y=fg_y, cx=fg_cx, cy=fg_cy,
             caption="Stablecoin arbitrage graph: 9 of 12 exchanges shown")
 
-    # ── Centre column: intro sentence + equation images ───────────────────────
+    # ── Centre column: intro sentence + OMML equation boxes ──────────────────
     # 5-bullet callout text ends at roughly y=8 500 000; equations start at 9 300 000.
     eq_cx      = COL_CX
-    eq_order   = ["eq_main", "eq_h1", "eq_h2", "eq_h3"]
-    eq_heights = [900_000, 850_000, 850_000, 850_000]
-    eq_gap     = 80_000
+    eq_gap     = 100_000
     label_cy   = 450_000
     eq_y_start = 9_300_000
 
@@ -573,22 +631,30 @@ def fill() -> None:
         sz=2300, color="333333", bold=False, align="ctr",
     )
 
-    # "Three Novel Heuristics" label between main formula and h1/h2/h3
+    # ── Main cost-function box: w(e) and f(n) on two stacked lines ────────────
+    main_cy = 1_050_000
+    add_eq_box([_EQ_W, _EQ_FN], None,
+               x=COL_C_X, y=eq_y_start, cx=eq_cx, cy=main_cy, sz=2800)
+
+    # "Three Novel Heuristics" sub-label
+    label_y = eq_y_start + main_cy + eq_gap
     add_label("Three Novel Heuristics",
-              x=COL_C_X, y=eq_y_start + eq_heights[0] + eq_gap,
-              cx=eq_cx, cy=label_cy,
+              x=COL_C_X, y=label_y, cx=eq_cx, cy=label_cy,
               sz=2700, color=SFU_RED, bold=True)
 
-    eq_y = eq_y_start
-    for i, key in enumerate(eq_order):
-        p = assets.get(key)
-        if p and p.exists():
-            add_pic(p, x=COL_C_X, y=eq_y, cx=eq_cx, cy=eq_heights[i])
-        if i == 0:
-            eq_y += eq_heights[i] + eq_gap + label_cy + eq_gap   # skip label space
-        else:
-            eq_y += eq_heights[i] + eq_gap
-    # eq_y is now just after eq_h3 (~13 600 000)
+    # ── h₁ / h₂ / h₃ boxes ────────────────────────────────────────────────────
+    h_cy   = 1_000_000   # cy per heuristic box
+    heur_defs = [
+        (_EQ_H1, "Liquidity depth penalty"),
+        (_EQ_H2, "\u2605 Slippage-aware  \u2014  Novel Contribution \u2605"),
+        (_EQ_H3, "Chain congestion + venue reliability"),
+    ]
+    eq_y = label_y + label_cy + eq_gap
+    for eq_block, lbl in heur_defs:
+        add_eq_box([eq_block], lbl,
+                   x=COL_C_X, y=eq_y, cx=eq_cx, cy=h_cy, sz=2800)
+        eq_y += h_cy + eq_gap
+    # eq_y is now just past the last heuristic box
 
     # ── Centre column: profitable path, bottom-aligned with FullGraph ─────────
     path_cx = COL_CX
