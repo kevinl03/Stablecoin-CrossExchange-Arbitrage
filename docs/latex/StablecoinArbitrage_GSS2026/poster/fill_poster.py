@@ -60,22 +60,20 @@ SECTION_TITLES = [
     "Code & Demo",                       # bottom-right
 ]
 
-# Top-left: abstract sentences (paper-accurate, concise)
-# Based on the paper abstract and intro.
+# Top-left: abstract sentences (paper-accurate, concise, no em-dashes)
 COL1_TOP_ABSTRACT = (
-    "Cross-exchange cryptocurrency arbitrage profits from price discrepancies across venues, "
-    "yet existing approaches use negative-cycle detection that targets opportunity identification "
-    "rather than execution feasibility. We introduce an execution-aware pathfinding framework "
-    "using A* search with domain-specific heuristics, applied to stablecoins \u2014 an asset class "
-    "exceeding $300\u202fB in market cap that bridges cryptocurrency and fiat currency."
+    "Cross-exchange cryptocurrency arbitrage profits from price discrepancies between venues, "
+    "yet existing approaches use negative-cycle detection targeting opportunity identification "
+    "rather than execution feasibility. We introduce an execution-aware A* pathfinding framework "
+    "applied to stablecoins, an asset class exceeding $300 B in market cap that bridges "
+    "cryptocurrency and fiat currency."
 )
 COL1_TOP_DATASET = (
-    "We collect live market data from 12 major centralized exchanges (CEX) via CCXT, covering "
-    "9 stablecoin symbols (USDT, USDC, DAI, TUSD, FDUSD, and more). The problem is modelled as "
-    "a weighted directed graph of up to 41\u202fnodes and 864\u202fedges where each node is an "
-    "(exchange, stablecoin) pair and each edge encodes real-world costs: trading fees, order-book "
-    "slippage, gas, transfer delays, and exchange reliability. This constitutes a novel proprietary "
-    "CEX stablecoin dataset evaluated over 7,200 search instances."
+    "Live market data is collected from 12 major centralized exchanges via CCXT, covering "
+    "9 stablecoin symbols (USDT, USDC, DAI, TUSD, FDUSD, and more). The problem is modelled "
+    "as a weighted directed graph (up to 41 nodes, 864 edges) where each node is an "
+    "(exchange, stablecoin) pair and each edge encodes fees, slippage, gas, transfer delays, "
+    "and venue reliability. This novel proprietary CEX dataset spans 7,200 search instances."
 )
 
 # Bottom-left: caption + 2 explanatory sentences from the paper
@@ -90,12 +88,19 @@ COL1_BOT_EXPLAIN = (
     "withdrawal and carries a gas fee plus an estimated blockchain-confirmation latency."
 )
 
-# Centre callout: three concise setup lines (equations are rendered images below)
+# Centre callout: 5-bullet methodology summary drawn from Section 3 of the paper
 CALLOUT_TITLE = "Method: Execution-Aware A* Search"
 CALLOUT_LINES = [
-    "Weighted directed graph: nodes = (exchange, stablecoin) pairs",
-    "Edge weight w(e) = \u2212log r(e) bundles fees, slippage, gas, latency & reliability",
-    "A* finds executable paths maximising USD profit under real-world constraints",
+    "Graph G=(V,E): nodes are (exchange, stablecoin) pairs; intra-exchange edges are spot "
+    "trades, inter-exchange edges are same-coin cross-venue stablecoin transfers.",
+    "Edge weight w(e) = -log r(e); effective rate r(e) = (1-fee)(1-slippage)(1-gas) x "
+    "reliability, converting all execution costs into a single multiplicative model.",
+    "Open-path goal: any node where final USD value exceeds start capital. No closed cycle "
+    "is required because all assets are USD-pegged stablecoins (within +/-2%).",
+    "A* with f(n) = g(n) + h(n); terminates when a profitable path is found, the frontier "
+    "is exhausted, or depth/time limits are reached. Search is not complete by design.",
+    "A parallelized multi-start baseline (k=3 random A* launches) is evaluated alongside "
+    "three novel guidance heuristics across 7,200 overnight search instances.",
 ]
 
 # Top-right: headline stat + two supporting lines
@@ -541,32 +546,37 @@ def fill() -> None:
 
     # (No floating stat boxes in the left column — abstract text fills the panel body)
 
-    # ── FullGraph in bottom-left (natural AR = 1.249) ─────────────────────────
-    # cx=COL_CX=9,200,000 → cy=9,200,000/1.249=7,366,693; y=11,800,000 → end=19,166,693 ✓
-    fg_cx = COL_CX
-    fg_cy = natural_cy("FullGraph.png", fg_cx)
-    fg_y  = FOOTER_Y - fg_cy - 350_000   # flush near footer
+    # ── FullGraph in bottom-left: pushed down to within ~1 mm of footer ──────
+    # Natural AR = 1926/1542 = 1.249.  Margin 100 000 EMU (~1 mm) from footer.
+    fg_cx  = COL_CX
+    fg_cy  = natural_cy("FullGraph.png", fg_cx)
+    fg_y   = FOOTER_Y - fg_cy - 100_000
+    fg_end = fg_y + fg_cy          # = FOOTER_Y - 100_000
     add_pic(FIGS / "FullGraph.png",
             x=COL_L_X, y=fg_y, cx=fg_cx, cy=fg_cy,
             caption="Stablecoin arbitrage graph: 9 of 12 exchanges shown")
 
-    # ── Centre column: equation images ────────────────────────────────────────
-    eq_labels = {
-        "eq_main": None,                          # no extra label (title already says it)
-        "eq_h1":   None,
-        "eq_h2":   None,
-        "eq_h3":   None,
-    }
-    eq_cx = COL_CX
-    eq_order = ["eq_main", "eq_h1", "eq_h2", "eq_h3"]
-    eq_heights = [1_100_000, 1_050_000, 1_050_000, 1_050_000]   # cy per equation
-    eq_gap     = 120_000
-    eq_y_start = 7_200_000
+    # ── Centre column: intro sentence + equation images ───────────────────────
+    # 5-bullet callout text ends at roughly y=8 500 000; equations start at 9 300 000.
+    eq_cx      = COL_CX
+    eq_order   = ["eq_main", "eq_h1", "eq_h2", "eq_h3"]
+    eq_heights = [900_000, 850_000, 850_000, 850_000]
+    eq_gap     = 80_000
+    label_cy   = 450_000
+    eq_y_start = 9_300_000
 
-    # "3 Novel Heuristics" sub-label (between main formula and h1/h2/h3)
-    add_label("3 Novel Heuristics (below)",
+    # Intro sentence between callout heading and first equation
+    add_label(
+        "The edge weight w(e) encodes all execution costs; each heuristic below "
+        "provides domain guidance to steer A* toward low-cost, profitable paths.",
+        x=COL_C_X, y=eq_y_start - 650_000, cx=eq_cx, cy=550_000,
+        sz=2300, color="333333", bold=False, align="ctr",
+    )
+
+    # "Three Novel Heuristics" label between main formula and h1/h2/h3
+    add_label("Three Novel Heuristics",
               x=COL_C_X, y=eq_y_start + eq_heights[0] + eq_gap,
-              cx=eq_cx, cy=500_000,
+              cx=eq_cx, cy=label_cy,
               sz=2700, color=SFU_RED, bold=True)
 
     eq_y = eq_y_start
@@ -574,26 +584,22 @@ def fill() -> None:
         p = assets.get(key)
         if p and p.exists():
             add_pic(p, x=COL_C_X, y=eq_y, cx=eq_cx, cy=eq_heights[i])
-        # After main formula, skip the sub-label height
         if i == 0:
-            eq_y += eq_heights[i] + eq_gap + 500_000 + eq_gap   # +label space
+            eq_y += eq_heights[i] + eq_gap + label_cy + eq_gap   # skip label space
         else:
             eq_y += eq_heights[i] + eq_gap
+    # eq_y is now just after eq_h3 (~13 600 000)
 
-    # ── Centre column: profitable path image (the main visual) ───────────────
-    path_y = eq_y + 200_000
+    # ── Centre column: profitable path, bottom-aligned with FullGraph ─────────
     path_cx = COL_CX
     path_cy = natural_cy("CameraReadySuccesfulPathProfit.png", path_cx)
-    if path_y + path_cy >= FOOTER_Y:
-        # If not enough room at full width, reduce width
-        path_cy = FOOTER_Y - path_y - 400_000
-        path_cx = natural_cx("CameraReadySuccesfulPathProfit.png", path_cy)
-        path_cx = min(path_cx, COL_CX)
-        path_cy = natural_cy("CameraReadySuccesfulPathProfit.png", path_cx)
+    path_y  = fg_end - path_cy    # bottom edge matches FullGraph bottom edge
+    if path_y < eq_y + 120_000:   # guard against overlap with equations
+        path_y = eq_y + 120_000
     cx_off = center_x(COL_C_X, COL_CX, path_cx)
     add_pic(FIGS / "CameraReadySuccesfulPathProfit.png",
             x=cx_off, y=path_y, cx=path_cx, cy=path_cy,
-            caption="Fig. 1b — A profitable path: Kraken \u2192 KuCoin (USDT \u2192 TUSD)")
+            caption="Fig. 1b - A profitable path: Kraken -> KuCoin (USDT -> TUSD)")
 
     # ── Right top: node-expansion bar chart ───────────────────────────────────
     # Constrain to top-right panel height so it doesn't overlap the QR code.
