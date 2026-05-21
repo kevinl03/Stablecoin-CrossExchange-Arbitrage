@@ -138,15 +138,17 @@
 
 > **Visual:** The contrast is stark and immediate. Three grey bars at zero, one red bar at $9.91. The slide does the work — keep your words short and fast here.
 
-*"The natural instinct is to use existing graph algorithms. We tried. Bellman-Ford finds closed cycles — it cannot model open-path stablecoin arbitrage. One-hop and two-hop enumeration are too shallow to find the multi-leg paths that matter."*
+*"The natural first reaction is: use an existing graph algorithm. Shortest path, negative cycle detection — computer science has solved routing problems before. So we tried them all."*
 
 `[PAUSE]`
 
-*"Under our live market conditions — none of them find a profitable executable path."*
+`[DIRECTION: Gesture toward the slide's three grey zero-bars.]`
+
+*"Bellman-Ford. One-hop enumeration. Two-hop enumeration. Under our live market conditions — zero profitable paths found. Every baseline fails."*
 
 `[BEAT]`
 
-*"We needed a fundamentally different approach."*
+*"Not because the math is wrong. Because they were designed for a different problem. We needed something built for this one."*
 
 ---
 
@@ -206,7 +208,7 @@
 
 ---
 
-## SLIDE 9 · Key Result · **5:10 – 5:40**
+## SLIDE 9 · Key Result · **5:10 – 5:45**
 
 `[SLIDE: S9 — fig01_node_expansion_bar.png full-screen hero. h₂ bar highlighted in SFU red. "−29%" annotation large and visible. Header: "h₂ (Slippage Heuristic) — 29% fewer node expansions. Same profit."]`
 
@@ -228,49 +230,63 @@
 
 *"Same destination. Same profit. Twenty-nine percent less work."*
 
+`[BEAT]`
+
+*"Now — you might ask: was it finding good paths? And does it hold up in the real world, not just a cached snapshot? Let me show you."*
+
 ---
 
-## SLIDE 10 · Profit Quality & Speed · **5:40 – 6:00**
+## SLIDE 10 · Profit Quality & Speed · **5:45 – 6:05**
 
 `[SLIDE: S10 — LEFT: fig03_profit_boxplot.png (profit distribution by algorithm). RIGHT: fig02_compute_time_bar.png (compute time comparison). Bottom banner: "h₂ matches Dijkstra profit within 1% · all algorithms run <10 ms · no speed-quality trade-off".]`
 
-> **Visual:** Let the two charts tell the story side by side. The profit distributions should look nearly identical — that's the point. Brief spoken words, then move on.
+> **Visual:** The profit distributions on the left should look nearly identical across algorithms — that's the entire point. Let the audience notice this before you say it. Brief spoken words, then move on quickly.
 
-`[DIRECTION: Gesture left, then right.]`
+`[DIRECTION: Gesture left toward the profit chart.]`
 
-*"And this is the profit distribution across all runs — h-two's quality matches Dijkstra almost exactly."*
+*"Look at the profit distribution. Every algorithm finds paths in roughly the same range. h-two is not cutting corners to be faster — it is finding the same quality paths, with less work."*
 
-`[BEAT]`
+`[DIRECTION: Gesture right toward the compute time chart.]`
 
-*"Same speed. Same profit. Fewer expansions. There is no trade-off."*
+*"And the speed? Sub-ten milliseconds across the board. There is no trade-off to make."*
 
 ---
 
-## SLIDE 11 · Overnight Campaign · **6:00 – 6:22**
+## SLIDE 11 · Overnight Campaign · **6:05 – 6:25**
 
 `[SLIDE: S11 — TOP: fig10_overnight_timeseries.png (profit over 8-hour run). BOTTOM: fig11_overnight_heuristic_comparison.png (heuristic comparison across run). Right callout: "7 200 searches · 100% found a path · 8 hours · live data".]`
 
-> **Visual:** The time series shows a real system running continuously. The flatness of the overnight line — no crashes, no gaps — is itself the message. The bottom comparison shows h₂ holding up throughout.
+> **Visual:** The time series running continuously IS the credibility. A flat, consistent line over 8 hours says more than any statistic. Let the image sit for a moment.
 
-*"This is not a snapshot. We ran seven thousand two hundred live searches across eight consecutive hours of real market data."*
+`[DIRECTION: Pause after advancing to this slide. Let the overnight chart register before speaking.]`
+
+*"Now here is the real test. We did not run this on a cached graph or a simulation. We ran seven thousand two hundred live searches across eight consecutive hours of real, live market data."*
 
 `[PAUSE]`
 
-*"Every single A* run found a profitable path. Not in simulation — on live order books."*
-
----
-
-## SLIDE 12 · Execution Window · **6:22 – 6:38**
-
-`[SLIDE: S12 — fig09_quote_staleness.png (success rate vs time delay). Right callout: "99.6% still profitable at +2 min". Bottom: "Act within 120 seconds."]`
-
-> **Visual:** The staleness curve tells the story instantly — the line stays high until 120 seconds, then degrades. Point to the inflection point. The "99.6%" number should be large enough to read from the back.
-
-*"And those paths stayed profitable. Ninety-nine point six percent were still valid two minutes after discovery."*
+*"Every single search found a profitable path."*
 
 `[BEAT]`
 
-*"That is a concrete execution window: act within one hundred and twenty seconds."*
+*"Eight hours. No cherry-picking. No resets."*
+
+---
+
+## SLIDE 12 · Execution Window · **6:25 – 6:40**
+
+`[SLIDE: S12 — fig09_quote_staleness.png (success rate vs time delay). Right callout: "99.6% still profitable at +2 min". Bottom: "Act within 120 seconds."]`
+
+> **Visual:** The staleness curve tells the story instantly — the line stays high until 120 seconds, then degrades. Point to the inflection point before speaking. The "99.6%" number must be large enough to read from the back.
+
+`[DIRECTION: Gesture toward the inflection point on the curve.]`
+
+*"Last question — and this one matters for anyone who might actually use this: how long does the path stay good?"*
+
+`[PAUSE]`
+
+*"Ninety-nine point six percent of paths are still profitable two minutes after we find them. After that, the market starts to close the gap."*
+
+*"So the playbook is simple: find the path, act within one hundred and twenty seconds."*
 
 ---
 
@@ -407,17 +423,17 @@
 | 2 | The Market | 1:35 | 1:35 |
 | 3 | Price Fragmentation | 2:00 | 2:00 |
 | 4 | Execution Barriers | 2:50 | 2:50 |
-| 5 | Baselines Fail | 3:10 | 3:10 |
-| 6 | The Dataset | 3:40 | 3:40 |
-| 7 | A* Method | 4:20 | 4:20 |
-| 8 | Three Heuristics | 5:10 | 5:10 |
-| 9 | Key Result (−29%) | 5:40 | 5:40 |
-| 10 | Profit Quality | 6:00 | 6:00 |
-| 11 | Overnight Campaign | 6:22 | 6:22 |
-| 12 | Execution Window | 6:38 | 6:38 |
+| 5 | Baselines Fail | 3:12 | 3:12 |
+| 6 | The Dataset | 3:42 | 3:42 |
+| 7 | A* Method | 4:22 | 4:22 |
+| 8 | Three Heuristics | 5:12 | 5:12 |
+| 9 | Key Result (−29%) | 5:45 | 5:45 |
+| 10 | Profit Quality | 6:05 | 6:05 |
+| 11 | Overnight Campaign | 6:25 | 6:25 |
+| 12 | Execution Window | 6:40 | 6:40 |
 | 13 | Why It Matters + Close | 8:00 | 8:00 |
 
-**Practice tip:** Record yourself once with a timer. Target 7:45–8:10. Slides 9–12 are intentionally short — let the paper figures carry them. Slides 4 and 13 carry the most weight; do not rush them.
+**Practice tip:** Record yourself once with a timer. Target 7:50–8:15. S10–S12 are "proof" slides — let the figures lead, your words just frame the question. S4 (barriers) and S13 (close) are the emotional anchors; do not rush them.
 
 ---
 
