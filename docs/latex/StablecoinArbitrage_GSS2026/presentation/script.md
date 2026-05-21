@@ -11,7 +11,7 @@
 > - `[PAUSE]` = stop speaking for 1–2 full seconds. Do not fill it.
 > - `[BEAT]` = half-second breath before continuing.
 > - `[DIRECTION: ...]` = physical or delivery cue — not spoken.
-> - Target pace: ~125 words per minute. Total spoken words: ~940.
+> - Target pace: ~125 words per minute. Total spoken words: ~950.
 
 ---
 
@@ -30,11 +30,11 @@
 
 ---
 
-## SLIDE 1 · Title · **0:00 – 0:55**
+## SLIDE 1 · Title · **0:00 – 0:50**
 
-`[SLIDE: Title slide — your name, paper title, GSS 2026 logo, FullGraph.png as full-bleed background image]`
+`[SLIDE: S1 — Title slide. FullGraph.png full-bleed background at low opacity. Paper title + author name + CdnAI logo.]`
 
-> **Visual:** Use `FullGraph.png` as the slide background at low opacity. The audience sees a dense, beautiful network before you speak. Immediate curiosity — *"what is that?"* — before a single word.
+> **Visual:** The audience sees a dense, beautiful network graph before you speak. Immediate curiosity — *"what is that?"* — before a single word.
 
 `[DIRECTION: Walk to centre. Make eye contact with three different people. Let two full seconds of silence pass. Do not start talking immediately.]`
 
@@ -52,15 +52,15 @@
 
 *"What I'm going to show you today is essentially Google Maps... for thirty-three trillion dollars."*
 
-`[DIRECTION: Let that number land. Do not continue immediately. Hold eye contact.]`
+`[DIRECTION: Let that number land. Hold eye contact. Do not continue immediately.]`
 
 ---
 
-## SLIDE 2 · The Market · **0:55 – 1:45**
+## SLIDE 2 · The Market · **0:50 – 1:35**
 
-`[SLIDE: Bar chart — Mastercard $8T | Visa $15T | Stablecoins $33T (animated, reveal one bar at a time left to right). USDT and USDC logos beside the stablecoin bar.]`
+`[SLIDE: S2 — Bar chart: Mastercard $9T / Visa $15T / Stablecoins $33T. Two stat callouts on the right: $300B+ market cap, $33T volume.]`
 
-> **Visual:** The bars should animate in one at a time, left to right, on click. The stablecoin bar should be noticeably taller — the contrast is the whole point. No need for the speaker to describe it; the image does the work.
+> **Visual:** The stablecoin bar is noticeably taller. The contrast IS the point. Let the image land before speaking.
 
 *"Stablecoins — USDT, USDC, DAI. Digital dollars. Cryptocurrencies pegged one-to-one with fiat, sitting at the intersection of traditional finance and the crypto world."*
 
@@ -82,96 +82,123 @@
 
 ---
 
-## SLIDE 3 · The Problem · **1:45 – 2:55**
+## SLIDE 3 · Price Fragmentation · **1:35 – 2:00**
 
-`[SLIDE: Split image — LEFT: a clean A→B profitable cycle (green arrow, simple). RIGHT: the same path with four red warning icons appearing one at a time: a fee tag, a price impact curve, a clock, an exchange suspension warning.]`
+`[SLIDE: S3 — USDT mid-price listed across all 12 exchanges as a horizontal bar chart. Spread annotation: "Spread = $0.0031 ← arbitrage window".]`
 
-> **Visual:** The left half shows what existing systems see — a clean arbitrage cycle. The right half reveals the execution reality. Animate the four icons on click, synchronized with the four spoken challenges.
+> **Visual:** This is a data table that speaks for itself. USDT should theoretically trade at exactly $1.0000 everywhere — the visual shows it doesn't. Let the audience read the spread for a moment before explaining it.
 
-`[DIRECTION: Step slightly forward. This is where tension builds.]`
+`[DIRECTION: Gesture toward the slide. Pause briefly before speaking.]`
 
-*"Imagine you are a quant trader. It is two in the morning. You are watching prices across twelve different exchanges and you see it — USDT is trading fractionally cheaper on Kraken than it is selling for on KuCoin. The gap is real. The math works."*
+*"Let me show you what that fragmentation looks like in practice."*
 
-*"Existing systems would tell you: there is an arbitrage opportunity here. Take it."*
+`[PAUSE]`
+
+*"This is USDT — one of the world's most liquid assets — priced simultaneously across twelve independent exchanges. Look at the spread. The same dollar, at the same moment, with different prices on every platform. That gap — that is the arbitrage window."*
 
 `[BEAT]`
 
-*"But here is what those systems do not tell you."*
+*"And capturing it requires finding a path through this network before anyone else does, and before the gap closes."*
+
+---
+
+## SLIDE 4 · Execution Barriers · **2:00 – 2:50**
+
+`[SLIDE: S4 — Four colour-coded challenge cards: Liquidity (blue) / Slippage ★ (red) / Latency (orange) / Reliability (green). Bottom punchline: "Bellman-Ford, 1-hop, and 2-hop enumeration all fail."]`
+
+> **Visual:** Animate each card in on click, synchronized with the four spoken challenges.
+
+`[DIRECTION: Step slightly forward. This is where tension builds.]`
+
+*"Imagine you are a quant trader. It is two in the morning. You see USDT cheaper on Kraken than on KuCoin. The gap is real. The math works. Existing systems say: take it."*
+
+`[BEAT]`
+
+*"But here is what they do not tell you."*
 
 `[DIRECTION: Count on fingers — slow, deliberate, one beat after each.]`
 
-*"First — the taker fee at each exchange eats into your margin.*
+*"First — the taker fee at each exchange eats into your margin."*
 
-*Second — your order size is large enough that buying on Kraken moves the price against you before your fill is complete. That is called slippage. Dynamic, live, and invisible to static models.*
+*"Second — your order size is large enough that buying on Kraken moves the price against you mid-fill. That is slippage. Dynamic, live, invisible to static models."*
 
-*Third — the blockchain transfer between exchanges takes time. The window may close while you are waiting for confirmations.*
+*"Third — the blockchain transfer between exchanges takes time. The window may close while you wait for confirmations."*
 
-*Fourth — an exchange might suspend withdrawals entirely. We have seen this happen overnight, without warning."*
+*"Fourth — an exchange might suspend withdrawals entirely. We have seen this happen overnight, without warning."*
 
 `[PAUSE]`
 
 *"Liquidity. Slippage. Latency. Reliability."*
 
+---
+
+## SLIDE 5 · Baselines Fail · **2:50 – 3:10**
+
+`[SLIDE: S5 — Bar chart: Bellman-Ford = $0 profit / 1-Hop = $0 / 2-Hop = $0 / A*+h₂ = $9.91. "FAIL" labels on first three bars.]`
+
+> **Visual:** The contrast is stark and immediate. Three grey bars at zero, one red bar at $9.91. The slide does the work — keep your words short and fast here.
+
+*"The natural instinct is to use existing graph algorithms. We tried. Bellman-Ford finds closed cycles — it cannot model open-path stablecoin arbitrage. One-hop and two-hop enumeration are too shallow to find the multi-leg paths that matter."*
+
+`[PAUSE]`
+
+*"Under our live market conditions — none of them find a profitable executable path."*
+
 `[BEAT]`
 
-*"Bellman-Ford finds the cycle. One-hop and two-hop enumeration find the cycle. In our experiments, all three baselines fail entirely — they cannot identify a profitable executable path under these conditions. We needed something different."*
+*"We needed a fundamentally different approach."*
 
 ---
 
-## SLIDE 4 · The Graph · **2:55 – 3:40**
+## SLIDE 6 · The Dataset · **3:10 – 3:40**
 
-`[SLIDE: FullGraph.png — full slide, clean, with one highlighted path glowing through it. Label: "12 exchanges · 41 nodes · 864 edges · Live market data"]`
+`[SLIDE: S6 — FullGraph.png on the left. Four stats on the right: 12 exchanges / 9 stablecoin symbols / 41 nodes / 864 edges.]`
 
-> **Visual:** Use the actual FullGraph.png image from the paper at full resolution. Overlay a single coloured path through the graph to show what the search is trying to find. The four label terms appear as small annotations. This visual replaces ~150 words of verbal description — point to it, don't recite it.
+> **Visual:** Let the graph image carry the weight. The four stats anchor the scale. Point to the graph, not the stats.
 
-`[DIRECTION: Gesture toward the slide. Let the image carry the weight here.]`
+`[DIRECTION: Gesture toward the graph image.]`
 
 *"This is our dataset. The actual network we built."*
 
-*"Every dot is a trading pair on one of twelve exchanges. Every line is a possible trade or cross-exchange transfer — and it carries the complete real-world cost of that action: the taker fee, the live slippage estimate from the order book, the gas cost, and the venue's reliability score."*
+*"Every node is a trading pair on one of twelve exchanges. Every edge carries the complete execution cost of that hop: the taker fee, a live slippage estimate derived from the order book, the gas cost, and the venue's reliability score."*
 
 *"To our knowledge, this is the first execution-aware graph dataset built specifically for stablecoin arbitrage research."*
 
 `[PAUSE]`
 
-*"The question is: which path through this network, starting from any node, ends with more dollars than you started with — and can actually be executed?"*
+*"The question is: which path through here ends with more dollars than you started with — and can actually be executed?"*
 
 ---
 
-## SLIDE 5 · A* Search · **3:40 – 4:30**
+## SLIDE 7 · Method: A* Search · **3:40 – 4:20**
 
-`[SLIDE: Side-by-side animation. LEFT panel labelled "Dijkstra" — nodes light up in a broad expanding wave. RIGHT panel labelled "A* with h₂" — a narrow directed beam reaches the goal with fewer nodes explored. A counter shows node expansion count under each. The right counter stops at ~70% of the left.]`
+`[SLIDE: S7 — f(n) = g(n) + h(n) displayed large. Below it: pipeline diagram: Live Order Books → Execution-Aware Graph → A* + h₂ → Profitable Path.]`
 
-> **Visual:** This is the single most important visual in the deck. The 29% reduction must be *seen* before it is said. Animate on click: both panels expand simultaneously so the audience sees the contrast live.
+> **Visual:** The formula is front and centre. The pipeline diagram shows the full system in one image — what comes in, what the search does, what comes out. Technical audience will read it immediately.
 
-*"Our core algorithm is A* search — the same search strategy that powers GPS navigation and game AI. The key insight: instead of exploring every possible path, A* uses an evaluation function, f of n equals g of n plus h of n, to decide which node to expand next."*
+*"Our core algorithm is A* search — the same search strategy that powers GPS navigation and game AI. The evaluation function: f of n equals g of n plus h of n."*
 
-*"g of n is the cost of the path so far. h of n is our heuristic — a domain-specific estimate of the execution risk ahead. Together they steer the search toward paths that are not just short, but feasible."*
+*"g of n is the accumulated execution cost so far. h of n is our domain-specific estimate of the execution risk still ahead. Together, they prioritize nodes that are not just close to the goal — but reachable."*
 
-*"Think of it like Google Maps during rush hour. It does not just find the shortest route. It weights the toll, the traffic density, the road reliability. It steers you toward the path you can actually take — not just the one that looks best on a map."*
-
-*"That is exactly what we are doing. Except the map is a live financial network, and the traffic is real-time order-book data."*
+*"Think of it as Google Maps during rush hour. Not the shortest route. The one you can actually drive — accounting for tolls, congestion, and road reliability. Except the map is a live financial network, and the traffic is real-time order-book data."*
 
 ---
 
-## SLIDE 6 · Three Heuristics · **4:30 – 5:25**
+## SLIDE 8 · Three Heuristics · **4:20 – 5:10**
 
-`[SLIDE: Three vertical panels, each with an icon and one-line label. Reveal one panel at a time on click.]`
-`[Panel 1 — h₁: water depth gauge icon. Label: "Liquidity — Is there enough market depth?"]`
-`[Panel 2 — h₂: price impact curve icon. Label: "Slippage ★ — Does my order move the price?"]`
-`[Panel 3 — h₃: chain link + clock icon. Label: "Chain + Venue — Will it settle in time?"]`
+`[SLIDE: S8 — Three coloured panels: h₁ Liquidity (blue) / h₂ ★ Slippage (red) / h₃ Chain+Venue (green), each with formula. Right side: slippage curve showing price impact vs order size.]`
 
-> **Visual:** Keep each panel clean: one icon, one line, the heuristic formula in small text below for the technical audience. Mark h₂ with a star — it is the novel contribution and the one that works.
+> **Visual:** Reveal each panel as you name it. Mark h₂ with a star — it is the novel contribution and the one that wins. The slippage curve on the right gives technical context for h₂ without requiring a verbal explanation.
 
-*"We designed three guidance heuristics. Each one estimates a different dimension of execution risk, and each adds that estimate to the priority function — steering A* away from paths that look profitable but cannot be executed."*
+*"We designed three guidance heuristics. Each adds a domain-specific penalty to h of n, steering A* away from paths that look profitable but cannot be executed."*
 
-`[DIRECTION: Reveal each panel as you name it. One breath between each. Do not rush through them.]`
+`[DIRECTION: Reveal each panel as you name it. One breath between each. Do not rush.]`
 
-*"Heuristic one: Liquidity. Is there enough market depth in this venue to support our order size right now, without exhausting the book?*
+*"Heuristic one: Liquidity. Is there enough market depth in this venue for our order size right now?"*
 
-*Heuristic two: Slippage. This is our novel contribution. Using live order-book data, we compute the volume-weighted average price of filling our order — and penalize paths where that price diverges too far from the mid-price. It is dynamic. It updates with the market.*
+*"Heuristic two: Slippage. Our novel contribution. Using live order-book data, we compute the volume-weighted average execution price and penalize paths where the slippage diverges too far from the mid-price. It updates in real time as the market moves."*
 
-*Heuristic three: Chain congestion and exchange reliability. How long will the blockchain transfer take? And how operationally reliable is this particular venue?"*
+*"Heuristic three: Chain congestion and exchange reliability. How long will the blockchain transfer take, and how operationally stable is this venue?"*
 
 `[BEAT]`
 
@@ -179,11 +206,11 @@
 
 ---
 
-## SLIDE 7 · The Result · **5:25 – 6:20**
+## SLIDE 9 · Key Result · **5:10 – 5:40**
 
-`[SLIDE: Two-part layout. TOP: fig01_node_expansion_bar.png — the bar chart (Dijkstra vs h₁ vs h₂ vs h₃), with h₂ bar highlighted in SFU red. "−29%" annotation visible. BOTTOM: CameraReadySuccesfulPathProfit.png — an actual found profitable path, labelled with the profit amount ($9.91 on $10k).]`
+`[SLIDE: S9 — fig01_node_expansion_bar.png full-screen hero. h₂ bar highlighted in SFU red. "−29%" annotation large and visible. Header: "h₂ (Slippage Heuristic) — 29% fewer node expansions. Same profit."]`
 
-> **Visual:** The bar chart is the evidence. The found path image is the proof of life — it makes the abstract concrete. The profit label should be large and readable from the back of the room.
+> **Visual:** The bar chart IS the message. The 29% gap must be unmissable. No text needed — slow down and let the numbers breathe.
 
 `[DIRECTION: Slow down. Every sentence here gets its own breath. This is the payoff.]`
 
@@ -197,57 +224,79 @@
 
 *"But it did so using twenty-nine percent fewer node expansions."*
 
-`[BEAT]`
+`[PAUSE]`
 
 *"Same destination. Same profit. Twenty-nine percent less work."*
 
-`[PAUSE]`
+---
 
-*"And this — "*
+## SLIDE 10 · Profit Quality & Speed · **5:40 – 6:00**
 
-`[DIRECTION: Gesture to the bottom image on the slide.]`
+`[SLIDE: S10 — LEFT: fig03_profit_boxplot.png (profit distribution by algorithm). RIGHT: fig02_compute_time_bar.png (compute time comparison). Bottom banner: "h₂ matches Dijkstra profit within 1% · all algorithms run <10 ms · no speed-quality trade-off".]`
 
-*" — is a real path our system found. Kraken to KuCoin, USDT to TUSD. Nine dollars and ninety-one cents profit on a ten-thousand dollar order. Found in under ten milliseconds of search time."*
+> **Visual:** Let the two charts tell the story side by side. The profit distributions should look nearly identical — that's the point. Brief spoken words, then move on.
 
-*"We ran this across an eight-hour overnight campaign — seven thousand two hundred search instances, live market data, continuous operation. Every A* run in that campaign found a profitable path. When we re-evaluated those paths two minutes later, accounting for quotes that had gone stale — ninety-nine point six percent were still profitable."*
+`[DIRECTION: Gesture left, then right.]`
 
-*"That is not a simulation artifact. That is a system working under real market conditions."*
+*"And this is the profit distribution across all runs — h-two's quality matches Dijkstra almost exactly."*
+
+`[BEAT]`
+
+*"Same speed. Same profit. Fewer expansions. There is no trade-off."*
 
 ---
 
-## SLIDE 8 · Why It Matters · **6:20 – 7:25**
+## SLIDE 11 · Overnight Campaign · **6:00 – 6:22**
 
-`[SLIDE: Left half — a world map with cryptocurrency exchange logos at major financial centres. Right half — a price divergence chart showing the same stablecoin at two different prices across two exchanges during a period of market stress. Small annotation: "February 2022 — crypto markets during geopolitical shock."]`
+`[SLIDE: S11 — TOP: fig10_overnight_timeseries.png (profit over 8-hour run). BOTTOM: fig11_overnight_heuristic_comparison.png (heuristic comparison across run). Right callout: "7 200 searches · 100% found a path · 8 hours · live data".]`
 
-> **Visual:** The price divergence chart makes the abstract tangible. Show an actual divergence event — not hypothetical. If you have one from your overnight data, use it. The geographic map gives spatial intuition for why twelve independent exchanges exist.
+> **Visual:** The time series shows a real system running continuously. The flatness of the overnight line — no crashes, no gaps — is itself the message. The bottom comparison shows h₂ holding up throughout.
 
-`[DIRECTION: Energy rises here. This is the vision. Speak with conviction.]`
+*"This is not a snapshot. We ran seven thousand two hundred live searches across eight consecutive hours of real market data."*
+
+`[PAUSE]`
+
+*"Every single A* run found a profitable path. Not in simulation — on live order books."*
+
+---
+
+## SLIDE 12 · Execution Window · **6:22 – 6:38**
+
+`[SLIDE: S12 — fig09_quote_staleness.png (success rate vs time delay). Right callout: "99.6% still profitable at +2 min". Bottom: "Act within 120 seconds."]`
+
+> **Visual:** The staleness curve tells the story instantly — the line stays high until 120 seconds, then degrades. Point to the inflection point. The "99.6%" number should be large enough to read from the back.
+
+*"And those paths stayed profitable. Ninety-nine point six percent were still valid two minutes after discovery."*
+
+`[BEAT]`
+
+*"That is a concrete execution window: act within one hundred and twenty seconds."*
+
+---
+
+## SLIDE 13 · Why It Matters + Close · **6:38 – 8:00**
+
+`[SLIDE: S13 — FullGraph.png full-bleed dark. LEFT: three-line summary: "Less Exploration. / More Execution. / Same Profit." RIGHT: fig18_radar_summary.png (method comparison radar chart across all metrics).]`
+
+> **Visual:** This is the visual callback AND the impact statement. The radar chart on the right gives technical judges a holistic view of all heuristics across all dimensions. The FullGraph background closes the loop — the audience saw this image before you spoke a word.
+
+`[DIRECTION: Return to centre. Energy rises first — this is the vision — then slows for the callback. Two distinct beats within this slide.]`
 
 *"Now you might be thinking — this is a niche trading problem. Why does it belong at an AI conference?"*
 
 `[BEAT]`
 
-*"Consider what happens to stablecoin markets during moments of geopolitical shock. A war breaks out. A government announces an exchange freeze. A major venue halts withdrawals overnight. These are the moments when price discrepancies across independent exchanges spike — not by fractions of a percent, but by meaningful margins, in real time."*
+*"Consider what happens to stablecoin markets during geopolitical shocks. A war breaks out. A government announces an exchange freeze. These are the moments when price discrepancies spike across independent exchanges — not by fractions of a percent, but by meaningful margins, in real time."*
 
 *"A system that can navigate those disruptions — twenty-nine percent more efficiently than the baseline — is not just a trading tool. It is a lens for understanding how fragmented financial markets behave under stress. That is a research question with implications well beyond cryptocurrency."*
 
-*"And the framework we built here is a foundation. Decentralized exchanges — Uniswap, Curve — are the natural next frontier. Continuous pricing invariants, automated market makers, on-chain liquidity: a richer search space that demands exactly this kind of execution-aware pathfinding."*
+*"Decentralized exchanges, automated market makers, on-chain liquidity — these are the next frontier. The framework we built here scales directly to that space."*
 
-*"The market is expanding. The navigation tools need to scale with it."*
+`[PAUSE]`
 
----
-
-## SLIDE 9 · Close · **7:25 – 8:00**
-
-`[SLIDE: FullGraph.png again — full bleed, same opening image — but now a single glowing path runs through it end to end. Text overlay, centred, large: "Less Exploration. More Execution. Same Profit."]`
-
-> **Visual:** This is the visual callback. The audience saw this graph at the start, before you spoke. Now it has meaning. The single glowing path is the answer to the question you opened with.
-
-`[DIRECTION: Return to centre. Slow your pace to below your normal speaking speed. This is the callback.]`
+`[DIRECTION: Slow your pace below your normal speaking speed for the next three lines. This is the callback.]`
 
 *"We started with a question: how do you find the most profitable, actually executable path through a thirty-three trillion dollar market?"*
-
-*"The answer: model the ecosystem as a graph. Encode every real-world cost as an edge weight. Apply A* search, guided by a slippage-aware heuristic that steers search toward paths the market can actually support."*
 
 `[PAUSE]`
 
@@ -263,19 +312,23 @@
 
 ---
 
-# Slide Visual Guide — Quick Reference
+# Slide Visual Guide — Quick Reference (v2 — 13 slides)
 
-| Slide | Key visual | Source |
-|-------|-----------|--------|
-| 1 — Title | FullGraph.png at low opacity as background | `docs/latex/.../figures/FullGraph.png` |
-| 2 — Market | Animated bar chart: MC $8T / Visa $15T / Stablecoins $33T | Create in PowerPoint |
-| 3 — Problem | Split: clean cycle LEFT / four red warning icons RIGHT (animated) | Create in PowerPoint |
-| 4 — The Graph | FullGraph.png full slide with one highlighted path | `figures/FullGraph.png` |
-| 5 — A* Method | Side-by-side animated expansion: Dijkstra wave vs. A* beam | Create in PowerPoint |
-| 6 — Heuristics | Three panels with icons, revealed one at a time | Create in PowerPoint |
-| 7 — Result | TOP: fig01 bar chart (h₂ highlighted) + BOTTOM: profitable path image | `figures/fig01_node_expansion_bar.png` + `figures/CameraReadySuccesfulPathProfit.png` |
-| 8 — Impact | World map + price divergence chart | Create / find real data |
-| 9 — Close | FullGraph.png again + glowing path + three-word text overlay | `figures/FullGraph.png` |
+| Slide | Title | Key visual | Source |
+|-------|-------|-----------|--------|
+| 1 | Title | FullGraph.png full-bleed background at low opacity | `figures/FullGraph.png` |
+| 2 | Market | Bar chart: MC $9T / Visa $15T / Stablecoins $33T + stat callouts | `v2_market.png` (generated) |
+| 3 | Price Fragmentation | Horizontal bar: USDT mid-price across 12 exchanges, spread annotated | `v2_price_table.png` (generated) |
+| 4 | Execution Barriers | Four colour-coded challenge cards | Generated in fill_slides_v2.py |
+| 5 | Baselines Fail | Bar chart: Bellman-Ford/1-hop/2-hop = $0, A*+h₂ = $9.91 | `v2_baselines.png` (generated) |
+| 6 | Dataset | FullGraph.png + 4 stats (12 exch / 9 coins / 41 nodes / 864 edges) | `figures/FullGraph.png` |
+| 7 | A* Method | f(n) formula + pipeline diagram (Data → Graph → A*+h₂ → Path) | `v2_pipeline.png` (generated) |
+| 8 | Heuristics | Three panels (h₁/h₂★/h₃) + slippage curve for h₂ | `v2_slippage.png` (generated) |
+| 9 | Key Result | fig01_node_expansion_bar.png full-screen, h₂ highlighted, −29% large | `figures/fig01_node_expansion_bar.png` |
+| 10 | Profit Quality | fig03 profit boxplot (LEFT) + fig02 compute time (RIGHT) | `figures/fig03_profit_boxplot.png` + `fig02` |
+| 11 | Overnight | fig10 overnight time series (TOP) + fig11 heuristic comparison (BOTTOM) | `figures/fig10_overnight_timeseries.png` + `fig11` |
+| 12 | Execution Window | fig09 quote staleness curve + "99.6%" callout | `figures/fig09_quote_staleness.png` |
+| 13 | Close | FullGraph.png dark + three-word summary + fig18 radar | `figures/FullGraph.png` + `figures/fig18_radar_summary.png` |
 
 ---
 
@@ -346,36 +399,39 @@
 
 ---
 
-# Timing Reference
+# Timing Reference (v2 — 13 slides)
 
-| Section | Slide | Target end | Running total |
-|---------|-------|-----------|---------------|
-| Hook | Title | 0:55 | 0:55 |
-| The Market | $33T Bar Chart | 1:45 | 1:45 |
-| The Problem | Split Warning Icons | 2:55 | 2:55 |
-| The Graph | FullGraph | 3:40 | 3:40 |
-| A* Method | Side-by-Side Animation | 4:30 | 4:30 |
-| Heuristics | Three Panels | 5:25 | 5:25 |
-| Result | Bar Chart + Path | 6:20 | 6:20 |
-| Impact | World Map + Divergence | 7:25 | 7:25 |
-| Close | FullGraph + Glowing Path | 8:00 | 8:00 |
+| Slide | Section | Target end | Running total |
+|-------|---------|-----------|---------------|
+| 1 | Hook — Title | 0:50 | 0:50 |
+| 2 | The Market | 1:35 | 1:35 |
+| 3 | Price Fragmentation | 2:00 | 2:00 |
+| 4 | Execution Barriers | 2:50 | 2:50 |
+| 5 | Baselines Fail | 3:10 | 3:10 |
+| 6 | The Dataset | 3:40 | 3:40 |
+| 7 | A* Method | 4:20 | 4:20 |
+| 8 | Three Heuristics | 5:10 | 5:10 |
+| 9 | Key Result (−29%) | 5:40 | 5:40 |
+| 10 | Profit Quality | 6:00 | 6:00 |
+| 11 | Overnight Campaign | 6:22 | 6:22 |
+| 12 | Execution Window | 6:38 | 6:38 |
+| 13 | Why It Matters + Close | 8:00 | 8:00 |
 
-**Practice tip:** Record yourself once with a timer. Target 7:45–8:10. The `[PAUSE]` and `[DIRECTION]` markers consume approximately 50 seconds of the 8 minutes — do not skip them, they are not dead time.
+**Practice tip:** Record yourself once with a timer. Target 7:45–8:10. Slides 9–12 are intentionally short — let the paper figures carry them. Slides 4 and 13 carry the most weight; do not rush them.
 
 ---
 
-# What Changed in This Revision (v2)
+# What Changed Script → v3 (alignment with slides_v2.pptx)
 
-| Issue | Fix |
-|-------|-----|
-| Research question never stated | Added explicitly in Slide 2: "Can we build a system smart enough to find and execute a profitable path through that fragmentation?" |
-| "Every A* run found a profitable path" conflated two experiments | Clarified: overnight campaign (7,200 instances) vs. cached graph (56.7%). Added Q6 to handle the likely challenge |
-| `h(n)` described as "adding to search cost" (wrong framing) | Slide 5 now correctly describes f(n) = g(n) + h(n) with g(n) and h(n) defined separately |
-| Airport analogy conflated slippage and liquidity | Split: Slide 3 mentions slippage correctly; h₁/h₂ distinction preserved in Slide 6 |
-| Bellman-Ford / baseline failure never mentioned | Added to Slide 3: "all three baselines fail entirely" |
-| No personal/human moment | Added: "Imagine you are a quant trader. It is two in the morning..." in Slide 3 |
-| No tension before result reveal | Added: "One of these three will prove decisive." at end of Slide 6 |
-| Slide 8 ended on a limitation ("only built the foundation") | Reframed as forward momentum: "The framework we built here is a foundation" |
-| Q1 Bellman-Ford answer contained error | Fixed: now correctly distinguishes closed-cycle vs. open-path problem structure |
-| No slides actually designed | Added full Slide Visual Guide with figure sources and slide-by-slide design specs |
-| Visual spec missing from script | Every slide now has a `> Visual:` block with exact content and source |
+| Change | Reason |
+|--------|--------|
+| Added S3 dialogue (Price Fragmentation) | New slide in v2 had no script words |
+| Added S5 dialogue (Baselines Fail) | New slide in v2 had no script words |
+| Split old Slide 7 Result → S9 + S10 + S11 + S12 | Old slide had 4 distinct data points crammed into one |
+| Removed standalone Impact slide | Content folded into S13 Close (Impact + callback combined) |
+| Added S10 dialogue (Profit Quality, 20s) | fig03/fig02 added in v2 but unscripted |
+| Added S11 dialogue (Overnight, 22s) | fig10/fig11 added in v2 but unscripted |
+| Added S12 dialogue (Staleness, 16s) | fig09 added in v2 but unscripted |
+| Expanded S13 to include Impact framing | Replaced standalone Slide 8 from old script |
+| Updated all timing markers | 9→13 slides, same 8-minute target |
+| Updated Visual Guide table | Now 13-row table matching v2 slide names |
