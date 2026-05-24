@@ -39,15 +39,15 @@
 
 `[DIRECTION: Walk to centre. Two full seconds of silence. Make eye contact with three different people before you open your mouth.]`
 
-*"Across twelve independent exchanges, the same digital asset can trade at twelve different prices at the exact same instant."*
+*"At any given moment, the same digital asset can be trading at a dozen different prices simultaneously across independent exchanges."*
 
 `[PAUSE]`
 
-*"That fragmentation is both the problem and the opportunity. The market it occurs in moved thirty-three trillion dollars last year."*
+*"This is fragmentation — both the problem and the opportunity. And the stablecoin market, where it happens, moved more than thirty-three trillion dollars last year."*
 
 `[BEAT]`
 
-*"This talk is about a pathfinding algorithm that turns that fragmentation into structured, executable profit — and about a heuristic that makes the search itself dramatically more efficient."*
+*"I'm Kevin Litvin from Simon Fraser University. This talk is about a pathfinding algorithm that turns that fragmentation into structured, executable profit — and a heuristic that makes the search itself dramatically more efficient."*
 
 ---
 
@@ -57,15 +57,15 @@
 
 > **Visual:** Lead with the $33T figure and the network graph. The previous Visa/Mastercard comparison was an apples-to-oranges scale framing — replaced with crypto-internal share of volume, which is the relevant comparison.
 
-*"Stablecoins — USDT, USDC, DAI — are blockchain-native dollars pegged one-to-one with fiat. Roughly three hundred billion in circulation. Thirty-three trillion in annual on-chain volume."*
+*"Stablecoins — USDT, USDC, DAI — are blockchain-native dollars pegged one-to-one with fiat. Roughly three hundred billion dollars in circulation. Thirty-three trillion dollars in annual on-chain volume."*
 
 `[PAUSE]`
 
-*"To put that in context: stablecoins now carry the majority of settled value moving through cryptocurrency markets. Every cross-exchange transfer touches these rails."*
+*"To put that in context: stablecoins are the dominant settlement asset for cross-exchange capital movement in crypto markets. They are how traders rebalance positions, how cross-border settlements clear, how liquidity moves between venues."*
 
 `[BEAT]`
 
-*"And those rails are fragmented across twelve independent centralized exchanges, each pricing the same asset slightly differently at the same instant."*
+*"And they're listed across more than a dozen independent centralized exchanges — same coin, slightly different price on each, at the exact same instant."*
 
 `[PAUSE]`
 
@@ -97,7 +97,7 @@
 
 *"One — fees. Taker fees compound across every hop."*
 
-*"Two — slippage. Large orders walk the L2 order book, executing at progressively worse prices."*
+*"Two — slippage. As a large order fills, it walks down the L2 order book — the live ladder of bids and asks at each price level — executing at progressively worse prices."*
 
 *"Three — latency. Cross-exchange transfers settle on-chain. Block times and congestion eat the execution window."*
 
@@ -145,7 +145,7 @@
 
 `[BEAT]`
 
-*"You know it: A* is Dijkstra's plus a heuristic. True accumulated cost g of n, plus an estimate h of n of the cost remaining. f equals g plus h decides which node we expand next."*
+*"Quick refresher: A* is Dijkstra's algorithm plus a heuristic. True accumulated cost g of n, plus an estimate h of n of the cost remaining. f equals g plus h decides which node we expand next."*
 
 `[PAUSE]`
 
@@ -215,15 +215,15 @@
 
 `[DIRECTION: Brief pause after advancing to this slide.]`
 
-*"Two findings from that overnight campaign."*
+*"To stress-test this, we ran what we call our overnight campaign — eight hours of continuous A* search against twelve live exchange feeds. Two findings stand out."*
 
 `[BEAT]`
 
-*"First — across seven thousand two hundred searches over eight continuous hours, the algorithm consistently surfaced profitable executable paths. The result is reproducible at high volume, not a one-off."*
+*"First — across all seven thousand two hundred searches, the algorithm consistently surfaced profitable executable paths. Reproducible at high volume, not a one-off."*
 
 `[PAUSE]`
 
-*"Second — those paths held up after discovery. We re-evaluated each one at increasing delays. Ninety-nine point six percent were still profitable at the two-minute mark. Beyond that, the gap closes as the market converges."*
+*"Second — staleness. There is always a gap between finding a path and being able to act on it: operator review, transfer confirmation. So we measured how long an opportunity actually persists. Ninety-nine point six percent of paths were still profitable two minutes after discovery. After that, the market converges."*
 
 `[BEAT]`
 
@@ -261,7 +261,7 @@
 
 `[PAUSE]`
 
-*"The answer, in three words."*
+*"The short answer is yes."*
 
 `[BEAT]`
 
