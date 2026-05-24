@@ -509,7 +509,7 @@ def s7_result(prs):
     _txt(s, "KEY RESULT",
          MARGIN, Inches(0.04), Inches(3.5), Inches(0.36),
          size=13, bold=True, color=RGBColor(0xFF,0xCC,0xCC))
-    _txt(s, "h₂ (Slippage Heuristic)  ·  29% fewer node expansions  ·  same profit quality",
+    _txt(s, "h₂ (Slippage)  ·  29% fewer node expansions vs. Dijkstra  ·  profit within 1%",
          MARGIN, Inches(0.40), SW-MARGIN*2-Inches(2.4), Inches(0.38),
          size=22, bold=True, color=WHITE)
 
