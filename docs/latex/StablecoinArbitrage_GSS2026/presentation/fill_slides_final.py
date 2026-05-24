@@ -74,12 +74,59 @@ plt.rcParams.update({
 
 # ── matplotlib asset generators ────────────────────────────────────────────────
 
-def _save(fig, name):
+def _save(fig, name, transparent=False):
     p = TMP / name
-    fig.savefig(p, dpi=200, bbox_inches="tight", facecolor="white", edgecolor="none")
+    if transparent:
+        fig.savefig(p, dpi=240, bbox_inches="tight", transparent=True, edgecolor="none")
+    else:
+        fig.savefig(p, dpi=200, bbox_inches="tight",
+                    facecolor="white", edgecolor="none")
     plt.close(fig)
     print(f"    {name}")
     return p
+
+
+# ── heuristic equations (rendered with matplotlib mathtext, transparent) ──
+def gen_eq_h1():
+    fig, ax = plt.subplots(figsize=(3.2, 1.5))
+    ax.axis("off")
+    ax.text(0.5, 0.74,
+            r"$h_1(n) = \lambda_{liq}\,(\,1 - \mathrm{clamp}\,\frac{\log_{10} r + 1}{2}\,)$",
+            ha="center", va="center", fontsize=14, color="white",
+            transform=ax.transAxes)
+    ax.text(0.5, 0.22,
+            r"$r = \frac{(V_{24h}/86400)\cdot T_{rem}}{Q}$",
+            ha="center", va="center", fontsize=13, color="white",
+            transform=ax.transAxes)
+    return _save(fig, "fin_eq_h1.png", transparent=True)
+
+
+def gen_eq_h2():
+    fig, ax = plt.subplots(figsize=(3.2, 1.5))
+    ax.axis("off")
+    ax.text(0.5, 0.74,
+            r"$h_2(n) = \lambda_{slip}\,\max(\,0,\;s_{bps} - \theta\,)$",
+            ha="center", va="center", fontsize=14, color="white",
+            transform=ax.transAxes)
+    ax.text(0.5, 0.22,
+            r"$s_{bps} = \frac{\mathrm{VWAP}(Q) - P_{mid}}{P_{mid}}\cdot 10^{4}$",
+            ha="center", va="center", fontsize=13, color="white",
+            transform=ax.transAxes)
+    return _save(fig, "fin_eq_h2.png", transparent=True)
+
+
+def gen_eq_h3():
+    fig, ax = plt.subplots(figsize=(3.2, 1.5))
+    ax.axis("off")
+    ax.text(0.5, 0.62,
+            r"$h_3(n) = \lambda_{chain}\,\frac{t_{min}}{T_{rem}}$",
+            ha="center", va="center", fontsize=14, color="white",
+            transform=ax.transAxes)
+    ax.text(0.5, 0.20,
+            r"$\;\;+\;\;\lambda_{exch}\,(\,1 - s(n)\,)$",
+            ha="center", va="center", fontsize=14, color="white",
+            transform=ax.transAxes)
+    return _save(fig, "fin_eq_h3.png", transparent=True)
 
 
 def gen_market_share():
@@ -386,49 +433,70 @@ def s5_method(prs, pipeline):
     print("  S5 Method")
 
 
-def s6_heuristics(prs, slippage):
+def s6_heuristics(prs, slippage, eq_h1, eq_h2, eq_h3):
     s = _blank(prs)
     _header(s, "Three Execution-Aware Heuristics"); _logo(s)
 
     _txt(s, "Each adds a domain-specific penalty to h(n) — steering A* away from paths too risky to execute under live costs.",
-         MARGIN, CONTENT_Y+Inches(0.05), SW-MARGIN*2, Inches(0.5),
-         size=15, italic=True, color=DARK, align=PP_ALIGN.CENTER)
-    _divider(s, CONTENT_Y+Inches(0.6))
+         MARGIN, CONTENT_Y+Inches(0.05), SW-MARGIN*2, Inches(0.4),
+         size=14, italic=True, color=DARK, align=PP_ALIGN.CENTER)
+    _divider(s, CONTENT_Y+Inches(0.55))
 
-    pw, ph, py = Inches(2.5), Inches(4.0), CONTENT_Y+Inches(0.72)
+    pw, ph, py = Inches(2.5), Inches(4.2), CONTENT_Y+Inches(0.65)
     heuristics = [
         ("h₁",   "Liquidity",
-         "Live L2 book depth\npenalty — too thin\nto absorb order size",
-         "Can the book\nabsorb our size?",  "#2196F3"),
+         eq_h1,
+         "24h-volume scaled to\norder size and time",
+         "Can the book\nabsorb our size?",   "#2196F3"),
         ("h₂ ★", "Slippage",
-         "VWAP penalty:\npen = max(0, VWAP−mid)\n× order size",
-         "Will my order\nmove the price?",  "#CC0633"),
+         eq_h2,
+         "VWAP divergence from\nmid-quote, live L2",
+         "Will my order\nmove the price?",   "#CC0633"),
         ("h₃",   "Chain + Venue",
-         "On-chain settlement\ntime penalty + venue\nreliability discount",
-         "Will it settle\nin time?",        "#2E7D32"),
+         eq_h3,
+         "On-chain settlement\n+ venue reliability",
+         "Will it settle\nin time?",         "#2E7D32"),
     ]
-    for i, (lbl, name, formula, q, hex_c) in enumerate(heuristics):
+    for i, (lbl, name, eq_img, sub, q, hex_c) in enumerate(heuristics):
         cx = MARGIN + i*(pw + Inches(0.2))
         rgb = RGBColor.from_string(hex_c.lstrip("#"))
         _rect(s, cx, py, pw, ph, rgb)
-        _txt(s, lbl,     cx+Inches(0.1), py+Inches(0.1),  pw-Inches(0.2), Inches(0.65),
-             size=28, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
-        _txt(s, name,    cx+Inches(0.1), py+Inches(0.75), pw-Inches(0.2), Inches(0.45),
-             size=17, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
-        _txt(s, formula, cx+Inches(0.1), py+Inches(1.22), pw-Inches(0.2), Inches(1.3),
-             size=12, color=WHITE, align=PP_ALIGN.CENTER, font="Courier New")
-        _txt(s, f'"{q}"', cx+Inches(0.1), py+Inches(2.7), pw-Inches(0.2), Inches(0.85),
-             size=13, italic=True, color=RGBColor(0xFF,0xFF,0xAA), align=PP_ALIGN.CENTER)
 
-    # Slippage curve
+        # Title
+        _txt(s, lbl,  cx+Inches(0.1), py+Inches(0.10), pw-Inches(0.2), Inches(0.6),
+             size=26, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+        _txt(s, name, cx+Inches(0.1), py+Inches(0.72), pw-Inches(0.2), Inches(0.4),
+             size=16, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+
+        # Equation image (transparent PNG, white math)
+        _pic(s, eq_img, cx+Inches(0.05), py+Inches(1.20),
+             width=pw-Inches(0.1))
+
+        # One-line sub-description
+        _txt(s, sub, cx+Inches(0.1), py+Inches(2.65), pw-Inches(0.2), Inches(0.7),
+             size=12, italic=True, color=RGBColor(0xFF, 0xFF, 0xFF),
+             align=PP_ALIGN.CENTER)
+
+        # Audience-question
+        _txt(s, f'"{q}"', cx+Inches(0.1), py+Inches(3.40), pw-Inches(0.2), Inches(0.7),
+             size=13, italic=True, color=RGBColor(0xFF, 0xFF, 0xAA),
+             align=PP_ALIGN.CENTER)
+
+    # Slippage curve (right column)
     rx = MARGIN + Inches(8.1)
     _txt(s, "h₂ in detail:", rx, py, SW-rx-MARGIN, Inches(0.35),
          size=14, bold=True, color=SFU_RED)
     _pic(s, slippage, rx, py+Inches(0.4), width=SW-rx-MARGIN-Inches(0.1))
 
+    # Paper-notation disclosure (small, low-emphasis)
+    _txt(s, "Paper notation: h₃ here = h₄ in paper §4.4.  "
+            "h₃ in the paper is the multi-start search strategy (§4.3).",
+         MARGIN, py+ph+Inches(0.10), SW-MARGIN*2, Inches(0.3),
+         size=10, italic=True, color=MGREY, align=PP_ALIGN.CENTER)
+
     _txt(s, "One of these three consistently outperforms the others.",
-         MARGIN, py+ph+Inches(0.18), SW-MARGIN*2, Inches(0.4),
-         size=16, bold=True, italic=True, color=SFU_RED, align=PP_ALIGN.CENTER)
+         MARGIN, py+ph+Inches(0.42), SW-MARGIN*2, Inches(0.35),
+         size=15, bold=True, italic=True, color=SFU_RED, align=PP_ALIGN.CENTER)
     _footer(s, 6)
     print("  S6 Heuristics")
 
@@ -540,6 +608,9 @@ def build():
     share    = gen_market_share()
     pipeline = gen_pipeline()
     slippage = gen_slippage()
+    eq_h1    = gen_eq_h1()
+    eq_h2    = gen_eq_h2()
+    eq_h3    = gen_eq_h3()
 
     print("step 2/3 — building slides …")
     prs = _prs()
@@ -548,7 +619,7 @@ def build():
     s3_problem(prs)
     s4_dataset(prs)
     s5_method(prs, pipeline)
-    s6_heuristics(prs, slippage)
+    s6_heuristics(prs, slippage, eq_h1, eq_h2, eq_h3)
     s7_result(prs)
     s8_proof(prs)
     s9_close(prs)
