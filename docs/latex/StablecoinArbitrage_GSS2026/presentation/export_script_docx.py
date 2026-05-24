@@ -192,7 +192,7 @@ def classify(line: str):
 
 # ── section detector ───────────────────────────────────────────────────────────
 
-SLIDE_RE  = re.compile(r"^SLIDE (\d+) · (.+?) · \*\*(.+?)\*\*")
+SLIDE_RE  = re.compile(r"^SLIDE (\d+) · (.+?) · (.+)$")
 QA_RE     = re.compile(r"^Q(\d+) — (.+)")
 TIMING_RE = re.compile(r"^Timing Reference")
 VISUAL_RE = re.compile(r"^Slide Visual Guide")

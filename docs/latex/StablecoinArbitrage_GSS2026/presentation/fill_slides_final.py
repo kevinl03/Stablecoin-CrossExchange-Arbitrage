@@ -1,18 +1,21 @@
 """
 fill_slides_final.py — 9-slide final presentation for GSS 2026
-Run:   python3 docs/latex/StablecoinArbitrage_GSS2026/presentation/fill_slides_final.py
+Aligned with the post-Tania-review script (May 23, 2026).
+Run:    venv312/bin/python3.14 docs/latex/StablecoinArbitrage_GSS2026/presentation/fill_slides_final.py
 Output: docs/latex/.../presentation/slides_final.pptx
 
 Structure (matches script.md):
-  S1  Title            — FullGraph dark full-bleed
-  S2  The Market       — $33T bar chart + stat callouts
-  S3  The Problem      — 4 barrier cards + "all baselines fail" punchline
-  S4  The Dataset      — FullGraph + 4 stats
-  S5  A* Method        — f(n) formula + pipeline diagram
-  S6  Three Heuristics — 3 panels + slippage curve
-  S7  The Result       — fig01 hero (full-screen 29%)
+  S1  Title            — FullGraph dark full-bleed; research question as subtitle
+  S2  The Market       — $300B + $33T stat callouts + stablecoin share bar
+                         + "12 venues, same asset, 12 prices" tagline + citation slot
+  S3  The Problem      — 4 cards (Fees / Slippage★ / Latency / Operational Risk)
+                         + Bellman-Ford / 1-hop / 2-hop punchline
+  S4  The Dataset      — FullGraph + 12/9/41/864 stats + L2 edge payload
+  S5  A* Method        — f=g+h formula + "A* = Dijkstra's + heuristic" + pipeline
+  S6  Three Heuristics — h₁/h₂★/h₃ panels + slippage curve detail
+  S7  The Result       — fig01 full-screen hero with 29% headline
   S8  Real-World Proof — fig10 overnight (top) + fig09 staleness (bottom)
-  S9  Close            — dark FullGraph + three-word summary + fig18 radar
+  S9  Close            — three-line mantra + Google Maps callback + radar
 """
 
 import sys
@@ -79,38 +82,37 @@ def _save(fig, name):
     return p
 
 
-def gen_market():
-    fig, ax = plt.subplots(figsize=(9, 5.0))
-    labels = ["Mastercard\n(2023)", "Visa\n(2023)", "Stablecoins\n(2024)"]
-    vals   = [9, 15, 33]
-    cols   = ["#AAAAAA", "#888888", "#CC0633"]
-    bars = ax.bar(labels, vals, color=cols, width=0.52, zorder=3,
-                  edgecolor="white", linewidth=2)
-    for bar, v, c in zip(bars, vals, cols):
-        ax.text(bar.get_x() + bar.get_width()/2, v + 0.4,
-                f"${v}T", ha="center", va="bottom",
-                fontsize=22, fontweight="bold",
-                color="#CC0633" if v == 33 else "#555555")
-    ax.set_ylim(0, 40)
-    ax.set_ylabel("Annual Transaction Volume (USD Trillion)", fontsize=14)
-    ax.tick_params(labelsize=14)
-    ax.spines["left"].set_color("#CCCCCC")
-    ax.spines["bottom"].set_color("#CCCCCC")
-    ax.annotate("", xy=(2.26, 25), xytext=(2.26, 33),
-                arrowprops=dict(arrowstyle="<->", color="#CC0633", lw=2))
-    ax.text(2.36, 29, "More than\nVisa + MC\ncombined",
-            color="#CC0633", fontsize=12, va="center", style="italic")
-    return _save(fig, "fin_market.png")
+def gen_market_share():
+    """Horizontal stacked bar: stablecoin share of on-chain crypto settled value.
+    Numbers are illustrative — the slide intentionally avoids fabricated precision
+    by labelling the larger segment 'Majority' rather than a specific percentage.
+    """
+    fig, ax = plt.subplots(figsize=(9, 2.0))
+    stable = 62
+    other  = 38
+    ax.barh([0], [stable],          color="#CC0633", height=0.55, zorder=3, edgecolor="white", linewidth=2)
+    ax.barh([0], [other], left=stable, color="#DDDDDD", height=0.55, zorder=3, edgecolor="white", linewidth=2)
+    ax.text(stable/2, 0, "Stablecoins  ·  Majority of\non-chain crypto settled value",
+            ha="center", va="center", color="white", fontsize=14, fontweight="bold",
+            multialignment="center", zorder=4)
+    ax.text(stable + other/2, 0, "All other\ncrypto",
+            ha="center", va="center", color="#555555", fontsize=12,
+            multialignment="center", zorder=4)
+    ax.set_xlim(0, 100); ax.set_ylim(-0.5, 0.5)
+    ax.set_xticks([]); ax.set_yticks([])
+    for spine in ax.spines.values(): spine.set_visible(False)
+    plt.tight_layout()
+    return _save(fig, "fin_market_share.png")
 
 
 def gen_pipeline():
     fig, ax = plt.subplots(figsize=(12, 3.6))
     ax.set_xlim(0, 12); ax.set_ylim(0, 4); ax.axis("off")
     boxes = [
-        (1.0,  "Live Order\nBook Data\n12 exchanges",          "#1A1A2E", "white"),
-        (3.5,  "Execution-Aware\nGraph\n41 nodes · 864 edges", "#1A1A2E", "white"),
-        (6.5,  "A* Search\n+ h₂ Slippage\nHeuristic",         "#CC0633", "white"),
-        (9.5,  "Profitable\nArbitrage Path\n≥ $0 net profit",  "#2E7D32", "white"),
+        (1.0,  "Live L2\nOrder Books\n12 exchanges",                "#1A1A2E", "white"),
+        (3.5,  "Execution-Aware\nGraph\n41 nodes · 864 edges",      "#1A1A2E", "white"),
+        (6.5,  "A* Search\n+ h(n)\nExecution Heuristic",            "#CC0633", "white"),
+        (9.5,  "Profitable\nExecutable Path\n> 0 net USD",          "#2E7D32", "white"),
     ]
     bw, bh = 2.0, 2.6
     for cx, label, bg, fg in boxes:
@@ -125,8 +127,8 @@ def gen_pipeline():
                     arrowprops=dict(arrowstyle="->", color="#888888", lw=2.5, mutation_scale=20))
     sub = [(1.0, "fees · slippage\ngas · reliability"),
            (3.5, "weighted directed\ngraph"),
-           (6.5, "f(n)=g(n)+h₂(n)\ngoal-directed"),
-           (9.5, "found in <10 ms\n99.6% valid +2 min")]
+           (6.5, "f(n) = g(n) + h(n)\ngoal-directed"),
+           (9.5, "valid within\n120-second window")]
     for cx, s in sub:
         ax.text(cx, 0.35, s, ha="center", va="center",
                 fontsize=10.5, color="#555555", style="italic", multialignment="center")
@@ -233,87 +235,132 @@ def s1_title(prs):
          Inches(0.55), Inches(1.4), Inches(12.2), Inches(2.3),
          size=42, bold=True, color=WHITE)
     _rect(s, Inches(0.55), Inches(3.75), Inches(6.0), Inches(0.04), SFU_RED)
-    _txt(s, "Can domain-specific heuristics reduce search cost\nwhile preserving profit quality?",
-         Inches(0.55), Inches(3.9), Inches(11.0), Inches(0.8),
+    _txt(s, "Can domain-specific heuristics steer search faster than\ngeneral-purpose graph algorithms — without sacrificing profit?",
+         Inches(0.55), Inches(3.9), Inches(11.0), Inches(0.9),
          size=18, italic=True, color=RGBColor(0xFF, 0xCC, 0xCC))
-    _txt(s, AUTHOR, Inches(0.55), Inches(4.9), Inches(9), Inches(0.5), size=18, color=WHITE)
-    _txt(s, CONF,   Inches(0.55), Inches(5.4), Inches(9), Inches(0.5),
+    _txt(s, AUTHOR, Inches(0.55), Inches(5.0), Inches(9), Inches(0.5), size=18, color=WHITE)
+    _txt(s, CONF,   Inches(0.55), Inches(5.5), Inches(9), Inches(0.5),
          size=14, italic=True, color=RGBColor(0xFF, 0xCC, 0xCC))
     _logo(s); _footer(s, 1)
     print("  S1 Title")
 
 
-def s2_market(prs, chart):
+def s2_market(prs, share_chart):
     s = _blank(prs)
-    _header(s, "The $33 Trillion Market"); _logo(s)
-    cy = CONTENT_Y + Inches(0.05)
-    _pic(s, chart, MARGIN, cy, width=Inches(7.2))
+    _header(s, "Stablecoins: The $33 Trillion Settlement Layer"); _logo(s)
 
-    rx, rw = Inches(7.8), SW - Inches(7.8) - MARGIN
-    ry = cy + Inches(0.3)
-    for val, lbl in [("$300B+", "market cap in circulation"), ("$33T", "annual volume")]:
-        _txt(s, val, rx, ry, rw, Inches(0.8), size=46, bold=True, color=SFU_RED, align=PP_ALIGN.CENTER)
-        _txt(s, lbl, rx, ry+Inches(0.82), rw, Inches(0.4), size=13, italic=True,
-             color=MGREY, align=PP_ALIGN.CENTER)
-        _divider(s, ry+Inches(1.3), color=RGBColor(0xDD,0xDD,0xDD), width=rw)
-        ry += Inches(1.52)
-    _txt(s, '"The liquidity highways of\nthe entire crypto ecosystem"',
-         rx, ry+Inches(0.2), rw, Inches(1.1), size=14, italic=True, color=DARK,
-         align=PP_ALIGN.CENTER)
+    # ── Top half: two big stat callouts side-by-side ──────────────────────────
+    top_y = CONTENT_Y + Inches(0.15)
+    col_w = (SW - MARGIN*2 - Inches(0.4)) / 2
+
+    # Stat 1: market cap
+    cx1 = MARGIN
+    _txt(s, "$300B+", cx1, top_y, col_w, Inches(1.4),
+         size=88, bold=True, color=SFU_RED, align=PP_ALIGN.CENTER)
+    _txt(s, "circulating supply",
+         cx1, top_y + Inches(1.45), col_w, Inches(0.4),
+         size=16, italic=True, color=MGREY, align=PP_ALIGN.CENTER)
+
+    # Vertical divider between the two callouts
+    _rect(s, MARGIN + col_w + Inches(0.18), top_y + Inches(0.15),
+          Inches(0.02), Inches(1.5), RGBColor(0xDD, 0xDD, 0xDD))
+
+    # Stat 2: volume
+    cx2 = MARGIN + col_w + Inches(0.4)
+    _txt(s, "$33T", cx2, top_y, col_w, Inches(1.4),
+         size=88, bold=True, color=SFU_RED, align=PP_ALIGN.CENTER)
+    _txt(s, "annual on-chain volume (2024)",
+         cx2, top_y + Inches(1.45), col_w, Inches(0.4),
+         size=16, italic=True, color=MGREY, align=PP_ALIGN.CENTER)
+
+    # Horizontal divider
+    div_y = top_y + Inches(2.05)
+    _divider(s, div_y, color=RGBColor(0xDD, 0xDD, 0xDD))
+
+    # ── Bottom: share-of-crypto bar + fragmentation tagline ───────────────────
+    chart_y = div_y + Inches(0.2)
+    _pic(s, share_chart, MARGIN, chart_y, width=SW - MARGIN*2)
+
+    # Fragmentation tagline strip
+    tag_y = chart_y + Inches(1.5)
+    _rect(s, MARGIN, tag_y, SW - MARGIN*2, Inches(0.5), RGBColor(0x1A, 0x1A, 0x2E))
+    _txt(s, "12 independent exchanges  ·  same asset  ·  12 different prices at the same instant",
+         MARGIN + Inches(0.15), tag_y + Inches(0.09),
+         SW - MARGIN*2 - Inches(0.3), Inches(0.36),
+         size=15, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+
+    # Source placeholder above the footer
+    _txt(s, "Source: stablecoin volume & supply — verify citation",
+         MARGIN, FTR_Y - Inches(0.28), SW - MARGIN*2, Inches(0.25),
+         size=9, italic=True, color=MGREY, align=PP_ALIGN.RIGHT)
     _footer(s, 2)
     print("  S2 Market")
 
 
 def s3_problem(prs):
     s = _blank(prs)
-    _header(s, "The Problem: Four Execution Barriers"); _logo(s)
+    _header(s, "Why Shortest-Path Isn't Enough: Four Real-World Costs"); _logo(s)
 
-    _txt(s, '"It is 2 AM. USDT is cheaper on Kraken than KuCoin. The math works. Existing systems say: take it."',
-         MARGIN, CONTENT_Y+Inches(0.05), SW-MARGIN*2, Inches(0.5),
-         size=15, italic=True, color=DARK)
-    _divider(s, CONTENT_Y+Inches(0.6))
+    _txt(s, "Each cost collapses candidate paths the moment you try to execute them.",
+         MARGIN, CONTENT_Y + Inches(0.05), SW - MARGIN*2, Inches(0.5),
+         size=15, italic=True, color=DARK, align=PP_ALIGN.CENTER)
+    _divider(s, CONTENT_Y + Inches(0.6))
 
     cards = [
-        ("1  Liquidity",   "Order may exhaust\nbook depth",           "#2196F3"),
-        ("2  Slippage ★",  "Large orders move\nprice mid-fill",       "#CC0633"),
-        ("3  Latency",     "Settlement may\nmiss the window",         "#FF9800"),
-        ("4  Reliability", "Exchanges may\nsuspend withdrawals",      "#2E7D32"),
+        ("1  Fees",
+         "Taker fees compound\nacross every hop",
+         "#2196F3"),
+        ("2  Slippage  ★",
+         "Large orders walk the\nL2 book — VWAP\ndiverges from mid",
+         "#CC0633"),
+        ("3  Latency",
+         "Cross-exchange transfers\nsettle on-chain;\nblock times eat the window",
+         "#FF9800"),
+        ("4  Operational Risk",
+         "Withdrawals paused ·\nregions geofenced /\nVPN-blocked",
+         "#2E7D32"),
     ]
     cw = (SW - MARGIN*2 - Inches(0.18)*3) / 4
-    ch = Inches(2.5); cy = CONTENT_Y + Inches(0.75)
+    ch = Inches(2.7); cy = CONTENT_Y + Inches(0.75)
     for i, (title, body, hex_c) in enumerate(cards):
         cx = MARGIN + i*(cw + Inches(0.18))
         rgb = RGBColor.from_string(hex_c.lstrip("#"))
         _rect(s, cx, cy, cw, ch, rgb)
-        _txt(s, title, cx+Inches(0.12), cy+Inches(0.12), cw-Inches(0.24), Inches(0.55),
-             size=17, bold=True, color=WHITE)
-        _txt(s, body,  cx+Inches(0.12), cy+Inches(0.72), cw-Inches(0.24), ch-Inches(0.8),
+        _txt(s, title, cx + Inches(0.12), cy + Inches(0.12),
+             cw - Inches(0.24), Inches(0.55),
+             size=18, bold=True, color=WHITE)
+        _txt(s, body, cx + Inches(0.12), cy + Inches(0.78),
+             cw - Inches(0.24), ch - Inches(0.85),
              size=14, color=WHITE)
 
-    # Punchline
+    # Punchline strip
     py = cy + ch + Inches(0.22)
-    _rect(s, MARGIN, py, SW-MARGIN*2, Inches(0.44), RGBColor(0xFF,0xF0,0xF0))
-    _txt(s, "Bellman-Ford · 1-hop · 2-hop enumeration — all fail under live market conditions.",
-         MARGIN+Inches(0.15), py+Inches(0.07), SW-MARGIN*2-Inches(0.3), Inches(0.38),
-         size=15, bold=True, color=SFU_RED, align=PP_ALIGN.CENTER)
+    _rect(s, MARGIN, py, SW - MARGIN*2, Inches(0.5), RGBColor(0xFF, 0xF0, 0xF0))
+    _txt(s, "Bellman-Ford  ·  1-hop  ·  2-hop enumeration  —  none returned a profitable executable path under live conditions.",
+         MARGIN + Inches(0.15), py + Inches(0.09),
+         SW - MARGIN*2 - Inches(0.3), Inches(0.4),
+         size=14, bold=True, color=SFU_RED, align=PP_ALIGN.CENTER)
     _footer(s, 3)
     print("  S3 Problem")
 
 
 def s4_dataset(prs):
     s = _blank(prs)
-    _header(s, "Dataset: The First Execution-Aware Stablecoin Graph"); _logo(s)
+    _header(s, "Dataset: First Academically Integrated CEX Stablecoin Graph"); _logo(s)
     fg = FIGS / "FullGraph.png"
     if fg.exists(): _pic(s, fg, MARGIN, CONTENT_Y+Inches(0.1), width=Inches(7.2))
 
     rx, ry, rw = Inches(8.0), CONTENT_Y+Inches(0.2), SW-Inches(8.0)-MARGIN
-    for val, lbl in [("12","centralized\nexchanges"), ("9","stablecoin symbols\n(USDT, USDC, DAI…)"),
-                     ("41","nodes"), ("864","edges")]:
+    for val, lbl in [("12", "centralized\nexchanges"),
+                     ("9",  "stablecoin symbols\n(USDT, USDC, DAI…)"),
+                     ("41", "nodes"),
+                     ("864","directed edges")]:
         _txt(s, val,  rx, ry, Inches(1.2), Inches(0.65), size=38, bold=True, color=SFU_RED)
-        _txt(s, lbl,  rx+Inches(1.3), ry+Inches(0.06), rw-Inches(1.3), Inches(0.65), size=13, color=DARK)
+        _txt(s, lbl,  rx+Inches(1.3), ry+Inches(0.06), rw-Inches(1.3), Inches(0.65),
+             size=13, color=DARK)
         ry += Inches(0.96)
     _divider(s, ry+Inches(0.1))
-    _txt(s, "Every edge carries:\ntaker fee · VWAP slippage ·\ngas cost · venue reliability",
+    _txt(s, "Every edge carries:\ntaker fee  ·  L2 slippage  ·\non-chain settlement  ·  venue reliability",
          rx, ry+Inches(0.25), rw, Inches(1.2), size=13, color=DARK)
     _footer(s, 4)
     print("  S4 Dataset")
@@ -321,16 +368,20 @@ def s4_dataset(prs):
 
 def s5_method(prs, pipeline):
     s = _blank(prs)
-    _header(s, "Method: A* Search — Google Maps for Money"); _logo(s)
+    _header(s, "Method: A* Search with Execution-Aware Heuristic"); _logo(s)
 
     _txt(s, "f (n)  =  g(n)  +  h(n)",
          MARGIN, CONTENT_Y+Inches(0.05), SW-MARGIN*2, Inches(0.7),
-         size=36, bold=True, color=DARK, align=PP_ALIGN.CENTER, font="Courier New")
-    _txt(s, "g(n) = accumulated execution cost so far          h(n) = domain-specific risk estimate ahead",
-         MARGIN, CONTENT_Y+Inches(0.75), SW-MARGIN*2, Inches(0.4),
-         size=15, italic=True, color=MGREY, align=PP_ALIGN.CENTER)
-    _divider(s, CONTENT_Y+Inches(1.22))
-    _pic(s, pipeline, MARGIN, CONTENT_Y+Inches(1.35), width=SW-MARGIN*2)
+         size=38, bold=True, color=DARK, align=PP_ALIGN.CENTER, font="Courier New")
+    _txt(s, "A*  =  Dijkstra's algorithm  +  goal-directed heuristic",
+         MARGIN, CONTENT_Y+Inches(0.78), SW-MARGIN*2, Inches(0.35),
+         size=14, italic=True, color=SFU_RED, align=PP_ALIGN.CENTER)
+    _txt(s, "g(n)  accumulated execution cost so far          h(n)  domain-specific estimate of remaining risk",
+         MARGIN, CONTENT_Y+Inches(1.12), SW-MARGIN*2, Inches(0.35),
+         size=13, italic=True, color=MGREY, align=PP_ALIGN.CENTER)
+
+    _divider(s, CONTENT_Y+Inches(1.55))
+    _pic(s, pipeline, MARGIN, CONTENT_Y+Inches(1.65), width=SW-MARGIN*2)
     _footer(s, 5)
     print("  S5 Method")
 
@@ -339,17 +390,21 @@ def s6_heuristics(prs, slippage):
     s = _blank(prs)
     _header(s, "Three Execution-Aware Heuristics"); _logo(s)
 
-    _txt(s, "Each heuristic adds a domain-specific penalty to h(n), steering A* toward paths that are profitable AND executable.",
-         MARGIN, CONTENT_Y+Inches(0.05), SW-MARGIN*2, Inches(0.5), size=15, italic=True, color=DARK)
+    _txt(s, "Each adds a domain-specific penalty to h(n) — steering A* away from paths too risky to execute under live costs.",
+         MARGIN, CONTENT_Y+Inches(0.05), SW-MARGIN*2, Inches(0.5),
+         size=15, italic=True, color=DARK, align=PP_ALIGN.CENTER)
     _divider(s, CONTENT_Y+Inches(0.6))
 
     pw, ph, py = Inches(2.5), Inches(4.0), CONTENT_Y+Inches(0.72)
     heuristics = [
-        ("h₁",   "Liquidity",  "Penalises paths where\norder size exceeds\nbook depth",
-         "Is there enough\nmarket depth?",  "#2196F3"),
-        ("h₂ ★", "Slippage",   "VWAP penalty:\npen = max(0, VWAP−mid)\n× order size",
-         "Will my order\nmove the price?", "#CC0633"),
-        ("h₃",   "Chain+Venue","Congestion penalty\n+ venue reliability\ndiscount",
+        ("h₁",   "Liquidity",
+         "Live L2 book depth\npenalty — too thin\nto absorb order size",
+         "Can the book\nabsorb our size?",  "#2196F3"),
+        ("h₂ ★", "Slippage",
+         "VWAP penalty:\npen = max(0, VWAP−mid)\n× order size",
+         "Will my order\nmove the price?",  "#CC0633"),
+        ("h₃",   "Chain + Venue",
+         "On-chain settlement\ntime penalty + venue\nreliability discount",
          "Will it settle\nin time?",        "#2E7D32"),
     ]
     for i, (lbl, name, formula, q, hex_c) in enumerate(heuristics):
@@ -360,17 +415,18 @@ def s6_heuristics(prs, slippage):
              size=28, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
         _txt(s, name,    cx+Inches(0.1), py+Inches(0.75), pw-Inches(0.2), Inches(0.45),
              size=17, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
-        _txt(s, formula, cx+Inches(0.1), py+Inches(1.22), pw-Inches(0.2), Inches(1.2),
+        _txt(s, formula, cx+Inches(0.1), py+Inches(1.22), pw-Inches(0.2), Inches(1.3),
              size=12, color=WHITE, align=PP_ALIGN.CENTER, font="Courier New")
-        _txt(s, f'"{q}"', cx+Inches(0.1), py+Inches(2.6), pw-Inches(0.2), Inches(0.85),
+        _txt(s, f'"{q}"', cx+Inches(0.1), py+Inches(2.7), pw-Inches(0.2), Inches(0.85),
              size=13, italic=True, color=RGBColor(0xFF,0xFF,0xAA), align=PP_ALIGN.CENTER)
 
     # Slippage curve
     rx = MARGIN + Inches(8.1)
-    _txt(s, "h₂ in detail:", rx, py, SW-rx-MARGIN, Inches(0.35), size=14, bold=True, color=SFU_RED)
+    _txt(s, "h₂ in detail:", rx, py, SW-rx-MARGIN, Inches(0.35),
+         size=14, bold=True, color=SFU_RED)
     _pic(s, slippage, rx, py+Inches(0.4), width=SW-rx-MARGIN-Inches(0.1))
 
-    _txt(s, "One of these three will prove decisive.",
+    _txt(s, "One of these three consistently outperforms the others.",
          MARGIN, py+ph+Inches(0.18), SW-MARGIN*2, Inches(0.4),
          size=16, bold=True, italic=True, color=SFU_RED, align=PP_ALIGN.CENTER)
     _footer(s, 6)
@@ -413,9 +469,12 @@ def s8_proof(prs):
         iw = Inches(min(10.0, half_h_in * ar))
         _pic(s, fig10, MARGIN, CONTENT_Y+Inches(0.05), width=iw)
     # Top-right stat callout
-    _txt(s, "100%\nof searches found\na profitable path",
+    _txt(s, "7,200 / 7,200\nsurfaced\nprofitable paths",
          SW-Inches(2.6), CONTENT_Y+Inches(0.2), Inches(2.3), Inches(1.2),
-         size=14, bold=True, color=SFU_RED, align=PP_ALIGN.CENTER)
+         size=15, bold=True, color=SFU_RED, align=PP_ALIGN.CENTER)
+    _txt(s, "Reproducible at high volume — not a one-off",
+         SW-Inches(2.7), CONTENT_Y+Inches(1.55), Inches(2.4), Inches(0.4),
+         size=11, italic=True, color=MGREY, align=PP_ALIGN.CENTER)
 
     # Divider
     mid_y = CONTENT_Y + Inches(half_h_in + 0.08)
@@ -445,17 +504,20 @@ def s9_close(prs):
     _dark_overlay(s, 78)
     _rect(s, 0, 0, Inches(0.22), SH, SFU_RED)
 
-    _txt(s, "Less Exploration.", Inches(0.55), Inches(1.0),
+    _txt(s, "Less Exploration.", Inches(0.55), Inches(0.9),
          Inches(6.5), Inches(1.1), size=52, bold=True, color=WHITE)
-    _txt(s, "More Execution.",   Inches(0.55), Inches(2.1),
+    _txt(s, "More Execution.",   Inches(0.55), Inches(2.0),
          Inches(6.5), Inches(1.1), size=52, bold=True, color=SFU_RED)
-    _txt(s, "Same Profit.",      Inches(0.55), Inches(3.2),
+    _txt(s, "Same Profit.",      Inches(0.55), Inches(3.1),
          Inches(6.5), Inches(1.1), size=52, bold=True, color=WHITE)
+    _txt(s, "—  Google Maps, for $33 trillion in stablecoin volume.",
+         Inches(0.55), Inches(4.35), Inches(7.0), Inches(0.5),
+         size=15, italic=True, color=RGBColor(0xFF, 0xCC, 0xCC))
     _txt(s, "Thank you  ·  Questions?",
-         Inches(0.55), Inches(4.5), Inches(6.5), Inches(0.6),
+         Inches(0.55), Inches(5.05), Inches(6.5), Inches(0.6),
          size=22, italic=True, color=RGBColor(0xFF,0xCC,0xCC))
     _txt(s, "github.com/kevinl03/Stablecoin-CrossExchange-Arbitrage",
-         Inches(0.55), Inches(5.2), Inches(7.0), Inches(0.45),
+         Inches(0.55), Inches(5.65), Inches(7.0), Inches(0.45),
          size=13, color=RGBColor(0xAA,0xAA,0xAA))
 
     # Radar summary (right side)
@@ -475,14 +537,14 @@ def s9_close(prs):
 
 def build():
     print("step 1/3 — generating visuals …")
-    market   = gen_market()
+    share    = gen_market_share()
     pipeline = gen_pipeline()
     slippage = gen_slippage()
 
     print("step 2/3 — building slides …")
     prs = _prs()
     s1_title(prs)
-    s2_market(prs, market)
+    s2_market(prs, share)
     s3_problem(prs)
     s4_dataset(prs)
     s5_method(prs, pipeline)

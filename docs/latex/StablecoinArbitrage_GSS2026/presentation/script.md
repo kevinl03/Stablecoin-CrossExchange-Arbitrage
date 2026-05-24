@@ -11,7 +11,8 @@
 > - `[PAUSE]` = stop speaking for 1–2 full seconds. Do not fill it.
 > - `[BEAT]` = half-second breath before continuing.
 > - `[DIRECTION: ...]` = physical or delivery cue — not spoken.
-> - Target pace: ~125 words per minute. Total spoken words: ~940.
+> - Target pace: ~130 words per minute (practiced). Total spoken words: ~1000.
+> - Audience: graduate students and researchers in CS / AI. Lean technical without going dry. Skip consumer metaphors until the very end; respect the room.
 
 ---
 
@@ -34,205 +35,243 @@
 
 `[SLIDE: S1 — Title slide. FullGraph.png full-bleed background at low opacity. Paper title, author name, CdnAI logo.]`
 
-> **Visual:** Dense network graph visible behind the title before you speak — immediate curiosity before a single word.
+> **Visual:** Dense network graph visible behind the title before you speak. The graph IS the hook — let the audience read it for two seconds.
 
-`[DIRECTION: Walk to centre. Make eye contact with three different people. Two full seconds of silence before you speak.]`
+`[DIRECTION: Walk to centre. Two full seconds of silence. Make eye contact with three different people before you open your mouth.]`
 
-*"Before I start — quick show of hands."*
+*"Across twelve independent exchanges, the same digital asset can trade at twelve different prices at the exact same instant."*
 
-`[DIRECTION: Raise your own hand as you ask.]`
+`[PAUSE]`
 
-*"How many of you have ever sent money internationally — Wise, PayPal, a bank transfer, anything?"*
-
-`[PAUSE — scan the room, nod.]`
-
-*"Every one of those transfers was routed through a system trying to find the cheapest path through a global financial network."*
+*"That fragmentation is both the problem and the opportunity. The market it occurs in moved thirty-three trillion dollars last year."*
 
 `[BEAT]`
 
-*"What I'm going to show you today is essentially Google Maps... for thirty-three trillion dollars."*
-
-`[DIRECTION: Let that number land. Hold eye contact. Do not continue immediately.]`
+*"This talk is about a pathfinding algorithm that turns that fragmentation into structured, executable profit — and about a heuristic that makes the search itself dramatically more efficient."*
 
 ---
 
 ## SLIDE 2 · The Market · **0:35 – 1:25**
 
-`[SLIDE: S2 — Bar chart: Mastercard $9T / Visa $15T / Stablecoins $33T. Two stat callouts on the right: $300B+ market cap, $33T volume.]`
+`[SLIDE: S2 — Stablecoin scale visual. Suggested: stablecoin annual on-chain volume + $300B market cap as primary callouts; stablecoin share of crypto settlement as supporting bar. Source citation as small footer link on the slide — do NOT say verbally.]`
 
-> **Visual:** The stablecoin bar is clearly the tallest. Let it land before you speak.
+> **Visual:** Lead with the $33T figure and the network graph. The previous Visa/Mastercard comparison was an apples-to-oranges scale framing — replaced with crypto-internal share of volume, which is the relevant comparison.
 
-*"Stablecoins — USDT, USDC, DAI. Digital dollars pegged one-to-one with fiat. Last year they processed thirty-three trillion dollars in transaction volume."*
+*"Stablecoins — USDT, USDC, DAI — are blockchain-native dollars pegged one-to-one with fiat. Roughly three hundred billion in circulation. Thirty-three trillion in annual on-chain volume."*
 
 `[PAUSE]`
 
-*"More than Visa. More than Mastercard. Combined."*
+*"To put that in context: stablecoins now carry the majority of settled value moving through cryptocurrency markets. Every cross-exchange transfer touches these rails."*
 
 `[BEAT]`
 
-*"Three hundred billion dollars in market cap. They are the liquidity highways of the entire crypto ecosystem — the bridge every trader crosses when moving capital between exchanges or across borders."*
+*"And those rails are fragmented across twelve independent centralized exchanges, each pricing the same asset slightly differently at the same instant."*
+
+`[PAUSE]`
+
+*"So the question this research asks:"*
 
 `[BEAT]`
 
-*"And those highways are fragmented. Twelve independent exchanges, each pricing the same asset differently at the same instant. That fragmentation is both the problem and the opportunity."*
+*"Can domain-specific heuristics steer search through that fragmentation faster than general-purpose graph algorithms — without sacrificing profit quality?"*
+
+`[PAUSE — let it land. Advance.]`
 
 ---
 
 ## SLIDE 3 · The Problem · **1:25 – 2:30**
 
-`[SLIDE: S3 — Four colour-coded execution barrier cards: Liquidity (blue) / Slippage ★ (red) / Latency (orange) / Reliability (green). Bottom punchline: "Bellman-Ford, 1-hop, 2-hop enumeration — all fail."]`
+`[SLIDE: S3 — Four (or five) execution-cost cards: Fees / Slippage ★ / Latency / Operational Risk. Bottom punchline strip: "Bellman-Ford · 1-hop · 2-hop enumeration — none found a profitable executable path."]`
 
-> **Visual:** Animate each card in on click, synchronized with the four spoken challenges. The bottom punchline appears last.
+> **Visual:** Reveal each card on click as you name it. The novel one (slippage) gets a star and a different colour. Punchline strip appears last.
 
-`[DIRECTION: Step slightly forward. This is where tension builds.]`
+`[DIRECTION: Step slightly forward. Speak in clean technical phrases — no theatrics.]`
 
-*"Imagine you are a quant trader. It is two in the morning. You see USDT cheaper on Kraken than on KuCoin. The gap is real. The math works. Every existing system tells you: take it."*
+*"Why does this need new search machinery? Why not just run shortest-path on the price graph?"*
 
 `[BEAT]`
 
-*"But here is what they do not tell you."*
+*"Because four real-world costs collapse most candidate paths the moment you try to execute them."*
 
-`[DIRECTION: Count on fingers — slow, deliberate.]`
+`[DIRECTION: Count on fingers — one breath between each.]`
 
-*"First — the taker fee at each exchange eats your margin. Second — your order is large enough to move the price against you mid-fill. That is slippage — dynamic, live, invisible to static models. Third — the blockchain transfer takes time. The window may close while you wait. Fourth — an exchange might suspend withdrawals overnight. Without warning."*
+*"One — fees. Taker fees compound across every hop."*
+
+*"Two — slippage. Large orders walk the L2 order book, executing at progressively worse prices."*
+
+*"Three — latency. Cross-exchange transfers settle on-chain. Block times and congestion eat the execution window."*
+
+*"Four — operational risk. Withdrawals can be paused, regions geofenced or VPN-blocked. A path that exists on paper can be unreachable in practice."*
 
 `[PAUSE]`
 
-*"Liquidity. Slippage. Latency. Reliability."*
+*"We tested three classical baselines — Bellman-Ford negative-cost detection, one-hop, and two-hop enumeration. None of them returned a profitable executable path under live conditions."*
 
 `[BEAT]`
 
-*"We tried every standard algorithm — Bellman-Ford, one-hop, two-hop enumeration. Under live market conditions, all of them fail. Zero profitable paths found. We needed something built for this problem."*
+*"We needed search that builds execution cost directly into the heuristic itself."*
 
 ---
 
 ## SLIDE 4 · The Dataset · **2:30 – 3:05**
 
-`[SLIDE: S4 — FullGraph.png on the left. Four stats on the right: 12 exchanges / 9 stablecoin symbols / 41 nodes / 864 edges.]`
+`[SLIDE: S4 — FullGraph.png on the left. Stats panel on the right: 12 exchanges / 9 stablecoin symbols / 41 nodes / 864 edges. Below the stats: small list of what each edge carries — fee, L2-derived slippage, gas, reliability.]`
 
-> **Visual:** Let the graph image carry the weight. Point to it, don't describe it.
+> **Visual:** Let the graph image carry the weight. Gesture to it; do not narrate the colours.
 
 `[DIRECTION: Gesture toward the graph image.]`
 
-*"This is our dataset. The actual network we built."*
+*"This is the graph we built."*
 
-*"Every node is a trading pair on one of twelve exchanges. Every edge carries the full execution cost of that hop — the taker fee, a live slippage estimate from the order book, gas cost, and venue reliability. To our knowledge, this is the first execution-aware graph dataset built specifically for stablecoin arbitrage."*
+*"Forty-one nodes — each a stablecoin on one of twelve centralized exchanges. Eight hundred sixty-four directed edges. Each edge encodes the live execution cost of that hop: taker fee, slippage from the venue's L2 order book, on-chain settlement cost, and a venue-reliability discount."*
 
 `[PAUSE]`
 
-*"The question: which path through here ends with more dollars than you started — and can actually be executed?"*
+*"To our knowledge, this is the first academically integrated centralized-exchange stablecoin dataset assembled for arbitrage-style search."*
+
+`[BEAT]`
+
+*"Goal: find a path that ends with more dollars than it started — with every execution cost accounted for."*
 
 ---
 
 ## SLIDE 5 · Method: A* · **3:05 – 3:50**
 
-`[SLIDE: S5 — f(n) = g(n) + h(n) displayed large. Below it: pipeline diagram: Live Order Books → Graph → A* + h₂ → Profitable Path.]`
+`[SLIDE: S5 — f(n) = g(n) + h(n) displayed large. Below it: pipeline diagram: Live L2 Order Books → Execution-Aware Graph → A* + h(n) → Profitable Path.]`
 
-> **Visual:** Formula front and centre. The pipeline below shows the full system — what goes in, what comes out.
+> **Visual:** Formula front and centre. Pipeline below shows what comes in and what comes out. Audience is CS — they don't need GPS metaphors, they need the precise statement.
 
-*"Our algorithm is A* search — the same strategy behind GPS navigation and game AI. The evaluation function: f of n equals g of n plus h of n."*
+*"Our search backbone is A* — best-first graph search with a goal-directed heuristic."*
 
-*"g of n is the accumulated execution cost so far — fees, slippage, gas, all of it. h of n is our domain-specific estimate of the execution risk still ahead. Together they steer the search toward paths that are not just profitable, but feasible."*
+`[BEAT]`
 
-*"Think of it as Google Maps during rush hour. Not just the shortest route — the one that accounts for tolls, congestion, and road reliability. Except the map is a live financial network and the traffic is real-time order-book data."*
+*"You know it: A* is Dijkstra's plus a heuristic. True accumulated cost g of n, plus an estimate h of n of the cost remaining. f equals g plus h decides which node we expand next."*
+
+`[PAUSE]`
+
+*"In our setup, g of n carries the accumulated execution cost — fees, slippage, gas, reliability. h of n is where our contribution lives: a domain-specific estimate of the execution risk still ahead."*
+
+`[BEAT]`
+
+*"Together, they push the search toward paths that are not just profitable on paper, but feasible to execute."*
 
 ---
 
 ## SLIDE 6 · Three Heuristics · **3:50 – 4:45**
 
-`[SLIDE: S6 — Three panels: h₁ Liquidity (blue) / h₂ ★ Slippage (red) / h₃ Chain+Venue (green). Each with formula. Right side: slippage curve for h₂.]`
+`[SLIDE: S6 — Three panels: h₁ Liquidity (blue) / h₂ ★ Slippage (red) / h₃ Chain+Venue (green). Each panel: short name, one-line definition, and the formula. Right side: slippage curve illustrating VWAP divergence as order size grows.]`
 
-> **Visual:** Reveal each panel as you name it. Star h₂ — it is the novel contribution. The slippage curve on the right gives technical depth without needing words.
+> **Visual:** Reveal each panel as you name it. Star h₂. The slippage curve on the right gives technical depth without needing extra words.
 
-*"We designed three guidance heuristics. Each adds a domain-specific penalty to h of n, steering A* away from paths that look profitable but cannot be executed."*
+*"We designed three execution-aware heuristics. Each adds a domain-specific penalty to h of n — steering A* away from paths that look profitable on paper but are too risky to execute under live costs."*
 
 `[DIRECTION: Reveal each panel as you name it. One breath between each.]`
 
-*"Heuristic one: Liquidity. Is there enough market depth for our order size, right now?"*
+*"h-one — Liquidity. Queries the live L2 order book from each venue and penalises hops where the available depth is too thin to absorb our order size."*
 
-*"Heuristic two: Slippage — our novel contribution. Using live order-book data, we compute the volume-weighted average execution price and penalise paths where that price diverges too far from the mid. It updates in real time as the market moves."*
+*"h-two — Slippage. From the same L2 book, computes a volume-weighted execution price and penalises paths where the VWAP diverges from the mid-quote. Updates in real time as the book moves."*
 
-*"Heuristic three: Chain congestion and venue reliability. How long will the transfer take, and how stable is this exchange?"*
+*"h-three — Chain and venue risk. Penalty proportional to on-chain settlement time, plus a discount for venue reliability."*
 
 `[BEAT]`
 
-*"One of these three will prove decisive."*
+*"In our experiments, one of these three consistently outperforms the others."*
 
 ---
 
 ## SLIDE 7 · The Result · **4:45 – 5:25**
 
-`[SLIDE: S7 — fig01_node_expansion_bar.png full-screen. h₂ bar highlighted in SFU red. "−29%" annotation large. Header: "h₂ — 29% fewer node expansions. Same profit."]`
+`[SLIDE: S7 — fig01_node_expansion_bar.png full-screen. h₂ bar highlighted in SFU red. "−29%" annotation large. Header: "h₂ — 29% fewer node expansions · profit within 1% of Dijkstra".]`
 
-> **Visual:** The bar chart IS the message. 29% gap must be unmissable from the back of the room. Slow down and let the numbers breathe.
+> **Visual:** The bar chart is the entire message. The 29% gap must be readable from the back of the room. Slow down here.
 
-`[DIRECTION: Slow down completely. Every sentence gets its own breath.]`
+`[DIRECTION: Slow down. Let each sentence land before the next.]`
 
-*"Here is what we found."*
-
-`[PAUSE]`
-
-*"Our slippage-aware heuristic — h-two — matched Dijkstra's profit quality within one percent."*
+*"Here is the headline."*
 
 `[PAUSE]`
 
-*"But it did so using twenty-nine percent fewer node expansions."*
-
-`[PAUSE]`
-
-*"Same destination. Same profit. Twenty-nine percent less work."*
+*"The slippage heuristic — h-two — matched Dijkstra's profit quality within one percent across the test set."*
 
 `[BEAT]`
 
-*"And this result held across seven thousand two hundred live searches, eight hours of continuous operation, on real market data — not a simulation."*
+*"While expanding twenty-nine percent fewer nodes."*
+
+`[PAUSE]`
+
+*"That is a measurable efficiency gain from domain-specialized guidance, with no meaningful loss in solution quality."*
+
+`[BEAT]`
+
+*"And it holds at scale — seven thousand two hundred independent searches across eight consecutive hours of live market data."*
 
 ---
 
 ## SLIDE 8 · Real-World Proof · **5:25 – 6:05**
 
-`[SLIDE: S8 — TOP half: fig10_overnight_timeseries.png. BOTTOM half: fig09_quote_staleness.png. Right callout: "100% success rate · 99.6% still profitable at +2 min".]`
+`[SLIDE: S8 — TOP half: fig10_overnight_timeseries.png. BOTTOM half: fig09_quote_staleness.png. Right callouts: "7,200 searches · 8 continuous hours" and "99.6% still profitable at +2 min".]`
 
-> **Visual:** The overnight time series running continuously is the credibility. The staleness curve shows the path doesn't expire instantly. Let both images register before speaking.
+> **Visual:** Two stacked plots. Top shows results held continuously through the overnight campaign; bottom shows the path stays valid for a meaningful window after discovery.
 
 `[DIRECTION: Brief pause after advancing to this slide.]`
 
-*"Here is the evidence. Seven thousand two hundred searches over eight consecutive hours of live market data. Every single one found a profitable path."*
+*"Two findings from that overnight campaign."*
 
 `[BEAT]`
 
-*"And those paths stayed good. Ninety-nine point six percent were still profitable two minutes after discovery. After that, the market starts closing the gap."*
+*"First — across seven thousand two hundred searches over eight continuous hours, the algorithm consistently surfaced profitable executable paths. The result is reproducible at high volume, not a one-off."*
 
-*"So the practical takeaway: find the path, act within one hundred and twenty seconds."*
+`[PAUSE]`
+
+*"Second — those paths held up after discovery. We re-evaluated each one at increasing delays. Ninety-nine point six percent were still profitable at the two-minute mark. Beyond that, the gap closes as the market converges."*
+
+`[BEAT]`
+
+*"Practical execution window: about one hundred and twenty seconds."*
 
 ---
 
 ## SLIDE 9 · Why It Matters + Close · **6:05 – 8:00**
 
-`[SLIDE: S9 — FullGraph.png full-bleed dark. LEFT: three lines large: "Less Exploration. / More Execution. / Same Profit." RIGHT: fig18_radar_summary.png — method comparison radar across all metrics.]`
+`[SLIDE: S9 — FullGraph.png full-bleed dark. LEFT: three lines large — "Less Exploration. / More Execution. / Same Profit." RIGHT: fig18_radar_summary.png — method comparison radar across all metrics.]`
 
-> **Visual:** Visual callback — the audience saw this graph before you spoke a word. Now it has meaning. The radar on the right gives technical judges a holistic view of all heuristics without needing a separate slide.
+> **Visual:** Callback to the title-slide graph — now meaningful. The radar on the right summarizes the full method comparison so judges can read the holistic story.
 
 `[DIRECTION: Energy rises first for the "why it matters" section, then pace drops for the close.]`
 
-*"Now — you might be thinking: this is a niche trading problem. Why does it belong at an AI conference?"*
+*"Why does this matter beyond stablecoin trading?"*
 
 `[BEAT]`
 
-*"Consider what happens to these markets during geopolitical shocks. An exchange freeze. A government ban. A liquidity crisis. These are the moments when price discrepancies spike across fragmented venues — not by fractions of a percent, but by meaningful margins, in real time. A system that can navigate those disruptions twenty-nine percent more efficiently is not just a trading tool. It is a lens for understanding how fragmented markets behave under stress."*
+*"Picture two people running the same search on the same graph. One uses general-purpose graph search. The other uses our domain-specialized heuristic. Both find the same profitable path — ours gets there with twenty-nine percent less compute and twenty-nine percent less latency."*
 
-*"And this framework scales. Decentralised exchanges, automated market makers, on-chain liquidity — that is the natural next frontier, and it demands exactly this kind of execution-aware pathfinding."*
+`[BEAT]`
+
+*"In a market with a hundred-and-twenty-second execution window, that's a structural edge."*
+
+`[BEAT]`
+
+*"More broadly, this is a template for execution-aware search in any fragmented marketplace — decentralized exchanges, AMMs, on-chain liquidity. That's the natural next frontier."*
 
 `[PAUSE]`
 
-`[DIRECTION: Return to centre. Slow your pace below your normal speaking speed.]`
+`[DIRECTION: Return to centre. Slow your pace.]`
 
-*"We started with a question: how do you find the most profitable, actually executable path through a thirty-three trillion dollar market?"*
+*"We asked: can heuristic guidance steer search through a fragmented market faster than general-purpose algorithms — without sacrificing profit?"*
 
 `[PAUSE]`
+
+*"The answer, in three words."*
+
+`[BEAT]`
 
 *"Less exploration. More execution. Same profit."*
 
-`[PAUSE — two full seconds. Make eye contact. Do not add anything.]`
+`[PAUSE — two full seconds. Make eye contact.]`
+
+*"Or, if you prefer the consumer analogy: Google Maps, for thirty-three trillion dollars in stablecoin volume."*
+
+`[BEAT]`
 
 *"Thank you."*
 
@@ -247,14 +286,14 @@
 | Slide | Title | Key visual | Source |
 |-------|-------|-----------|--------|
 | 1 | Title | FullGraph.png full-bleed dark background | `figures/FullGraph.png` |
-| 2 | The Market | Bar chart: MC $9T / Visa $15T / Stablecoins $33T + stat callouts | Generated |
-| 3 | The Problem | Four colour-coded barrier cards + "all baselines fail" punchline | Generated |
-| 4 | The Dataset | FullGraph.png + 4 stats (12 exch / 9 coins / 41 nodes / 864 edges) | `figures/FullGraph.png` |
-| 5 | A* Method | f(n) formula + pipeline diagram | Generated |
-| 6 | Three Heuristics | Three panels (h₁/h₂★/h₃) + slippage curve | Generated |
+| 2 | The Market | Stablecoin volume + market cap callouts + share-of-crypto-volume supporting bar (citation as slide footer link) | Generated |
+| 3 | The Problem | Four execution-cost cards (Fees / Slippage★ / Latency / Operational Risk) + "all baselines fail" punchline | Generated |
+| 4 | The Dataset | FullGraph.png + stats (12 exch / 9 coins / 41 nodes / 864 edges) + edge-payload list | `figures/FullGraph.png` |
+| 5 | A* Method | f(n) formula + L2→graph→A*→path pipeline diagram | Generated |
+| 6 | Three Heuristics | Three panels (h₁/h₂★/h₃) + slippage / VWAP-divergence curve | Generated |
 | 7 | The Result | fig01_node_expansion_bar.png full-screen hero, h₂ in red, −29% large | `figures/fig01_node_expansion_bar.png` |
 | 8 | Real-World Proof | TOP: fig10 overnight timeseries · BOTTOM: fig09 quote staleness | `figures/fig10_overnight_timeseries.png` + `fig09` |
-| 9 | Close | FullGraph.png dark + three-word summary + fig18 radar | `figures/FullGraph.png` + `figures/fig18_radar_summary.png` |
+| 9 | Close | FullGraph.png dark + three-line summary + fig18 radar | `figures/FullGraph.png` + `figures/fig18_radar_summary.png` |
 
 ---
 
@@ -269,57 +308,57 @@
 
 ### Q1 — "Why A\* and not Bellman-Ford or negative cycle detection?"
 
-**One-line opener:** *"Bellman-Ford solves a different problem — it finds closed cycles that look profitable on paper, but does not model whether you can execute them."*
+**One-line opener:** *"Bellman-Ford with negative-cycle detection solves a different problem — closed cycles on a static graph, with no execution costs modeled."*
 
-**Full answer:** Traditional arbitrage systems use negative cycle detection — closed loops where the product of exchange rates exceeds one. That framing has two problems here. First, it ignores all execution costs: fees, slippage, delays, reliability. Second, it requires returning to your starting asset — unnecessary when all assets are dollar-pegged stablecoins. Our open-path formulation is different: we look for any path ending with more USD than we started, accounting for all real costs. A* with goal-directed early termination is the right tool. Bellman-Ford, one-hop, and two-hop enumeration all fail under live market conditions.
-
----
-
-### Q2 — "Is a 29% reduction practically significant in live trading?"
-
-**One-line opener:** *"The significance is not just speed — it is that the heuristic steers search intelligently toward paths the market can actually support."*
-
-**Full answer:** A 29% reduction while matching profit within 1% tells us h₂'s slippage estimate is genuinely informative — it guides A* toward the same high-quality routes as Dijkstra but with fewer dead ends. In deployment this means lower compute cost at scale — thousands of searches per day — and faster termination in time-sensitive windows. More importantly for the research: it validates that domain-specific guidance can improve efficiency without sacrificing solution quality.
+**Full answer:** Traditional stablecoin arbitrage work formulates the problem as negative-cycle detection on the price graph — a closed loop where the product of exchange rates exceeds one. That framing has two issues for us. First, it ignores all execution costs: fees, slippage, on-chain delays, operational risk. Second, it requires returning to the starting asset, which is an unnecessary constraint when all assets are dollar-pegged stablecoins. Our formulation is an open-path one: find any path ending with more USD than we started, with execution costs fully accounted for. A* with goal-directed termination is the right tool, and the three classical baselines we tested — Bellman-Ford, one-hop, and two-hop enumeration — all failed to produce a profitable executable path under live conditions.
 
 ---
 
-### Q3 — "Are your heuristics admissible? Do they guarantee optimal paths?"
+### Q2 — "Is a 29% reduction in node expansions practically significant?"
 
-**One-line opener:** *"No — they are guidance penalties, not admissible lower bounds. We trade optimality guarantees for execution-aware steering, and we are explicit about that in the paper."*
+**One-line opener:** *"The significance is not just compute — it's that the heuristic is genuinely informative about execution risk, which is what we wanted to prove."*
 
-**Full answer:** Admissibility requires the heuristic to never overestimate the true remaining cost. Ours are domain-specific calibrations tuned to execution risk, so they can overestimate — meaning A* may not return the globally optimal path. We accept that deliberately. In real-time arbitrage, a good executable path found quickly beats proving optimality. The fact that h₂ matches Dijkstra's profit within 1% across 7,200 instances suggests the practical cost of inadmissibility is negligible.
+**Full answer:** A 29% reduction in node expansions while matching profit quality within 1% tells us h₂'s slippage estimate is doing real work — A* is being guided toward the same high-quality routes Dijkstra finds, but with fewer wasted expansions on paths that would have failed under execution costs. In deployment, that's lower compute at scale and faster termination inside time-sensitive windows. For the research contribution, it validates that domain-specific guidance can improve efficiency without trading away solution quality.
+
+---
+
+### Q3 — "Are your heuristics admissible? Do you guarantee optimal paths?"
+
+**One-line opener:** *"No — they are guidance penalties, not admissible lower bounds. We trade optimality guarantees for execution-aware steering, and we're explicit about that in the paper."*
+
+**Full answer:** Admissibility requires the heuristic to never overestimate the true remaining cost. Ours are domain-specific risk penalties tuned to execution conditions, so they can overestimate — meaning A* may not return the globally optimal path. We accept that deliberately. In real-time arbitrage-like search, a good executable path found quickly beats proving optimality. And empirically, h₂ matches Dijkstra's profit within 1% across 7,200 instances, which suggests the practical cost of inadmissibility is negligible in this regime.
 
 ---
 
 ### Q4 — "What are the main limitations?"
 
-**One-line opener:** *"Three honest ones: centralised exchanges only, planning not live execution, and heuristic weights need domain tuning."*
+**One-line opener:** *"Three honest ones: centralised exchanges only, planning rather than live execution, and heuristic weights that need domain tuning."*
 
-**Full answer:** First, CEX-only — DEX extension is future work. Second, we plan paths but do not place live orders; bridging the planning-execution gap — partial fills, rejections, race conditions — is open. Third, the lambda parameters in our heuristics were tuned on our dataset; applying to a different exchange set or asset class requires retuning. All three are in the conclusion.
+**Full answer:** First, CEX-only — extending to DEXs is future work. Second, we plan paths but do not place live orders; bridging the planning-to-execution gap (partial fills, rejections, race conditions, MEV) is an open problem. Third, the lambda parameters in our heuristics were tuned on this dataset; applying to a different exchange set or asset class would require retuning. All three are discussed in the conclusion.
 
 ---
 
 ### Q5 — "How do you handle stale market quotes?"
 
-**One-line opener:** *"We ran a dedicated experiment: 99.6% of found paths remain profitable after two minutes — that defines the execution window."*
+**One-line opener:** *"We measured it directly: 99.6% of found paths remain profitable two minutes after discovery — and that defines the execution window."*
 
-**Full answer:** After finding a path, we re-evaluated it at delays of 5, 30, 60, 120, and 300 seconds. Up to 120 seconds, 99.6% remained profitable. Beyond that, the rate degrades — telling us how long discrepancies actually persist. The practical answer: act within two minutes of path discovery.
+**Full answer:** After A* surfaces a path, we re-evaluated it under fresh order books at delays of 5, 30, 60, 120, and 300 seconds. Up through 120 seconds the success rate stays at 99.6%. Past that, the rate degrades as the market converges. That gives us a concrete practical answer: act within two minutes of path discovery.
 
 ---
 
-### Q6 — "Your paper shows 56.7% success on the cached graph. But you said every run found a path?"
+### Q6 — "Your paper shows 56.7% success on the cached graph. But you said every overnight run found a path?"
 
-**One-line opener:** *"Those are two different experiments — good catch."*
+**One-line opener:** *"They're two different experiments — good catch."*
 
-**Full answer:** The 56.7% is from the cached-graph study: 30 fixed starting nodes, 17 of which had a reachable profitable path. Not every starting node has an arbitrage opportunity — the market may not support one from node X at that moment. The overnight campaign is different: 7,200 searches with varied starting conditions across 8 hours of live data. Every instance found a profitable path because we were not restricted to a fixed set of potentially unprofitable starting nodes.
+**Full answer:** The 56.7% figure is from the cached-graph study: 30 fixed starting nodes, 17 of which had a reachable profitable path. Not every starting node has an arbitrage opportunity — the market may not support one from node X at that moment. The overnight campaign is a different setup: 7,200 searches with varied starting conditions across 8 hours of live data. Across that campaign the algorithm consistently surfaced profitable executable paths, because we weren't restricted to a fixed set of potentially unprofitable starting nodes.
 
 ---
 
 ### Q7 — "Could this be used for market manipulation?"
 
-**One-line opener:** *"Arbitrage is market-stabilising — it pushes prices toward equilibrium, not away from it."*
+**One-line opener:** *"Arbitrage-style trading is broadly price-stabilising — it pushes prices toward equilibrium, not away from it."*
 
-**Full answer:** Our system finds naturally occurring discrepancies between independent exchanges. It does not coordinate orders to move prices, and the capital scale we test — $1,000 to $100,000 — is orders of magnitude below what would move a $300B market. Arbitrage is broadly considered stabilising: buying cheap and selling dear drives convergence. This is a planning and analysis framework, not a deployment-ready trading system.
+**Full answer:** Our system finds naturally occurring discrepancies between independent exchanges. It does not coordinate orders to move prices, and the capital scale we test — $1,000 to $100,000 — is orders of magnitude below what would move a $300B market. Arbitrage of this form is considered stabilising in market microstructure: buying cheap and selling dear drives convergence. This is a planning and analysis framework, not a deployment-ready trading system.
 
 ---
 
@@ -339,4 +378,4 @@
 | 8 | Real-World Proof | 6:05 | 6:05 |
 | 9 | Why It Matters + Close | 8:00 | 8:00 |
 
-**Practice tip:** Record yourself once with a timer. Target 7:45–8:10. S7 (The Result) is the emotional centrepiece — do not rush it. S9 (Close) has the most words; the first half is conviction, the second half is quiet.
+**Practice tip:** Record yourself once with a timer. Target 7:45–8:10. S7 is the structural climax — slow down and breathe through the 29%. S9 is your widest range: open with energy on "two people running the same search," drop to slow and quiet for "Less exploration. More execution. Same profit." The Google Maps line at the end is a deliberate wink — earned by everything before it, never offered as the opener.
