@@ -9,4 +9,5 @@
 | **Poster (print-ready)** | [`../../poster/final/poster_filled_final.pptx`](../../poster/final/poster_filled_final.pptx) |
 | Poster README | [`../../poster/final/README.md`](../../poster/final/README.md) |
 | Talk format notes | [`../PresentationRequirements`](../PresentationRequirements) |
-| Blank poster template (logos) | [`../CdnAI2026_poster_landscape_36x24.pptx`](../CdnAI2026_poster_landscape_36x24.pptx) |
+| Slide template (SICC) | [`../_SICC Template [FINAL].pptx`](../_SICC%20Template%20[FINAL].pptx) |
+| Blank poster template (logos) | [`../../poster/CdnAI2026_poster_landscape_36x24.pptx`](../../poster/CdnAI2026_poster_landscape_36x24.pptx) |
