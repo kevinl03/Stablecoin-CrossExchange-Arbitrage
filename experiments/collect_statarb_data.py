@@ -23,6 +23,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import ctypes
 import json
 import os
 import signal
@@ -36,6 +37,27 @@ from typing import Any, Dict, List, Optional, Tuple
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from scripts.data import EXCHANGES, STABLE_COINS, COIN_MARKETS, normalize_price_to_usd
+
+
+# ---------------------------------------------------------------------------
+# Prevent Windows from sleeping while collecting data
+# ---------------------------------------------------------------------------
+def _prevent_sleep():
+    """Tell Windows to keep the system awake (display can turn off)."""
+    if sys.platform == "win32":
+        ES_CONTINUOUS = 0x80000000
+        ES_SYSTEM_REQUIRED = 0x00000001
+        ctypes.windll.kernel32.SetThreadExecutionState(
+            ES_CONTINUOUS | ES_SYSTEM_REQUIRED
+        )
+        print("  [POWER] Windows sleep inhibited for this process.")
+
+
+def _allow_sleep():
+    """Restore normal Windows sleep behavior."""
+    if sys.platform == "win32":
+        ES_CONTINUOUS = 0x80000000
+        ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS)
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -919,6 +941,8 @@ def main():
     print(f" + spread_matrix")
     print(f"  Press Ctrl+C to stop gracefully.\n")
 
+    _prevent_sleep()
+
     try:
         while _RUNNING and time.time() < end_time:
             snapshot_idx += 1
@@ -1005,6 +1029,7 @@ def main():
     except KeyboardInterrupt:
         print("\n[SHUTDOWN] Interrupted by user.")
     finally:
+        _allow_sleep()
         writer.close()
         print(f"\n=== Collection complete ===")
         print(f"  Snapshots: {snapshot_idx}")
