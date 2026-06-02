@@ -35,6 +35,18 @@ STABLE_COINS = [
     # FRAX removed — depegged (~$0.46 as of Apr 2026), no longer a stablecoin
 ]
 
+# Volatile crypto assets for cross-exchange arb (wider spreads, more opportunity)
+VOLATILE_COINS = [
+    "BTC", "ETH", "SOL",           # majors
+    "DOGE", "XRP", "ADA", "AVAX",  # large caps
+    "CRV", "LDO", "UNI", "AAVE",  # DeFi tokens
+    "ARB", "OP",                    # L2 tokens
+    "PEPE", "WIF",                  # memecoins
+]
+
+# All coins combined
+ALL_COINS = STABLE_COINS + VOLATILE_COINS
+
 # 3. For each coin+exchange, specify which market symbol to use.
 #    Some markets may not exist; we'll skip those gracefully.
 #    Expanded to cover all 12 exchanges.
@@ -181,6 +193,19 @@ COIN_MARKETS = {
     },
 }
 
+# Auto-generate COIN_MARKETS for volatile assets.
+# Most trade as ASSET/USDT on all exchanges; Kraken and Coinbase use /USD.
+_VOLATILE_DEFAULTS = {
+    ex: "/USDT" for ex in EXCHANGES
+}
+_VOLATILE_DEFAULTS["kraken"] = "/USD"
+_VOLATILE_DEFAULTS["coinbase"] = "/USD"
+
+for _coin in VOLATILE_COINS:
+    COIN_MARKETS[_coin] = {
+        ex: f"{_coin}{suffix}" for ex, suffix in _VOLATILE_DEFAULTS.items()
+    }
+
 
 def normalize_price_to_usd(coin: str, market: str, mid: float) -> float | None:
     """
@@ -212,6 +237,10 @@ def normalize_price_to_usd(coin: str, market: str, mid: float) -> float | None:
     # market = "USDT/DAI" => mid = DAI per 1 USDT; if 1 USDT ≈ 1 USD then 1 DAI ≈ 1/mid USD
     if coin == "DAI" and base == "USDT" and quote == "DAI":
         return 1.0 / mid
+
+    # Volatile asset priced in USDT (e.g. BTC/USDT) — quote ≈ 1 USD
+    if base == coin and quote == "USDT":
+        return mid
 
     # Otherwise, we don't know how to normalize this pair for this coin
     return None
