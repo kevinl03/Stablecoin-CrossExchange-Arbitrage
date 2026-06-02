@@ -36,7 +36,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from scripts.data import EXCHANGES, STABLE_COINS, COIN_MARKETS, normalize_price_to_usd
+from scripts.data import EXCHANGES, STABLE_COINS, VOLATILE_COINS, ALL_COINS, COIN_MARKETS, normalize_price_to_usd
 
 
 # ---------------------------------------------------------------------------
@@ -77,6 +77,34 @@ STABLECOIN_PERP_SYMBOLS = [
     "FDUSD/USDT:USDT",
     "TUSD/USDT:USDT",
 ]
+
+# Volatile asset perpetual symbols
+VOLATILE_PERP_SYMBOLS = [
+    "BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT",
+    "DOGE/USDT:USDT", "XRP/USDT:USDT", "ADA/USDT:USDT", "AVAX/USDT:USDT",
+    "CRV/USDT:USDT", "LDO/USDT:USDT", "UNI/USDT:USDT", "AAVE/USDT:USDT",
+    "ARB/USDT:USDT", "OP/USDT:USDT",
+    "PEPE/USDT:USDT", "WIF/USDT:USDT",
+]
+
+ALL_PERP_SYMBOLS = STABLECOIN_PERP_SYMBOLS + VOLATILE_PERP_SYMBOLS
+
+
+def _resolve_asset_config(asset_mode: str):
+    """Return (coin_list, perp_symbols) based on the --assets flag."""
+    if asset_mode == "stablecoins":
+        return STABLE_COINS, STABLECOIN_PERP_SYMBOLS
+    elif asset_mode == "volatile":
+        return VOLATILE_COINS, VOLATILE_PERP_SYMBOLS
+    elif asset_mode == "all":
+        return ALL_COINS, ALL_PERP_SYMBOLS
+    else:
+        raise ValueError(f"Unknown asset mode: {asset_mode}")
+
+# Active coin list and perp symbols — set by main() based on --assets flag.
+# Default to stablecoins for backward compatibility.
+ACTIVE_COINS = STABLE_COINS
+ACTIVE_PERPS = STABLECOIN_PERP_SYMBOLS
 
 # Graceful shutdown
 _RUNNING = True
@@ -119,7 +147,7 @@ def collect_tickers(
     ts = _now_iso()
     failed_exchanges: set = set()
 
-    for coin in STABLE_COINS:
+    for coin in ACTIVE_COINS:
         for ex_name, ex in EXCHANGES.items():
             if ex_name in failed_exchanges:
                 continue
@@ -204,7 +232,7 @@ def collect_orderbooks(
     ts = _now_iso()
     failed_exchanges: set = set()
 
-    for coin in STABLE_COINS:
+    for coin in ACTIVE_COINS:
         for ex_name, ex in EXCHANGES.items():
             if ex_name in failed_exchanges:
                 continue
@@ -357,7 +385,7 @@ def collect_ohlcv(
     ts = _now_iso()
     failed_exchanges: set = set()
 
-    for coin in STABLE_COINS:
+    for coin in ACTIVE_COINS:
         for ex_name, ex in EXCHANGES.items():
             if ex_name in failed_exchanges:
                 continue
@@ -419,7 +447,7 @@ def collect_trades(
     ts = _now_iso()
     failed_exchanges: set = set()
 
-    for coin in STABLE_COINS:
+    for coin in ACTIVE_COINS:
         for ex_name, ex in EXCHANGES.items():
             if ex_name in failed_exchanges:
                 continue
@@ -520,7 +548,7 @@ def compute_spread_matrix(
     records = []
     ts = _now_iso()
 
-    for coin in STABLE_COINS:
+    for coin in ACTIVE_COINS:
         # Gather all exchanges with valid price_usd for this coin
         ex_prices = {}
         for (ex, c), ticker in raw_tickers.items():
@@ -595,7 +623,7 @@ def collect_funding_rates(snapshot_idx: int) -> List[Dict]:
         if not ex.has.get("fetchFundingRate", False):
             continue
 
-        for sym in STABLECOIN_PERP_SYMBOLS:
+        for sym in ACTIVE_PERPS:
             try:
                 fr = ex.fetch_funding_rate(sym)
                 rec = {
@@ -633,7 +661,7 @@ def collect_open_interest(snapshot_idx: int) -> List[Dict]:
         if not ex.has.get("fetchOpenInterest", False):
             continue
 
-        for sym in STABLECOIN_PERP_SYMBOLS:
+        for sym in ACTIVE_PERPS:
             try:
                 oi = ex.fetch_open_interest(sym)
                 rec = {
@@ -668,7 +696,7 @@ def collect_withdrawal_status(snapshot_idx: int) -> List[Dict]:
         except Exception:
             continue
 
-        for coin in STABLE_COINS:
+        for coin in ACTIVE_COINS:
             c = currencies.get(coin)
             if not c:
                 continue
@@ -797,11 +825,19 @@ def main():
                         help="Skip withdrawal/deposit status collection")
     parser.add_argument("--skip-exchange-status", action="store_true",
                         help="Skip exchange health status collection")
+    parser.add_argument("--assets", type=str, default="stablecoins",
+                        choices=["stablecoins", "volatile", "all"],
+                        help="Asset group to collect (default: stablecoins)")
     parser.add_argument("--output-dir", type=str, default=None,
                         help="Custom output directory")
     parser.add_argument("--resume", type=str, default=None, metavar="DIR",
                         help="Resume a previous run from its output directory")
     args = parser.parse_args()
+
+    # --- Resolve asset configuration ---
+    global ACTIVE_COINS, ACTIVE_PERPS
+    ACTIVE_COINS, ACTIVE_PERPS = _resolve_asset_config(args.assets)
+    print(f"  [CONFIG] Asset mode: {args.assets} → {len(ACTIVE_COINS)} coins, {len(ACTIVE_PERPS)} perps")
 
     # --- Resume or fresh start ---
     if args.resume:
@@ -827,6 +863,10 @@ def main():
         args.skip_oi = cfg.get("skip_oi", args.skip_oi)
         args.skip_withdrawal_status = cfg.get("skip_withdrawal_status", args.skip_withdrawal_status)
         args.skip_exchange_status = cfg.get("skip_exchange_status", args.skip_exchange_status)
+        # Restore asset mode
+        resumed_mode = cfg.get("asset_mode", "stablecoins")
+        ACTIVE_COINS, ACTIVE_PERPS = _resolve_asset_config(resumed_mode)
+        print(f"  [RESUME] Asset mode: {resumed_mode} \u2192 {len(ACTIVE_COINS)} coins, {len(ACTIVE_PERPS)} perps")
         # Compute remaining time
         original_start = datetime.fromisoformat(state["start_ts"])
         elapsed_h = (datetime.now(timezone.utc) - original_start).total_seconds() / 3600
@@ -878,8 +918,9 @@ def main():
             "skip_withdrawal_status": args.skip_withdrawal_status,
             "skip_exchange_status": args.skip_exchange_status,
             "exchanges": list(EXCHANGES.keys()),
-            "coins": STABLE_COINS,
-            "perp_symbols": STABLECOIN_PERP_SYMBOLS,
+            "coins": list(ACTIVE_COINS),
+            "perp_symbols": list(ACTIVE_PERPS),
+            "asset_mode": args.assets,
         }
         writer.write([config])
 
