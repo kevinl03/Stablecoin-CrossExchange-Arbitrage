@@ -777,27 +777,98 @@ def main():
                         help="Skip exchange health status collection")
     parser.add_argument("--output-dir", type=str, default=None,
                         help="Custom output directory")
+    parser.add_argument("--resume", type=str, default=None, metavar="DIR",
+                        help="Resume a previous run from its output directory")
     args = parser.parse_args()
 
-    # Output directory
-    run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    if args.output_dir:
-        out_dir = Path(args.output_dir)
+    # --- Resume or fresh start ---
+    if args.resume:
+        out_dir = Path(args.resume)
+        state_file = out_dir / "_state.json"
+        if not state_file.exists():
+            print(f"[ERROR] No _state.json in {out_dir}, cannot resume.")
+            sys.exit(1)
+        with open(state_file) as f:
+            state = json.load(f)
+        snapshot_idx = state["snapshot_idx"]
+        # Restore skip flags and params from original config
+        cfg = state.get("config", {})
+        args.interval = cfg.get("interval_sec", args.interval)
+        args.hours = cfg.get("hours", args.hours)
+        args.ob_depth = cfg.get("ob_depth", args.ob_depth)
+        args.candles = cfg.get("candles", args.candles)
+        args.trades = cfg.get("trades_limit", args.trades)
+        args.skip_orderbook = cfg.get("skip_orderbook", args.skip_orderbook)
+        args.skip_ohlcv = cfg.get("skip_ohlcv", args.skip_ohlcv)
+        args.skip_trades = cfg.get("skip_trades", args.skip_trades)
+        args.skip_funding = cfg.get("skip_funding", args.skip_funding)
+        args.skip_oi = cfg.get("skip_oi", args.skip_oi)
+        args.skip_withdrawal_status = cfg.get("skip_withdrawal_status", args.skip_withdrawal_status)
+        args.skip_exchange_status = cfg.get("skip_exchange_status", args.skip_exchange_status)
+        # Compute remaining time
+        original_start = datetime.fromisoformat(state["start_ts"])
+        elapsed_h = (datetime.now(timezone.utc) - original_start).total_seconds() / 3600
+        remaining_h = max(0, args.hours - elapsed_h)
+        total_sec = remaining_h * 3600
+        end_time = time.time() + total_sec
+        expected_snapshots = snapshot_idx + int(total_sec / args.interval)
+        run_id = out_dir.name
+        writer = DataWriter(out_dir)
+        # Log resume event
+        writer.write([{
+            "type": "run_config",
+            "event": "resume",
+            "resume_ts": _now_iso(),
+            "resumed_from_snapshot": snapshot_idx,
+            "remaining_hours": round(remaining_h, 3),
+        }])
+        print(f"[RESUME] Continuing from snapshot {snapshot_idx}, {remaining_h:.2f}h remaining")
     else:
-        out_dir = (
-            Path(__file__).resolve().parent.parent
-            / "data"
-            / "statarb"
-            / run_id
-        )
+        # Fresh start
+        run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        if args.output_dir:
+            out_dir = Path(args.output_dir)
+        else:
+            out_dir = (
+                Path(__file__).resolve().parent.parent
+                / "data"
+                / "statarb"
+                / run_id
+            )
 
-    writer = DataWriter(out_dir)
+        writer = DataWriter(out_dir)
 
-    # Write run config
-    config = {
-        "type": "run_config",
-        "run_id": run_id,
-        "start_ts": _now_iso(),
+        # Write run config
+        config = {
+            "type": "run_config",
+            "run_id": run_id,
+            "start_ts": _now_iso(),
+            "interval_sec": args.interval,
+            "hours": args.hours,
+            "ob_depth": args.ob_depth,
+            "candles": args.candles,
+            "trades_limit": args.trades,
+            "skip_orderbook": args.skip_orderbook,
+            "skip_ohlcv": args.skip_ohlcv,
+            "skip_trades": args.skip_trades,
+            "skip_funding": args.skip_funding,
+            "skip_oi": args.skip_oi,
+            "skip_withdrawal_status": args.skip_withdrawal_status,
+            "skip_exchange_status": args.skip_exchange_status,
+            "exchanges": list(EXCHANGES.keys()),
+            "coins": STABLE_COINS,
+            "perp_symbols": STABLECOIN_PERP_SYMBOLS,
+        }
+        writer.write([config])
+
+        total_sec = args.hours * 3600
+        end_time = time.time() + total_sec
+        expected_snapshots = int(total_sec / args.interval)
+        snapshot_idx = 0
+
+    # State file for crash recovery
+    _state_file = out_dir / "_state.json"
+    _state_config = {
         "interval_sec": args.interval,
         "hours": args.hours,
         "ob_depth": args.ob_depth,
@@ -810,16 +881,21 @@ def main():
         "skip_oi": args.skip_oi,
         "skip_withdrawal_status": args.skip_withdrawal_status,
         "skip_exchange_status": args.skip_exchange_status,
-        "exchanges": list(EXCHANGES.keys()),
-        "coins": STABLE_COINS,
-        "perp_symbols": STABLECOIN_PERP_SYMBOLS,
     }
-    writer.write([config])
+    _state_start_ts = _now_iso() if not args.resume else state["start_ts"]
 
-    total_sec = args.hours * 3600
-    end_time = time.time() + total_sec
-    expected_snapshots = int(total_sec / args.interval)
-    snapshot_idx = 0
+    def _save_state(snap_idx: int):
+        """Save checkpoint so we can resume after crash/sleep."""
+        s = {
+            "snapshot_idx": snap_idx,
+            "last_ts": _now_iso(),
+            "start_ts": _state_start_ts,
+            "config": _state_config,
+        }
+        tmp = _state_file.with_suffix(".tmp")
+        with open(tmp, "w") as f:
+            json.dump(s, f)
+        tmp.replace(_state_file)  # atomic on Windows NTFS
 
     print(f"=== Stat Arb Data Collector ===")
     print(f"  Output: {out_dir}")
@@ -905,6 +981,9 @@ def main():
             # 9) Spread matrix (computed, no API calls)
             spread_recs = compute_spread_matrix(raw_tickers, snapshot_idx)
             writer.write(spread_recs)
+
+            # Save state for crash recovery
+            _save_state(snapshot_idx)
 
             snap_dur = time.time() - snap_start
             print(
