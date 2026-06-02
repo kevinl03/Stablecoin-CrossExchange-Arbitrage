@@ -10,12 +10,17 @@
 
 This document summarizes a research pivot from A\*-based stablecoin arbitrage to **statistical arbitrage (stat-arb) on volatile crypto assets**. The original stablecoin approach was definitively proven unprofitable due to fees exceeding spreads by 25x. The volatile asset pivot discovered a **structural price lag** on certain exchanges (Crypto.com, MEXC) that creates exploitable mean-reverting spreads.
 
-### Key Result
+### Key Result (5-Asset, 30-Day Validation)
 
-| Asset | Best Pair | Net Profit (30d) | Trades | Win Rate | Sharpe |
-|-------|-----------|-----------------|--------|----------|--------|
-| WIF | binance → mexc | +59,045 bps | 1,341 | 100% | 2.46 |
-| CRV | cryptocom → mexc | +27,411 bps | 958 | 100% | 1.50 |
+| Asset | Spread Std (bps) | Pairs Profitable | Best Net (30d) | Best Pair | Sharpe |
+|-------|-----------------|-----------------|---------------|-----------|--------|
+| **WIF** | 93 bps | **10/10** | +49,544 bps | binance-cryptocom (z-score) | 0.93 |
+| **PEPE** | 22 bps | **10/10** | +37,621 bps | binance-cryptocom (OU) | 2.38 |
+| **CRV** | 78 bps | **10/10** | +27,411 bps | cryptocom-mexc (OU) | 1.50 |
+| **DOGE** | 11 bps | **0/10** | -21,181 bps | — | — |
+| **SOL** | 7.5 bps | **0/10** | -44,849 bps | — | — |
+
+**Pattern:** Works when spread std >> fees (~15 bps). WIF/PEPE/CRV have std 22-93 bps → all profitable. DOGE/SOL have std 7-11 bps → all unprofitable.
 
 **Caveat:** These results use 1-minute close prices with no slippage, no bid-ask crossing cost, and zero execution latency. Realistic production profits would be significantly lower (see Section 7).
 
@@ -142,6 +147,20 @@ Fees are deducted per trade. The backtest uses the actual CCXT fee schedule from
 
 ## 5. Full 30-Day Backtest Results
 
+### 5.0 Cross-Asset Summary
+
+50 pair-models tested across 5 assets. **30 profitable, 20 unprofitable.**
+
+| Asset | Spread Std | Profitable | Best Model | Best Net | Best Sharpe | Slow Exchange |
+|-------|-----------|------------|-----------|---------|-------------|---------------|
+| WIF | 93 bps | 10/10 | binance-cryptocom (z-score) | +49,544 | 0.93 | Crypto.com |
+| PEPE | 22 bps | 10/10 | binance-cryptocom (OU) | +37,621 | 2.38 | Crypto.com |
+| CRV | 78 bps | 10/10 | cryptocom-mexc (OU) | +27,411 | 1.50 | Crypto.com |
+| DOGE | 11 bps | 0/10 | — | -21,181 | — | — |
+| SOL | 7.5 bps | 0/10 | — | -44,849 | — | — |
+
+**Critical threshold:** Spread std must be >~15 bps (the typical round-trip fee) for the strategy to work. Assets below this threshold lose money consistently.
+
 ### 5.1 CRV (30 days, 43,200 candles per exchange)
 
 **18 of 20 pair-models are net profitable.**
@@ -175,7 +194,45 @@ Fees are deducted per trade. The backtest uses the actual CCXT fee schedule from
 
 **Key observation:** Binance leads price for WIF, MEXC lags by ~1.5 minutes. Very fast mean-reversion.
 
-### 5.3 Stablecoin Baseline (120 snapshots, 7 coins, 10 exchanges)
+### 5.3 PEPE (30 days, 43,200 candles per exchange)
+
+**10 of 10 pair-models are net profitable.** Highest Sharpe ratio of all assets.
+
+| Pair | Model | Gross (bps) | Fees (bps) | Net (bps) | Trades | Win% | Sharpe | OU Half-Life |
+|------|-------|------------|-----------|----------|--------|------|--------|-------------|
+| binance-cryptocom | OU | 55,698 | 18,078 | **37,621** | 1,033 | 100% | 2.38 | 2 min |
+| binance-cryptocom | z-score | 54,736 | 20,143 | 34,593 | 1,151 | 99% | 1.56 | — |
+| bybit-cryptocom | OU | 50,011 | 26,723 | 23,289 | 1,527 | 100% | 1.32 | 5 min |
+| cryptocom-okx | OU | 51,112 | 28,035 | 23,077 | 1,602 | 100% | 1.24 | 5 min |
+| bitget-cryptocom | OU | 64,808 | 45,570 | 19,238 | 2,604 | 77% | 0.69 | 5 min |
+
+**Key observation:** Crypto.com lags Binance by ~2 minutes for PEPE. Highest Sharpe (2.38) of any pair across all assets. PEPE's very low price ($0.00001x) may contribute to wider spreads on exchanges with limited decimal precision.
+
+### 5.4 DOGE (30 days, 43,200 candles per exchange)
+
+**0 of 10 pair-models are net profitable.** Spread std (11 bps) is below the fee threshold.
+
+| Pair | Model | Net (bps) | Trades | Win% | Sharpe |
+|------|-------|----------|--------|------|--------|
+| cryptocom-htx | OU | -21,181 | 1,774 | 5.3% | -1.76 |
+| htx-mexc | OU | -23,956 | 2,197 | 4.6% | -1.29 |
+| binance-htx | OU | -39,889 | 2,452 | 2.5% | -2.72 |
+
+**Key observation:** DOGE is too liquid/efficient — the spread between exchanges is too small to overcome fees. The strategy generates many trades but nearly all lose money.
+
+### 5.5 SOL (30 days, 43,200 candles per exchange)
+
+**0 of 10 pair-models are net profitable.** Spread std (7.5 bps) is the lowest of all assets — the most efficient market.
+
+| Pair | Model | Net (bps) | Trades | Win% | Sharpe |
+|------|-------|----------|--------|------|--------|
+| bybit-htx | z-score | -44,849 | 2,292 | 2.0% | -3.02 |
+| binance-htx | OU | -55,824 | 2,880 | 0.8% | -3.81 |
+| bitget-htx | OU | -88,740 | 4,208 | 0.7% | -4.39 |
+
+**Key observation:** SOL is a top-10 crypto by market cap with deep liquidity on every exchange. Prices are efficiently arbitraged by existing market makers, leaving no exploitable spread.
+
+### 5.6 Stablecoin Baseline (120 snapshots, 7 coins, 10 exchanges)
 
 | Metric | Value |
 |--------|-------|
@@ -255,7 +312,8 @@ Applying realistic discounts to the WIF binance-mexc OU strategy:
 
 | Strategy | Verdict | Notes |
 |----------|---------|-------|
-| OU on volatile assets via slow exchanges | **Plausible edge** | Real structural lag exists, but needs sub-second execution infra and realistic slippage modeling to validate |
+| OU on WIF/CRV/PEPE via slow exchanges | **Plausible edge** | Real structural lag exists on Crypto.com/MEXC. Spread std 22-93 bps vs 15 bps fees. Needs sub-second execution infra and realistic slippage modeling to validate |
+| OU on DOGE/SOL | **Not viable** | Spread std (7-11 bps) below fee threshold. These markets are too efficient |
 | Stablecoin A\* arbitrage | **Dead** | Fee/spread ratio makes it mathematically impossible |
 | DEX arbitrage | **Unknown** | Gas costs + MEV competition likely eliminate edge |
 
