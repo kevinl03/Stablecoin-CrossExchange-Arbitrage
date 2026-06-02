@@ -23,7 +23,7 @@ $\theta$ & Slippage tolerance & 10\,bps \\
 Unknown penalty & No-data fallback cost & 50.0 \\
 Cache TTL & Order-book cache lifetime & 30\,s \\
 \midrule
-\multicolumn{3}{l}{\textit{H4 -- Chain/Exchange Risk}} \\
+\multicolumn{3}{l}{\textit{H3 -- Chain/Exchange Risk}} \\
 $\lambda_{\text{chain}}$ & Chain risk penalty weight & 1.0 \\
 $\lambda_{\text{exchange}}$ & Exchange risk penalty weight & 1.0 \\
 $w_{\min}$ & Min Weighted A* weight & 1.0 \\
@@ -33,14 +33,14 @@ $w_{\max}$ & Max Weighted A* weight & 3.0 \\
 Max depth & Maximum path hops & 6 \\
 $T_{\max}$ & Arbitrage time window & 1800\,s \\
 Early exit iter. & Iters after first profit & 200 \\
-$k$ (H3) & Multi-start parallel runs & 3 \\
+$k$ (Parallel) & Multi-start parallel runs & 3 \\
 User overhead & Execution latency per hop & 45\,s \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{Chain transfer times.}
-Transfer-time estimates are drawn from documented blockchain finality times plus typical exchange processing delays: Solana $\approx$~1\,s, BNB Chain $\approx$~4\,s, Polygon $\approx$~5\,s, Tron $\approx$~30\,s, Arbitrum/Base $\approx$~120\,s, Ethereum L1 $\approx$~600\,s. These are used by $h_4$ to compute chain reliability penalties and by the transfer-time model to assess path time-feasibility.
+Transfer-time estimates are drawn from documented blockchain finality times plus typical exchange processing delays: Solana $\approx$~1\,s, BNB Chain $\approx$~4\,s, Polygon $\approx$~5\,s, Tron $\approx$~30\,s, Arbitrum/Base $\approx$~120\,s, Ethereum L1 $\approx$~600\,s. These are used by $h_3$ to compute chain reliability penalties and by the transfer-time model to assess path time-feasibility.
 
 \subsection{Sensitivity Analysis}
 \label{sec:sensitivity_appendix}
@@ -74,7 +74,7 @@ Profit scales linearly from \$0.09 at \$100 to \$86.18 at \$100k, with constant 
 \label{sec:additional_results}
 
 \paragraph{Heuristic comparison: expansions and compute time.}
-Figure~\ref{fig:app_expansion_time} compares mean node expansions and compute time across all heuristics on the cached graph. $h_2$ consistently achieves the fewest expansions, while $h_4$ matches Dijkstra-class latency due to pre-computed scores requiring zero API calls.
+Figure~\ref{fig:app_expansion_time} compares mean node expansions and compute time across all heuristics on the cached graph. $h_2$ consistently achieves the fewest expansions, while $h_3$ matches Dijkstra-class latency due to pre-computed scores requiring zero API calls.
 
 \begin{figure}[h]
 \centering

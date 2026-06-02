@@ -92,6 +92,9 @@ Thumbs.db
 # Cursor IDE
 .cursor/
 
+# Microsoft Office temporary lock files
+~$*
+
 # Project specific
 results/h2_constant_tests/*.json
 results/h2_constant_tests/*.txt
