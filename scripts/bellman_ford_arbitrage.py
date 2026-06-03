@@ -102,7 +102,9 @@ def detect_negative_cycles(
             # If we can still relax, there's a negative cycle
             if dist[u] + cost < dist[v]:
                 # Trace back to find the cycle
-                cycle = _extract_cycle(v, pred, n)
+                # Use 2*n steps: predecessor chains in cycles can revisit nodes,
+                # and n steps is insufficient for Hamiltonian cycles (cycle len == n)
+                cycle = _extract_cycle(v, pred, 2 * n)
                 if cycle and tuple(cycle) not in visited_cycles:
                     visited_cycles.add(tuple(cycle))
                     negative_cycles.append(cycle)

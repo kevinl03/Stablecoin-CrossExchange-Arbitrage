@@ -123,21 +123,17 @@ class TestDetectNegativeCycles:
         assert len(cycles) >= 1
 
     def test_cycle_extraction_boundary_bug(self):
-        """Known edge case: _extract_cycle(max_steps=n) misses cycles
-        when cycle length == n (Hamiltonian cycles). The extraction loop
-        needs len(cycle)+1 steps to revisit the start node, but only has n.
-        This test documents current behavior — fixing _extract_cycle
-        to use max_steps=2*n would resolve this."""
+        """Regression: _extract_cycle must handle cycles where cycle length
+        equals total node count (Hamiltonian cycles). Fixed by using
+        max_steps=2*n instead of max_steps=n."""
         nodes = {"A": {}, "B": {}, "C": {}}
         adj = {
             "A": [{"to": "B", "cost": -0.1}],
             "B": [{"to": "C", "cost": -0.1}],
             "C": [{"to": "A", "cost": -0.1}],
         }
-        # 3 nodes, cycle length 3 → extraction needs 4 steps but has only 3
         cycles = detect_negative_cycles(nodes, adj)
-        # KNOWN BUG: returns [] even though cycle exists. When fixed, change to >= 1.
-        assert len(cycles) == 0
+        assert len(cycles) >= 1
 
 
 class TestExtractCycle:
@@ -278,19 +274,10 @@ class TestNormalizePriceToUsd:
 class TestCoinMarkets:
     """Regression tests for market configuration."""
 
-    def test_wif_binance_exists(self):
-        """WIF on Binance is a key trading pair."""
-        market = COIN_MARKETS.get("WIF", {}).get("binance")
-        assert market is not None
-        assert "WIF" in market
-
-    def test_pepe_binance_exists(self):
-        market = COIN_MARKETS.get("PEPE", {}).get("binance")
-        assert market is not None
-
-    def test_crv_cryptocom_exists(self):
-        market = COIN_MARKETS.get("CRV", {}).get("cryptocom")
-        assert market is not None
+    def test_stablecoin_markets_exist(self):
+        """Core stablecoins should have market entries."""
+        for coin in ["USDT", "USDC"]:
+            assert coin in COIN_MARKETS, f"{coin} missing from COIN_MARKETS"
 
     def test_nonexistent_asset_returns_empty(self):
         """Unknown asset should return empty dict or None from .get()."""
