@@ -19,6 +19,7 @@ import json
 import sys
 import os
 import time
+import signal
 from datetime import datetime, timezone
 from dataclasses import dataclass, field, asdict
 from collections import deque
@@ -112,6 +113,13 @@ class State:
     tick_count: int = 0
     start_time: float = 0.0
     total_net_pnl_bps: float = 0.0
+    # Latency tracking
+    latency_samples: deque = field(default_factory=lambda: deque(maxlen=1000))
+    signal_latency_samples: deque = field(default_factory=lambda: deque(maxlen=1000))
+    # Reconnection tracking
+    reconnect_count_a: int = 0
+    reconnect_count_b: int = 0
+    last_tick_time: float = 0.0  # for detecting feed stalls
 
 
 # ---------------------------------------------------------------------------
@@ -234,11 +242,14 @@ class PaperTrader:
 
     def on_tick(self, tick: Tick):
         """Process a new tick from either exchange."""
+        t_start = time.perf_counter()
+
         if tick.exchange == self.config.exchange_a:
             self.last_tick_a = tick
         else:
             self.last_tick_b = tick
         self.state.tick_count += 1
+        self.state.last_tick_time = time.time()
 
         # Log tick
         self.tick_log.write(json.dumps({
@@ -262,11 +273,16 @@ class PaperTrader:
         spread_bps = compute_spread_bps(self.last_tick_a.mid, self.last_tick_b.mid)
         self.state.spread_history.append((now, spread_bps))
 
+        # Track tick processing latency
+        tick_latency_us = (time.perf_counter() - t_start) * 1_000_000
+        self.state.latency_samples.append(tick_latency_us)
+
     def check_signals(self):
         """Check strategy signals and manage positions."""
         if len(self.state.spread_history) < self.config.warmup:
             return
 
+        t_signal_start = time.perf_counter()
         spreads = np.array([s[1] for s in self.state.spread_history])
         now = time.time()
 
@@ -286,6 +302,10 @@ class PaperTrader:
 
         current_spread = spreads[-1]
         rolling_std = np.std(spreads[-self.config.zscore_window:]) if len(spreads) >= self.config.zscore_window else np.std(spreads)
+
+        # Track signal computation latency
+        signal_latency_us = (time.perf_counter() - t_signal_start) * 1_000_000
+        self.state.signal_latency_samples.append(signal_latency_us)
 
         # Log signal
         self.signal_log.write(json.dumps({
@@ -416,6 +436,20 @@ class PaperTrader:
         if self.state.position:
             hold = time.time() - self.state.position.entry_time
             print(f"  Open: {self.state.position.direction} for {hold:.0f}s")
+
+        # Latency stats
+        if self.state.latency_samples:
+            lat = np.array(self.state.latency_samples)
+            print(f"  Tick latency (us): p50={np.percentile(lat,50):.0f} p99={np.percentile(lat,99):.0f} max={lat.max():.0f}")
+        if self.state.signal_latency_samples:
+            slat = np.array(self.state.signal_latency_samples)
+            print(f"  Signal latency (us): p50={np.percentile(slat,50):.0f} p99={np.percentile(slat,99):.0f} max={slat.max():.0f}")
+
+        # Reconnection stats
+        recon = self.state.reconnect_count_a + self.state.reconnect_count_b
+        if recon > 0:
+            print(f"  Reconnections: A={self.state.reconnect_count_a} B={self.state.reconnect_count_b}")
+
         print()
 
     def save_summary(self):
@@ -436,7 +470,27 @@ class PaperTrader:
             "avg_pnl_per_trade_bps": round(self.state.total_net_pnl_bps / n_trades, 2) if n_trades > 0 else 0,
             "fee_bps_per_trade": self.fee_bps,
             "slippage_bps_per_trade": self.slippage_bps,
+            "reconnections_a": self.state.reconnect_count_a,
+            "reconnections_b": self.state.reconnect_count_b,
         }
+
+        # Add latency stats if available
+        if self.state.latency_samples:
+            lat = np.array(self.state.latency_samples)
+            summary["tick_latency_us"] = {
+                "p50": round(float(np.percentile(lat, 50)), 1),
+                "p99": round(float(np.percentile(lat, 99)), 1),
+                "max": round(float(lat.max()), 1),
+                "samples": len(lat),
+            }
+        if self.state.signal_latency_samples:
+            slat = np.array(self.state.signal_latency_samples)
+            summary["signal_latency_us"] = {
+                "p50": round(float(np.percentile(slat, 50)), 1),
+                "p99": round(float(np.percentile(slat, 99)), 1),
+                "max": round(float(slat.max()), 1),
+                "samples": len(slat),
+            }
 
         with open(self.output_dir / "summary.json", "w") as f:
             json.dump(summary, f, indent=2)
@@ -460,48 +514,22 @@ class PaperTrader:
 # Feed managers (WebSocket primary, REST polling fallback)
 # ---------------------------------------------------------------------------
 
-async def run_feed_ws(exchange_id: str, market: str, tick_queue: asyncio.Queue):
-    """Connect to exchange WebSocket and push ticks to queue."""
-    exchange_class = getattr(ccxtpro, exchange_id)
-    exchange = exchange_class({"timeout": 10000})
+async def run_feed_ws(exchange_id: str, market: str, tick_queue: asyncio.Queue,
+                      reconnect_counter: list = None):
+    """Connect to exchange WebSocket and push ticks to queue.
+    Automatically reconnects with exponential backoff on failure."""
+    backoff = 1.0
+    max_backoff = 60.0
 
-    try:
-        while True:
-            ticker = await exchange.watch_ticker(market)
-            bid = ticker.get("bid") or ticker.get("last", 0)
-            ask = ticker.get("ask") or ticker.get("last", 0)
-            mid = (bid + ask) / 2 if (bid and ask) else ticker.get("last", 0)
+    while True:
+        exchange = None
+        try:
+            exchange_class = getattr(ccxtpro, exchange_id)
+            exchange = exchange_class({"timeout": 10000})
+            backoff = 1.0  # reset on successful connection
 
-            if mid > 0:
-                tick = Tick(
-                    ts=time.time(),
-                    exchange=exchange_id,
-                    bid=bid,
-                    ask=ask,
-                    mid=mid,
-                )
-                await tick_queue.put(tick)
-    except asyncio.CancelledError:
-        pass
-    finally:
-        await exchange.close()
-
-
-async def run_feed_rest(exchange_id: str, market: str, tick_queue: asyncio.Queue,
-                        poll_interval: float = 1.0):
-    """Fallback: poll REST API for tickers using thread executor."""
-    import ccxt as ccxt_sync
-
-    exchange_class = getattr(ccxt_sync, exchange_id)
-    exchange = exchange_class({"timeout": 5000})
-    loop = asyncio.get_event_loop()
-
-    try:
-        while True:
-            try:
-                ticker = await loop.run_in_executor(
-                    None, exchange.fetch_ticker, market
-                )
+            while True:
+                ticker = await exchange.watch_ticker(market)
                 bid = ticker.get("bid") or ticker.get("last", 0)
                 ask = ticker.get("ask") or ticker.get("last", 0)
                 mid = (bid + ask) / 2 if (bid and ask) else ticker.get("last", 0)
@@ -515,17 +543,89 @@ async def run_feed_rest(exchange_id: str, market: str, tick_queue: asyncio.Queue
                         mid=mid,
                     )
                     await tick_queue.put(tick)
-            except Exception as e:
-                print(f"  [WARN] REST poll error ({exchange_id}): {e}")
 
-            await asyncio.sleep(poll_interval)
-    except asyncio.CancelledError:
-        pass
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
+            print(f"  [{ts}] [RECONNECT] {exchange_id} WS error: {type(e).__name__}: {e}")
+            print(f"  [{ts}] [RECONNECT] Retrying in {backoff:.0f}s...")
+            if reconnect_counter is not None:
+                reconnect_counter[0] += 1
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 2, max_backoff)
+        finally:
+            if exchange:
+                try:
+                    await exchange.close()
+                except Exception:
+                    pass
+
+
+async def run_feed_rest(exchange_id: str, market: str, tick_queue: asyncio.Queue,
+                        poll_interval: float = 1.0, reconnect_counter: list = None):
+    """Fallback: poll REST API for tickers with automatic reconnection."""
+    import ccxt as ccxt_sync
+
+    backoff = 1.0
+    max_backoff = 60.0
+    consecutive_errors = 0
+
+    while True:
+        try:
+            exchange_class = getattr(ccxt_sync, exchange_id)
+            exchange = exchange_class({"timeout": 5000})
+            loop = asyncio.get_event_loop()
+            backoff = 1.0
+            consecutive_errors = 0
+
+            while True:
+                try:
+                    ticker = await loop.run_in_executor(
+                        None, exchange.fetch_ticker, market
+                    )
+                    bid = ticker.get("bid") or ticker.get("last", 0)
+                    ask = ticker.get("ask") or ticker.get("last", 0)
+                    mid = (bid + ask) / 2 if (bid and ask) else ticker.get("last", 0)
+
+                    if mid > 0:
+                        tick = Tick(
+                            ts=time.time(),
+                            exchange=exchange_id,
+                            bid=bid,
+                            ask=ask,
+                            mid=mid,
+                        )
+                        await tick_queue.put(tick)
+                    consecutive_errors = 0
+                    await asyncio.sleep(poll_interval)
+
+                except asyncio.CancelledError:
+                    raise
+                except Exception as e:
+                    consecutive_errors += 1
+                    if consecutive_errors <= 3:
+                        print(f"  [WARN] REST poll error ({exchange_id}): {e}")
+                        await asyncio.sleep(poll_interval)
+                    else:
+                        raise  # break to outer loop for full reconnect
+
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
+            print(f"  [{ts}] [RECONNECT] {exchange_id} REST error: {type(e).__name__}: {e}")
+            print(f"  [{ts}] [RECONNECT] Retrying in {backoff:.0f}s...")
+            if reconnect_counter is not None:
+                reconnect_counter[0] += 1
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 2, max_backoff)
 
 
 async def run_feed(exchange_id: str, market: str, tick_queue: asyncio.Queue,
-                   use_ws: bool = True, poll_interval: float = 1.0):
-    """Try WebSocket first, fall back to REST polling."""
+                   use_ws: bool = True, poll_interval: float = 1.0,
+                   reconnect_counter: list = None):
+    """Try WebSocket first, fall back to REST polling. Both auto-reconnect."""
     if use_ws:
         try:
             # Try one WebSocket tick to see if it works
@@ -534,17 +634,21 @@ async def run_feed(exchange_id: str, market: str, tick_queue: asyncio.Queue,
             ticker = await asyncio.wait_for(exchange.watch_ticker(market), timeout=10)
             await exchange.close()
             print(f"  [{exchange_id}] WebSocket connected OK")
-            await run_feed_ws(exchange_id, market, tick_queue)
+            await run_feed_ws(exchange_id, market, tick_queue, reconnect_counter)
             return
         except Exception as e:
             print(f"  [{exchange_id}] WebSocket failed ({e}), falling back to REST polling")
 
-    await run_feed_rest(exchange_id, market, tick_queue, poll_interval)
+    await run_feed_rest(exchange_id, market, tick_queue, poll_interval, reconnect_counter)
 
 
 async def run_paper_trader(config: Config):
-    """Main async loop: feeds + signal checking."""
+    """Main async loop: feeds + signal checking + auto-reconnection."""
     trader = PaperTrader(config)
+
+    # Mutable counters for reconnection tracking (passed by reference via list)
+    reconnect_a = [0]
+    reconnect_b = [0]
 
     # Resolve markets
     market_a = COIN_MARKETS.get(config.asset, {}).get(config.exchange_a)
@@ -561,17 +665,21 @@ async def run_paper_trader(config: Config):
 
     tick_queue = asyncio.Queue()
 
-    # Start feeds (try WS, fall back to REST)
+    # Start feeds (try WS, fall back to REST -- both auto-reconnect)
     feed_a = asyncio.create_task(run_feed(config.exchange_a, market_a, tick_queue,
                                           use_ws=config.use_websocket,
-                                          poll_interval=config.poll_interval_ms / 1000))
+                                          poll_interval=config.poll_interval_ms / 1000,
+                                          reconnect_counter=reconnect_a))
     feed_b = asyncio.create_task(run_feed(config.exchange_b, market_b, tick_queue,
                                           use_ws=config.use_websocket,
-                                          poll_interval=config.poll_interval_ms / 1000))
+                                          poll_interval=config.poll_interval_ms / 1000,
+                                          reconnect_counter=reconnect_b))
 
-    # Status timer
+    # Status and checkpoint timers
     last_status = time.time()
-    status_interval = 60  # print status every 60s
+    last_checkpoint = time.time()
+    status_interval = 60      # print status every 60s
+    checkpoint_interval = 300  # save checkpoint every 5 min
 
     try:
         while True:
@@ -581,13 +689,24 @@ async def run_paper_trader(config: Config):
             except asyncio.TimeoutError:
                 pass
 
+            # Sync reconnection counts
+            trader.state.reconnect_count_a = reconnect_a[0]
+            trader.state.reconnect_count_b = reconnect_b[0]
+
             # Check signals periodically
             trader.check_signals()
 
+            now = time.time()
+
             # Status update
-            if time.time() - last_status > status_interval:
+            if now - last_status > status_interval:
                 trader.print_status()
-                last_status = time.time()
+                last_status = now
+
+            # Periodic checkpoint save (survive crashes)
+            if now - last_checkpoint > checkpoint_interval:
+                trader.save_summary()
+                last_checkpoint = now
 
     except asyncio.CancelledError:
         pass
@@ -654,6 +773,8 @@ def main():
     )
 
     print(f"\n  Starting paper trader at {datetime.now(timezone.utc).isoformat()}")
+    print(f"  Auto-reconnect: ENABLED (exponential backoff 1-60s)")
+    print(f"  Checkpoint saves: every 5 min")
     print(f"  Press Ctrl+C to stop.\n")
 
     try:
