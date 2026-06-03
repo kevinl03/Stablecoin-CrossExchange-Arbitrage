@@ -45,12 +45,14 @@ class Config:
     strategy: str = "ou"              # "ou" or "zscore"
     # Strategy params
     entry_z: float = 2.0
-    exit_z: float = 0.5
+    exit_z: float = 0.0               # 0.0 = wait for full mean reversion
     warmup: int = 60                  # seconds of data before trading
     max_holding_sec: int = 300        # max hold time (5 min)
+    vol_filter_mult: float = 0.8      # only trade when spread_std > mult * cost
+    cooldown_ticks: int = 0           # min ticks between trades
     # OU params (rolling window for estimation)
     ou_window: int = 60              # seconds for OU param estimation
-    zscore_window: int = 30           # ticks for rolling z-score
+    zscore_window: int = 60           # ticks for rolling z-score (was 30)
     # Execution
     slippage_bps: float = 2.0         # additional slippage per side
     capital_usd: float = 1000.0       # notional per trade
@@ -219,7 +221,12 @@ class PaperTrader:
         print(f"  Strategy: {config.strategy.upper()}")
         print(f"  Entry z: {config.entry_z}, Exit z: {config.exit_z}")
         print(f"  Fee: {self.fee_bps:.1f} bps, Slippage: {self.slippage_bps:.1f} bps")
+        self.vol_threshold = config.vol_filter_mult * self.total_cost_bps
+        self.last_trade_tick = -config.cooldown_ticks - 1
+
         print(f"  Total cost per round-trip: {self.total_cost_bps:.1f} bps")
+        print(f"  Vol filter: spread_std > {config.vol_filter_mult}x cost = {self.vol_threshold:.1f} bps")
+        print(f"  Cooldown: {config.cooldown_ticks} ticks between trades")
         print(f"  Capital: ${config.capital_usd:.0f} per trade")
         print(f"  Max hold: {config.max_holding_sec}s")
         print(f"  Output: {self.output_dir}")
@@ -278,18 +285,26 @@ class PaperTrader:
             return
 
         current_spread = spreads[-1]
+        rolling_std = np.std(spreads[-self.config.zscore_window:]) if len(spreads) >= self.config.zscore_window else np.std(spreads)
 
         # Log signal
         self.signal_log.write(json.dumps({
             "ts": datetime.fromtimestamp(now, tz=timezone.utc).isoformat(),
             "spread_bps": round(current_spread, 2),
             "z_score": round(z, 4),
+            "rolling_std": round(rolling_std, 2),
             "position": self.state.position.direction if self.state.position else None,
         }) + "\n")
         self.signal_log.flush()
 
         # Position management
         if self.state.position is None:
+            # Cooldown check
+            if self.state.tick_count - self.last_trade_tick < self.config.cooldown_ticks:
+                return
+            # Volatility filter: skip low-vol regimes
+            if self.config.vol_filter_mult > 0 and rolling_std < self.vol_threshold:
+                return
             # Entry logic
             if z > self.config.entry_z:
                 self._open_position("short_spread", current_spread)
@@ -368,6 +383,7 @@ class PaperTrader:
         self.state.trades.append(trade)
         self.state.total_net_pnl_bps += net_pnl
         self.state.position = None
+        self.last_trade_tick = self.state.tick_count
 
         # Log
         self.trade_log.write(json.dumps(asdict(trade)) + "\n")
@@ -394,7 +410,8 @@ class PaperTrader:
 
         print(f"\n  --- STATUS ({elapsed/60:.1f} min) ---")
         print(f"  Ticks: {self.state.tick_count} | Spreads: {len(self.state.spread_history)}")
-        print(f"  Spread std: {spread_std:.1f} bps | Cost threshold: {self.total_cost_bps:.1f} bps")
+        print(f"  Spread std: {spread_std:.1f} bps | Cost: {self.total_cost_bps:.1f} bps | "
+              f"Vol gate: {'OPEN' if spread_std > self.vol_threshold else 'CLOSED'} (need >{self.vol_threshold:.1f})")
         print(f"  Trades: {n_trades} | Win rate: {win_rate:.0f}% | Net PnL: {self.state.total_net_pnl_bps:+.1f} bps")
         if self.state.position:
             hold = time.time() - self.state.position.entry_time
@@ -600,9 +617,12 @@ def main():
     parser.add_argument("--strategy", default="ou", choices=["ou", "zscore"],
                         help="Strategy: ou or zscore")
     parser.add_argument("--entry-z", type=float, default=2.0, help="Entry z-score threshold")
-    parser.add_argument("--exit-z", type=float, default=0.5, help="Exit z-score threshold")
+    parser.add_argument("--exit-z", type=float, default=0.0, help="Exit z-score threshold (0=full reversion)")
     parser.add_argument("--warmup", type=int, default=60, help="Warmup ticks before trading")
     parser.add_argument("--max-hold", type=int, default=300, help="Max holding time in seconds")
+    parser.add_argument("--vol-filter", type=float, default=0.8,
+                        help="Vol filter: only trade when spread_std > N * cost (0=disabled)")
+    parser.add_argument("--cooldown", type=int, default=0, help="Min ticks between trades")
     parser.add_argument("--slippage", type=float, default=2.0, help="Slippage per side in bps")
     parser.add_argument("--capital", type=float, default=1000.0, help="Capital per trade in USD")
     parser.add_argument("--no-ws", action="store_true", help="Force REST polling (skip WebSocket)")
@@ -624,6 +644,8 @@ def main():
         exit_z=args.exit_z,
         warmup=args.warmup,
         max_holding_sec=args.max_hold,
+        vol_filter_mult=args.vol_filter,
+        cooldown_ticks=args.cooldown,
         slippage_bps=args.slippage,
         capital_usd=args.capital,
         output_dir=args.output_dir,
