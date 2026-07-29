@@ -320,14 +320,67 @@ bullets(s, Inches(0.4), Inches(1.2), Inches(3.5), Inches(3.5), [
     "Edge weight = fee in bps",
     "Goal: find lowest-cost path\n  \u2014 a closed cycle back to\n  start, OR just the cheapest\n  route between two nodes",
 ], size=12)
-# Large graph frame on right
+# Graph frame on right, sized to fit within the remaining slide area
 frame_path = os.path.join(FRAMES_DIR, "frame_00_step01.png")
 if os.path.exists(frame_path):
-    s.shapes.add_picture(frame_path, Inches(3.8), Inches(1.1), width=Inches(6.0))
+    from PIL import Image as _Image
+    with _Image.open(frame_path) as _im:
+        _iw, _ih = _im.size
+    _max_w = Inches(5.7)
+    _max_h = Inches(4.1)
+    _width = _max_w
+    _height = Emu(int(_width * _ih / _iw))
+    if _height > _max_h:
+        _height = _max_h
+        _width = Emu(int(_height * _iw / _ih))
+    _left = Inches(4.0)
+    _top = Inches(1.2) + Emu(int((_max_h - _height) / 2))
+    s.shapes.add_picture(frame_path, _left, _top, width=_width, height=_height)
 page_number(s, 6)
 
 # =====================================================================
-# SLIDE 7 — Dijkstra: f(n) = g(n)
+# SLIDE 7 — Why Shortest-Path Isn't Enough: 4 Real-World Costs
+# =====================================================================
+s = add_slide(); set_bg(s)
+slide_title(s, "Why Shortest-Path Isn\u2019t Enough", "4 real-world costs a naive graph search ignores")
+cw, ch, gap = Inches(2.9), Inches(2.8), Inches(0.2)
+left0 = Inches(0.45); top0 = Inches(1.4)
+
+card(s, left0, top0, cw, ch, fill=MINT)
+textbox(s, left0 + Inches(0.15), top0 + Inches(0.1), cw - Inches(0.3), ch - Inches(0.2),
+        "1. Fees\n\n"
+        "Flat transfer fees apply\n"
+        "per trade \u2014 the order needs\n"
+        "to be large enough to\n"
+        "offset them.",
+        size=12, color=DARK)
+
+card(s, left0 + cw + gap, top0, cw, ch, fill=SKY)
+textbox(s, left0 + cw + gap + Inches(0.15), top0 + Inches(0.1), cw - Inches(0.3), ch - Inches(0.2),
+        "2. Slippage\n\n"
+        "Asset prices move during\n"
+        "execution \u2014 impacts profit\n"
+        "more for larger order\n"
+        "sizes.",
+        size=12, color=DARK)
+
+card(s, left0 + 2*(cw + gap), top0, cw, ch, fill=CARD_GRAY)
+textbox(s, left0 + 2*(cw + gap) + Inches(0.15), top0 + Inches(0.1), cw - Inches(0.3), ch - Inches(0.2),
+        "3. Latency\n\n"
+        "Some blockchains take\n"
+        "longer to confirm \u2014 others\n"
+        "slow down under\n"
+        "high volume.",
+        size=12, color=DARK)
+
+card(s, left0 + Inches(1.55), top0 + ch + gap, cw, Inches(0.95), fill=NAVY)
+textbox(s, left0 + Inches(1.7), top0 + ch + gap + Inches(0.1), cw - Inches(0.3), Inches(0.75),
+        "4. Operational risk \u2014 withdrawals may be paused,\nregions geofenced, or VPNs blocked",
+        size=12, color=WHITE)
+page_number(s, 7)
+
+# =====================================================================
+# SLIDE 8 — Dijkstra: f(n) = g(n)
 # =====================================================================
 s = add_slide(); set_bg(s)
 slide_title(s, "Dijkstra: f(n) = g(n)")
@@ -344,10 +397,10 @@ card(s, Inches(5.2), Inches(2.9), Inches(4.3), Inches(2.0), fill=RGBColor(0xFF, 
 textbox(s, Inches(5.4), Inches(3.0), Inches(3.9), Inches(1.8),
         "\u2717  Explores blindly\n\u2717  Ignores slippage risk\n\u2717  Ignores transfer time\n\u2717  Wastes time on thin books",
         size=14, color=DARK)
-page_number(s, 7)
+page_number(s, 8)
 
 # =====================================================================
-# SLIDE 8 — A*: f(n) = g(n) + h(n)
+# SLIDE 9 — A*: f(n) = g(n) + h(n)
 # =====================================================================
 s = add_slide(); set_bg(s)
 slide_title(s, "A*: f(n) = g(n) + h(n)")
@@ -363,10 +416,10 @@ textbox(s, Inches(0.8), Inches(3.0), Inches(8.4), Inches(2.0),
         "  Time risk:  Stablecoin vol (~1.5 bps/min) \u00D7 transfer duration.\n\n"
         "  Deep book + fast transfer \u2192 low h \u2192 A* explores that path first.",
         size=13, color=DARK)
-page_number(s, 8)
+page_number(s, 9)
 
 # =====================================================================
-# SLIDES 9-13 — A* Step-by-Step (FULL SLIDE frames)
+# SLIDES 10-14 — A* Step-by-Step (FULL SLIDE frames)
 # =====================================================================
 frame_files = sorted(f for f in os.listdir(FRAMES_DIR) if f.endswith(".png"))
 # Pick 5 frames: start, early, mid, late, final
@@ -401,10 +454,10 @@ for i, (fname, (title, desc)) in enumerate(zip(demo_frames, step_descriptions)):
     # Full-width frame image
     frame_path = os.path.join(FRAMES_DIR, fname)
     centered_picture(s, frame_path, Inches(0.95), max_width=Inches(9.5), max_height=Inches(4.5))
-    page_number(s, 9 + i)
+    page_number(s, 10 + i)
 
 # =====================================================================
-# SLIDE 14 — L2 Order Book
+# SLIDE 15 — L2 Order Book
 # =====================================================================
 s = add_slide(); set_bg(s)
 slide_title(s, "The L2 Order Book \u2192 Slippage Heuristic")
@@ -419,10 +472,10 @@ bullets(s, Inches(0.5), Inches(1.2), Inches(4.0), Inches(3.5), [
 ob_fig_path = os.path.join("docs", "figures", "astar_arbitrage_demo.png")
 if os.path.exists(ob_fig_path):
     s.shapes.add_picture(ob_fig_path, Inches(4.2), Inches(1.1), width=Inches(5.6))
-page_number(s, 14)
+page_number(s, 15)
 
 # =====================================================================
-# SLIDE 15 — Summary
+# SLIDE 16 — Summary
 # =====================================================================
 s = add_slide(); set_bg(s)
 slide_title(s, "Summary")
@@ -430,13 +483,15 @@ bullets(s, Inches(0.6), Inches(1.3), Inches(9.0), Inches(3.0), [
     "Stablecoins = crypto pegged to fiat (USD, EUR, etc.) \u2014 tiny cross-exchange gaps exist",
     "Model as a graph \u2192 arbitrage = finding a profitable path",
     "The path can close a cycle back to start, or just end at a cheaper destination \u2014 both count",
+    "Real-world costs \u2014 fees, slippage, latency, operational risk \u2014 shape which paths are worth it",
     "A* + slippage heuristic guides search toward deep, fast routes",
     "Same optimality as Dijkstra, but focused exploration",
-], size=16)
+], size=15)
 textbox(s, Inches(0.6), Inches(4.0), Inches(9.0), Inches(0.8),
         "Code: scripts/animate_astar_search.py\nUI: streamlit run scripts/ui.py",
         size=12, color=MUTED, italic=True)
-page_number(s, 15)
+page_number(s, 16)
+
 
 # =====================================================================
 # Save
