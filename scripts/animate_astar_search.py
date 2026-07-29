@@ -1,14 +1,16 @@
 """
 A* Arbitrage Search — Animated Step-by-Step Expansion
 =====================================================
-Produces a GIF that shows each node expansion as it happens:
-  - Frame N: the Nth node gets popped from the priority queue
-  - Frontier edges light up, expanded nodes fill in
-  - Final frame highlights the discovered profitable cycle
+Produces a GIF + individual PNG frames showing each node expansion:
+  - Each frame = one node popped from A*'s priority queue
+  - Nodes show exchange:coin with simulated price
+  - Edges show fee (bps) for trades and transfers
+  - Yellow = currently expanding, orange = frontier, red = profitable cycle
 
 Usage:
-    python scripts/animate_astar_search.py          # saves GIF
-    python scripts/animate_astar_search.py --fps 2  # slower
+    python scripts/animate_astar_search.py              # GIF + frames
+    python scripts/animate_astar_search.py --fps 2      # slower GIF
+    python scripts/animate_astar_search.py --no-frames  # GIF only
 """
 
 from __future__ import annotations
@@ -96,6 +98,25 @@ class Edge:
     fee_bps: float
     transfer_time_s: float = 0.0
     book_key: Optional[Tuple[str, str]] = None
+    rate: float = 1.0  # multiplicative conversion rate
+
+
+# Simulated prices for display (stablecoins near $1.00)
+NODE_PRICES = {
+    ("Binance", "USDT"):  1.0001,
+    ("Binance", "USDC"):  1.0000,
+    ("Binance", "DAI"):   0.9998,
+    ("Kraken", "USDT"):   0.9999,
+    ("Kraken", "USDC"):   0.9997,
+    ("Kraken", "DAI"):    0.9995,
+    ("Bybit", "USDT"):    1.0002,
+    ("Bybit", "USDC"):    1.0001,
+    ("Bybit", "DAI"):     0.9997,
+    ("Gate.io", "USDT"):  1.0003,
+    ("Gate.io", "USDC"):  1.0001,
+    ("OKX", "USDT"):      1.0000,
+    ("OKX", "USDC"):      0.9999,
+}
 
 
 def build_graph() -> Tuple[nx.DiGraph, List[Edge]]:
@@ -111,7 +132,8 @@ def build_graph() -> Tuple[nx.DiGraph, List[Edge]]:
                 continue
             if ex == "Gate.io" and coin == "DAI":
                 continue
-            G.add_node((ex, coin), exchange=ex, coin=coin)
+            price = NODE_PRICES.get((ex, coin), 1.0000)
+            G.add_node((ex, coin), exchange=ex, coin=coin, price_usd=price)
 
     trade_defs = [
         ("Binance", "USDT", "USDC", 0.8, ("Binance", "USDC/USDT")),
@@ -134,9 +156,10 @@ def build_graph() -> Tuple[nx.DiGraph, List[Edge]]:
         ("OKX",     "USDC", "USDT", 0.9, ("OKX", "USDC/USDT")),
     ]
     for ex, c1, c2, fee, bk in trade_defs:
-        e = Edge((ex, c1), (ex, c2), "trade", fee, 0.0, bk)
+        rate = 1.0 - fee / 10_000  # fee_bps → multiplicative rate
+        e = Edge((ex, c1), (ex, c2), "trade", fee, 0.0, bk, rate)
         edges.append(e)
-        G.add_edge((ex, c1), (ex, c2), kind="trade", fee_bps=fee, time_s=0)
+        G.add_edge((ex, c1), (ex, c2), kind="trade", fee_bps=fee, time_s=0, rate=rate)
 
     xfer_defs = [
         ("Binance", "Kraken",  "USDT", 0.5,  90),
@@ -166,9 +189,10 @@ def build_graph() -> Tuple[nx.DiGraph, List[Edge]]:
     for ex_f, ex_t, coin, fee, t in xfer_defs:
         if not G.has_node((ex_f, coin)) or not G.has_node((ex_t, coin)):
             continue
-        e = Edge((ex_f, coin), (ex_t, coin), "transfer", fee, t, None)
+        rate = 1.0 - fee / 10_000
+        e = Edge((ex_f, coin), (ex_t, coin), "transfer", fee, t, None, rate)
         edges.append(e)
-        G.add_edge((ex_f, coin), (ex_t, coin), kind="transfer", fee_bps=fee, time_s=t)
+        G.add_edge((ex_f, coin), (ex_t, coin), kind="transfer", fee_bps=fee, time_s=t, rate=rate)
 
     return G, edges
 
@@ -309,38 +333,21 @@ def render_frame(
     step_idx: int,
     total_steps: int,
 ):
-    """Render a single frame of the search animation."""
+    """
+    Render one frame of the A* search using the same visual style as
+    scripts/ui.py: exchange-colored nodes, dotted transfers, rate labels.
+    """
     ax.clear()
-    ax.set_title(
-        f"A* Search: f(n) = g(n) + h(n)    —    Step {step_idx + 1}/{total_steps}",
-        fontsize=12, fontweight="bold", pad=10,
-    )
     ax.axis("off")
     ax.set_aspect("equal")
-    ax.set_xlim(-7, 7)
-    ax.set_ylim(-7, 7)
+    ax.set_xlim(-7.5, 7.5)
+    ax.set_ylim(-7.5, 7.5)
 
-    # ── Exchange cluster boxes ──
-    exchanges = list(dict.fromkeys(G.nodes[n]["exchange"] for n in G.nodes()))
-    for ex in exchanges:
-        ex_nodes = [n for n in G.nodes() if G.nodes[n]["exchange"] == ex]
-        xs = [pos[n][0] for n in ex_nodes]
-        ys = [pos[n][1] for n in ex_nodes]
-        cx, cy = np.mean(xs), np.mean(ys)
-        pad = 1.2
-        w = max(max(xs) - min(xs) + pad, 2.0)
-        h = max(max(ys) - min(ys) + pad, 2.0)
-        color = EXCHANGE_COLORS.get(ex, "#808080")
-
-        rect = FancyBboxPatch(
-            (cx - w/2, cy - h/2), w, h,
-            boxstyle="round,pad=0.15",
-            linewidth=2.0, edgecolor=color, facecolor=color + "18",
-            linestyle="--", zorder=0,
-        )
-        ax.add_patch(rect)
-        ax.text(cx, cy + h/2 + 0.15, ex, ha="center", va="bottom",
-                fontsize=9, fontweight="bold", color=color)
+    # Title
+    ax.set_title(
+        f"A* Search   f(n) = g(n) + h(n)          Step {step_idx + 1} / {total_steps}",
+        fontsize=13, fontweight="bold", pad=14, loc="left",
+    )
 
     # State sets
     expanded_set = set(step.expanded_so_far)
@@ -349,87 +356,198 @@ def render_frame(
     cycle_edge_set: Set[Tuple[NodeId, NodeId]] = set()
     if step.best_cycle and len(step.best_cycle) > 1:
         for i in range(len(step.best_cycle) - 1):
-            cycle_edge_set.add((step.best_cycle[i], step.best_cycle[i+1]))
+            cycle_edge_set.add((step.best_cycle[i], step.best_cycle[i + 1]))
 
-    # ── Edges ──
+    # ── Exchange cluster boxes (dashed rectangle, exchange color) ──
+    exchanges = list(dict.fromkeys(G.nodes[n]["exchange"] for n in G.nodes()))
+    for ex in exchanges:
+        ex_nodes = [n for n in G.nodes() if G.nodes[n]["exchange"] == ex]
+        xs = [pos[n][0] for n in ex_nodes]
+        ys = [pos[n][1] for n in ex_nodes]
+        cx, cy = np.mean(xs), np.mean(ys)
+        pad_box = 1.35
+        w = max(max(xs) - min(xs) + pad_box, 2.2)
+        h = max(max(ys) - min(ys) + pad_box, 2.2)
+        color = EXCHANGE_COLORS.get(ex, "#808080")
+
+        from matplotlib.patches import Rectangle as Rect
+        rect = Rect(
+            (cx - w / 2, cy - h / 2), w, h,
+            linewidth=2.0, edgecolor=color, facecolor="none",
+            linestyle="--", alpha=0.35, zorder=0,
+        )
+        ax.add_patch(rect)
+        # Exchange label above box
+        n_coins = len(ex_nodes)
+        ax.text(cx, cy + h / 2 + 0.15, f"{ex}",
+                ha="center", va="bottom", fontsize=10, fontweight="bold", color=color)
+        ax.text(cx, cy + h / 2 + 0.0, f"|V| = {n_coins}",
+                ha="center", va="top", fontsize=7, color="#999", style="italic")
+
+    # ── Layer 1: background edges (not yet explored) ──
     for u, v, data in G.edges(data=True):
         kind = data.get("kind", "trade")
-        if (u, v) in cycle_edge_set:
-            color, alpha, lw = "#D32F2F", 1.0, 3.5
-        elif (u, v) in frontier_edge_set:
-            color, alpha, lw = "#FF9800", 0.9, 2.0  # frontier = orange glow
-        elif u in expanded_set and v in expanded_set:
-            color = "#2E7D32" if kind == "transfer" else "#555"
-            alpha, lw = 0.5, 1.0
-        else:
-            color, alpha, lw = "#CCCCCC", 0.15, 0.4
-
-        style = "-" if kind == "trade" else (0, (4, 3))
+        if (u, v) in cycle_edge_set or (u, v) in frontier_edge_set:
+            continue
+        if u in expanded_set or v in expanded_set:
+            continue
+        style = "dotted" if kind == "transfer" else "-"
         nx.draw_networkx_edges(
             G, pos, edgelist=[(u, v)],
-            edge_color=color, width=lw, alpha=alpha,
-            arrows=True, arrowsize=9, arrowstyle="->",
+            edge_color="#CCCCCC", width=0.4, alpha=0.12,
+            arrows=True, arrowsize=6, arrowstyle="->",
             style=style, ax=ax, connectionstyle="arc3,rad=0.08",
         )
 
-    # ── Nodes ──
+    # ── Layer 2: explored edges (expanded nodes connected) ──
+    for u, v, data in G.edges(data=True):
+        kind = data.get("kind", "trade")
+        if (u, v) in cycle_edge_set or (u, v) in frontier_edge_set:
+            continue
+        if not (u in expanded_set and v in expanded_set):
+            continue
+
+        u_ex = G.nodes[u]["exchange"]
+        if kind == "transfer":
+            ec, alpha, lw, style = "#BDBDBD", 0.3, 0.8, "dotted"
+        else:
+            ec = EXCHANGE_COLORS.get(u_ex, "#808080")
+            alpha, lw, style = 0.55, 1.5, "-"
+
+        nx.draw_networkx_edges(
+            G, pos, edgelist=[(u, v)],
+            edge_color=ec, width=lw, alpha=alpha,
+            arrows=True, arrowsize=10, arrowstyle="->",
+            style=style, ax=ax, connectionstyle="arc3,rad=0.08",
+        )
+
+    # ── Layer 3: frontier edges (orange, just pushed to queue) ──
+    frontier_list = [e for e in step.frontier_edges if e not in cycle_edge_set]
+    if frontier_list:
+        nx.draw_networkx_edges(
+            G, pos, edgelist=frontier_list,
+            edge_color="#FF9800", width=2.2, alpha=0.85,
+            arrows=True, arrowsize=14, arrowstyle="->",
+            ax=ax, connectionstyle="arc3,rad=0.08",
+        )
+        # Fee labels on frontier edges
+        for u, v in frontier_list:
+            fee = G.edges[(u, v)].get("fee_bps", 0)
+            mx = (pos[u][0] + pos[v][0]) / 2
+            my = (pos[u][1] + pos[v][1]) / 2
+            ax.text(mx, my, f"{fee:.1f}bp", ha="center", va="center",
+                    fontsize=5.5, color="#E65100", fontweight="bold",
+                    bbox=dict(boxstyle="round,pad=0.15", facecolor="white",
+                              edgecolor="#FF9800", linewidth=0.6, alpha=0.9),
+                    zorder=8)
+
+    # ── Layer 4: cycle edges (bold red) ──
+    if cycle_edge_set:
+        cycle_list = list(cycle_edge_set)
+        nx.draw_networkx_edges(
+            G, pos, edgelist=cycle_list,
+            edge_color="#D32F2F", width=3.5, alpha=1.0,
+            arrows=True, arrowsize=18, arrowstyle="->",
+            ax=ax, connectionstyle="arc3,rad=0.08",
+        )
+        # Rate labels on cycle edges
+        for u, v in cycle_list:
+            rate = G.edges[(u, v)].get("rate", 1.0)
+            fee = G.edges[(u, v)].get("fee_bps", 0)
+            mx = (pos[u][0] + pos[v][0]) / 2
+            my = (pos[u][1] + pos[v][1]) / 2
+            ax.text(mx, my, f"{rate:.4f}\n({fee:.1f}bp)",
+                    ha="center", va="center", fontsize=6, fontweight="bold",
+                    color="#B71C1C",
+                    bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
+                              edgecolor="#D32F2F", linewidth=1.2),
+                    zorder=9)
+
+    # ── Nodes (ui.py style: exchange-colored fill, white edge, label inside) ──
     for node in G.nodes():
         x, y = pos[node]
         ex = G.nodes[node]["exchange"]
         coin = G.nodes[node]["coin"]
+        price = G.nodes[node].get("price_usd", 1.0)
         base_color = EXCHANGE_COLORS.get(ex, "#808080")
 
         if node == step.current_node:
-            # Currently being expanded — big highlight
-            fc, ec, tc, lw = "#FFEB3B", "#F57F17", "#333", 3.0
+            # Currently being expanded: bright yellow with thick border
+            fc, ec, tc, lw, r = "#FFEB3B", "#F57F17", "#333333", 3.5, 0.48
         elif node in cycle_set:
-            fc, ec, tc, lw = "#D32F2F", "#B71C1C", "white", 2.5
+            # Part of a profitable cycle: red highlight
+            fc, ec, tc, lw, r = "#FFE0E0", "#D32F2F", "#222222", 3.0, 0.48
         elif node in expanded_set:
-            fc, ec, tc, lw = "white", base_color, "#222", 2.2
+            # Already expanded: exchange-colored fill, white border
+            fc, ec, tc, lw, r = base_color, "white", "#222222", 1.8, 0.42
         else:
-            fc, ec, tc, lw = "#F5F5F5", "#CCCCCC", "#AAA", 1.2
+            # Not yet reached: gray
+            fc, ec, tc, lw, r = "#E0E0E0", "white", "#999999", 1.0, 0.38
 
-        circle = plt.Circle((x, y), 0.38, facecolor=fc, edgecolor=ec,
+        circle = plt.Circle((x, y), r, facecolor=fc, edgecolor=ec,
                             linewidth=lw, zorder=4)
         ax.add_patch(circle)
-        ax.text(x, y, coin, ha="center", va="center",
-                fontsize=7.5, fontweight="bold", color=tc, zorder=5)
 
-    # ── Info box (current step details) ──
+        # Label: exchange:coin + price
+        label = f"{ex[:3]}:{coin}\n${price:.4f}"
+        ax.text(x, y, label, ha="center", va="center",
+                fontsize=5.5, fontweight="bold", color=tc, zorder=5,
+                linespacing=1.3)
+
+    # ── Info box (dark terminal-style panel) ──
     info_lines = [
-        f"Expanding: {step.current_node[0]} / {step.current_node[1]}",
-        f"g(n) = {step.g_value:.2f} bps   h(n) = {step.h_value:.2f} bps",
-        f"f(n) = {step.f_value:.2f} bps",
-        f"Nodes expanded: {len(step.expanded_so_far)}/{G.number_of_nodes()}",
+        f"EXPANDING  {step.current_node[0]}:{step.current_node[1]}",
+        f"",
+        f"  g(n) = {step.g_value:6.2f} bps  (actual fees so far)",
+        f"  h(n) = {step.h_value:6.2f} bps  (estimated slippage)",
+        f"  f(n) = {step.f_value:6.2f} bps  (total priority)",
+        f"",
+        f"  Expanded: {len(step.expanded_so_far)}/{G.number_of_nodes()} nodes",
     ]
     if step.best_cycle:
         cycle_str = " → ".join(f"{n[0][:3]}:{n[1]}" for n in step.best_cycle)
-        info_lines.append(f"Cycle found: {cycle_str}")
+        info_lines.append(f"")
+        info_lines.append(f"  CYCLE FOUND: {cycle_str}")
+        total_fee = sum(
+            G.edges[(step.best_cycle[i], step.best_cycle[i+1])].get("fee_bps", 0)
+            for i in range(len(step.best_cycle) - 1)
+            if G.has_edge(step.best_cycle[i], step.best_cycle[i+1])
+        )
+        info_lines.append(f"  Total cycle cost: {total_fee:.2f} bps")
 
     info_text = "\n".join(info_lines)
-    ax.text(0.02, 0.02, info_text, transform=ax.transAxes, fontsize=8,
+    ax.text(0.02, 0.02, info_text, transform=ax.transAxes, fontsize=7.5,
             va="bottom", ha="left", family="monospace",
-            bbox=dict(boxstyle="round,pad=0.4", facecolor="#263238",
-                      edgecolor="#455A64", linewidth=1, alpha=0.92),
-            color="#E0E0E0")
+            bbox=dict(boxstyle="round,pad=0.5", facecolor="#1B2631",
+                      edgecolor="#2C3E50", linewidth=1.2, alpha=0.93),
+            color="#E8E8E8")
 
-    # ── Legend ──
+    # ── Legend (matches ui.py style) ──
+    import matplotlib.lines as mlines
     legend = [
-        mpatches.Patch(facecolor="#FFEB3B", edgecolor="#F57F17", linewidth=2, label="Currently expanding"),
-        mpatches.Patch(facecolor="white", edgecolor="#888", linewidth=1.5, label="Already expanded"),
-        mpatches.Patch(facecolor="#F5F5F5", edgecolor="#CCC", linewidth=1, label="Not yet reached"),
-        mpatches.Patch(facecolor="#FF9800", edgecolor="#E65100", linewidth=1.5, label="Frontier edges"),
-        mpatches.Patch(facecolor="#D32F2F", edgecolor="#B71C1C", linewidth=2, label="Best cycle"),
+        mlines.Line2D([], [], marker="o", color="w", markerfacecolor="#FFEB3B",
+                       markeredgecolor="#F57F17", markersize=10, label="Currently expanding"),
+        mlines.Line2D([], [], marker="o", color="w", markerfacecolor="#F6C344",
+                       markeredgecolor="white", markersize=8, label="Already expanded"),
+        mlines.Line2D([], [], marker="o", color="w", markerfacecolor="#E0E0E0",
+                       markeredgecolor="white", markersize=8, label="Not yet reached"),
+        mlines.Line2D([], [], color="#FF9800", linewidth=2.5, label="Frontier (just queued)"),
+        mlines.Line2D([], [], color="#888", linewidth=1.5, label="Intra-exchange trade"),
+        mlines.Line2D([], [], color="#BDBDBD", linewidth=1, linestyle="dotted",
+                       label="Cross-exchange transfer"),
+        mlines.Line2D([], [], color="#D32F2F", linewidth=3.5, label="Profitable cycle"),
     ]
     ax.legend(handles=legend, loc="upper right", fontsize=7, framealpha=0.92,
-              edgecolor="#555")
+              edgecolor="#777", fancybox=True)
 
 
 def main():
     parser = argparse.ArgumentParser(description="Animated A* search visualization")
-    parser.add_argument("--fps", type=int, default=1, help="Frames per second (default: 1)")
+    parser.add_argument("--fps", type=int, default=2, help="Frames per second (default: 2)")
     parser.add_argument("--trade-size", type=float, default=50_000)
     parser.add_argument("--output", type=str, default="docs/figures/astar_search_animated.gif")
+    parser.add_argument("--no-frames", action="store_true",
+                        help="Skip saving individual PNG frames")
     args = parser.parse_args()
 
     G, edges = build_graph()
@@ -440,17 +558,45 @@ def main():
     steps = run_astar_with_steps(G, edges, start, trade_size=args.trade_size)
     print(f"  {len(steps)} expansion steps recorded.")
 
-    # Create animation
-    fig, ax = plt.subplots(figsize=(10, 10), facecolor="white")
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.95, bottom=0.02)
+    # ── Save individual PNG frames for presentations ──
+    if not args.no_frames:
+        frames_dir = "docs/figures/astar_frames"
+        os.makedirs(frames_dir, exist_ok=True)
+
+        # Pick key frames: first, a few mid-steps, first cycle found, last
+        key_indices = [0]
+        # Add every 5th step
+        key_indices += list(range(4, len(steps), 5))
+        # Add cycle-found steps
+        for i, s in enumerate(steps):
+            if s.best_cycle:
+                key_indices.append(i)
+                break
+        key_indices.append(len(steps) - 1)
+        key_indices = sorted(set(i for i in key_indices if 0 <= i < len(steps)))
+
+        print(f"  Saving {len(key_indices)} key frames to {frames_dir}/")
+        for frame_num, si in enumerate(key_indices):
+            fig_f, ax_f = plt.subplots(figsize=(14, 14), facecolor="white")
+            fig_f.subplots_adjust(left=0.01, right=0.99, top=0.96, bottom=0.01)
+            render_frame(ax_f, G, pos, steps[si], si, len(steps))
+            out = os.path.join(frames_dir, f"frame_{frame_num:02d}_step{si+1:02d}.png")
+            fig_f.savefig(out, dpi=150, bbox_inches="tight", facecolor="white")
+            plt.close(fig_f)
+        print(f"  Frames saved.")
+
+    # ── Save animated GIF ──
+    fig, ax = plt.subplots(figsize=(14, 14), facecolor="white")
+    fig.subplots_adjust(left=0.01, right=0.99, top=0.96, bottom=0.01)
 
     def animate(frame_idx):
         render_frame(ax, G, pos, steps[frame_idx], frame_idx, len(steps))
 
-    anim = FuncAnimation(fig, animate, frames=len(steps), interval=1000 // args.fps, repeat=True)
+    anim = FuncAnimation(fig, animate, frames=len(steps),
+                         interval=1000 // args.fps, repeat=True)
 
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
-    print(f"Saving {len(steps)}-frame GIF @ {args.fps} fps → {args.output}")
+    print(f"  Saving {len(steps)}-frame GIF @ {args.fps} fps → {args.output}")
     anim.save(args.output, writer=PillowWriter(fps=args.fps))
     print("Done.")
     plt.close(fig)
