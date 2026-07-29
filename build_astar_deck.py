@@ -213,30 +213,32 @@ page_number(s, 2)
 s = add_slide(); set_bg(s)
 slide_title(s, "Stablecoins: The \u201CCash\u201D of Crypto")
 # Left: 3 bullet points only
-bullets(s, Inches(0.6), Inches(1.3), Inches(4.8), Inches(2.0), [
-    "Crypto tokens pegged to $1.00 USD",
+bullets(s, Inches(0.6), Inches(1.3), Inches(4.8), Inches(2.4), [
+    "Crypto tokens pegged to a fiat currency",
+    "Not just USD \u2014 EUR, GBP, CAD, JPY\nstablecoins exist too (e.g. EURC, EURT)",
     "Backed by real reserves (cash, treasuries)",
     "Multiple issuers \u2192 multiple prices",
-], size=15)
-# Right: stablecoin price cards (large, visual)
-card_w, card_h = Inches(4.2), Inches(0.75)
+], size=14)
+# Right: stablecoin price cards (large, visual) — mix of currencies
+card_w, card_h = Inches(4.2), Inches(0.62)
 card_left = Inches(5.5)
 coins_data = [
     ("USDT  (Tether)", "$1.0001", GOLD),
     ("USDC  (Circle)", "$0.9999", SKY),
     ("DAI    (Maker)", "$0.9997", MINT),
-    ("FDUSD (Binance)", "$0.9988", CARD_GRAY),
+    ("EURC  (Circle, EUR)", "\u20AC1.0002", CARD_GRAY),
+    ("EURT  (Tether, EUR)", "\u20AC0.9995", SKY),
 ]
 for i, (name, price, fill) in enumerate(coins_data):
-    t = Inches(1.3) + Inches(i * 0.95)
-    card(s, card_left, t, card_w, Inches(0.7), fill=fill)
-    textbox(s, card_left + Inches(0.2), t + Inches(0.1), Inches(2.8), Inches(0.5),
-            name, size=13, color=DARK, bold=True)
-    textbox(s, card_left + Inches(3.0), t + Inches(0.1), Inches(1.0), Inches(0.5),
-            price, size=14, color=NAVY, bold=True)
+    t = Inches(1.3) + Inches(i * 0.78)
+    card(s, card_left, t, card_w, Inches(0.62), fill=fill)
+    textbox(s, card_left + Inches(0.2), t + Inches(0.06), Inches(2.8), Inches(0.5),
+            name, size=12, color=DARK, bold=True)
+    textbox(s, card_left + Inches(3.0), t + Inches(0.06), Inches(1.0), Inches(0.5),
+            price, size=13, color=NAVY, bold=True)
 
 textbox(s, Inches(0.5), Inches(4.7), Inches(9.0), Inches(0.5),
-        "These tiny deviations from $1.00 across exchanges = our arbitrage signal",
+        "Cross-currency arbitrage is possible too: USD-pegged vs. EUR-pegged coins",
         size=13, color=MUTED, italic=True, align=PP_ALIGN.CENTER)
 page_number(s, 3)
 
@@ -244,16 +246,16 @@ page_number(s, 3)
 # SLIDE 4 — How Stablecoins Stay Pegged
 # =====================================================================
 s = add_slide(); set_bg(s)
-slide_title(s, "How Do They Stay at $1.00?", "Three pegging mechanisms")
+slide_title(s, "How Do They Stay Pegged?", "Three mechanisms \u2014 works for USD, EUR, GBP, CAD, etc.")
 cw, ch, gap = Inches(2.9), Inches(2.8), Inches(0.2)
 left0 = Inches(0.45); top0 = Inches(1.4)
 
 card(s, left0, top0, cw, ch, fill=MINT)
 textbox(s, left0 + Inches(0.15), top0 + Inches(0.1), cw - Inches(0.3), ch - Inches(0.2),
-        "Fiat-Backed\n(USDT, USDC)\n\n"
-        "1:1 reserve of USD in\n"
-        "bank accounts + T-bills.\n"
-        "Redeem anytime for $1.",
+        "Fiat-Backed\n(USDT, EURC)\n\n"
+        "1:1 reserve of fiat cash\n"
+        "in bank accounts + bonds.\n"
+        "Redeem anytime at par.",
         size=12, color=DARK)
 
 card(s, left0 + cw + gap, top0, cw, ch, fill=SKY)
@@ -316,7 +318,7 @@ bullets(s, Inches(0.4), Inches(1.2), Inches(3.5), Inches(3.5), [
     "Trade edge: swap coins\n  on same exchange",
     "Transfer edge: move coin\n  between exchanges",
     "Edge weight = fee in bps",
-    "Goal: find lowest-cost\n  cycle back to start",
+    "Goal: find lowest-cost path\n  \u2014 a closed cycle back to\n  start, OR just the cheapest\n  route between two nodes",
 ], size=12)
 # Large graph frame on right
 frame_path = os.path.join(FRAMES_DIR, "frame_00_step01.png")
@@ -383,8 +385,9 @@ step_descriptions = [
      "Bybit and Kraken reached. High time-risk paths to OKX deprioritized."),
     ("A* Nearing Completion",
      "Most nodes expanded. Searching for profitable return path to start."),
-    ("A* Final: Cycle Found",
-     "Red = profitable arbitrage cycle. Total cost shown in info panel."),
+    ("A* Final: Profitable Path Found",
+     "Red = lowest-cost route found. Doesn\u2019t have to close a cycle \u2014\n"
+     "a one-way path can be profitable too (e.g. rebalancing, one-off transfers)."),
 ]
 
 for i, (fname, (title, desc)) in enumerate(zip(demo_frames, step_descriptions)):
@@ -424,8 +427,9 @@ page_number(s, 14)
 s = add_slide(); set_bg(s)
 slide_title(s, "Summary")
 bullets(s, Inches(0.6), Inches(1.3), Inches(9.0), Inches(3.0), [
-    "Stablecoins = crypto pegged to $1 \u2014 tiny cross-exchange price gaps exist",
-    "Model as a graph \u2192 arbitrage = finding a profitable cycle",
+    "Stablecoins = crypto pegged to fiat (USD, EUR, etc.) \u2014 tiny cross-exchange gaps exist",
+    "Model as a graph \u2192 arbitrage = finding a profitable path",
+    "The path can close a cycle back to start, or just end at a cheaper destination \u2014 both count",
     "A* + slippage heuristic guides search toward deep, fast routes",
     "Same optimality as Dijkstra, but focused exploration",
 ], size=16)
