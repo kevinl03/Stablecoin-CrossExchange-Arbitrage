@@ -457,21 +457,67 @@ for i, (fname, (title, desc)) in enumerate(zip(demo_frames, step_descriptions)):
     page_number(s, 10 + i)
 
 # =====================================================================
-# SLIDE 15 — L2 Order Book
+# SLIDE 15 — L2 Order Book -> Slippage Heuristic
 # =====================================================================
 s = add_slide(); set_bg(s)
 slide_title(s, "The L2 Order Book \u2192 Slippage Heuristic")
 # Minimal bullets left
-bullets(s, Inches(0.5), Inches(1.2), Inches(4.0), Inches(3.5), [
-    "20 price levels of depth",
-    "Walk asks for our trade size",
-    "Binance: ~0 bps slippage\n  (millions of units at top)",
-    "Gate.io: ~0.5 bps slippage\n  (only 6K at top level)",
-    "Thin book = high h(n)\n  = A* avoids it",
-], size=12)
-ob_fig_path = os.path.join("docs", "figures", "astar_arbitrage_demo.png")
-if os.path.exists(ob_fig_path):
-    s.shapes.add_picture(ob_fig_path, Inches(4.2), Inches(1.1), width=Inches(5.6))
+bullets(s, Inches(0.45), Inches(1.2), Inches(4.05), Inches(2.7), [
+    "20 price levels of depth per book",
+    "Walk the asks for our trade size\n  \u2192 this is what guides h(n)",
+    "Deep book (Binance) \u2192 low slippage\n  \u2192 A* prefers it",
+    "Thin book (Gate.io) \u2192 high slippage\n  \u2192 A* avoids it",
+], size=13)
+card(s, Inches(0.45), Inches(3.95), Inches(4.05), Inches(1.15), fill=CARD_GRAY)
+textbox(s, Inches(0.6), Inches(4.02), Inches(3.75), Inches(1.0),
+        "Also tested h(n) variants penalizing:\n"
+        "\u2022 Liquidity (order book depth)\n"
+        "\u2022 Latency (chain + venue confirm time)",
+        size=12, color=DARK, bold=False)
+
+# Right: a compact bid/ask table, deep book vs. thin book (real ORDER_BOOKS data)
+table_left, table_top = Inches(4.85), Inches(1.25)
+table_w, table_h = Inches(4.7), Inches(2.7)
+rows, cols = 7, 3
+gtbl = s.shapes.add_table(rows, cols, table_left, table_top, table_w, table_h).table
+gtbl.columns[0].width = Inches(1.7)
+gtbl.columns[1].width = Inches(1.5)
+gtbl.columns[2].width = Inches(1.5)
+
+header = ["USDC/USDT", "Bid", "Ask"]
+binance_rows = [
+    ("Binance (deep)", "1.00011", "1.00014"),
+    ("", "1.00010", "1.00015"),
+    ("", "1.00009", "1.00016"),
+]
+gateio_rows = [
+    ("Gate.io (thin)", "1.0006", "1.0009"),
+    ("", "1.0005", "1.0010"),
+    ("", "1.0004", "1.0011"),
+]
+
+def _fill_row(row_cells, values, header_row=False, section_fill=None):
+    for c, val in enumerate(values):
+        cell = row_cells[c]
+        cell.text = val
+        p = cell.text_frame.paragraphs[0]
+        p.font.size = Pt(12 if not header_row else 13)
+        p.font.bold = header_row
+        p.font.color.rgb = WHITE if header_row else DARK
+        cell.vertical_anchor = MSO_ANCHOR.MIDDLE
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = section_fill if section_fill else (NAVY if header_row else CARD_GRAY)
+
+_fill_row(gtbl.rows[0].cells, header, header_row=True)
+for i, vals in enumerate(binance_rows):
+    _fill_row(gtbl.rows[1 + i].cells, vals, section_fill=MINT)
+for i, vals in enumerate(gateio_rows):
+    _fill_row(gtbl.rows[4 + i].cells, vals, section_fill=RGBColor(0xFF, 0xEB, 0xEE))
+
+textbox(s, Inches(4.85), Inches(4.05), Inches(4.7), Inches(1.0),
+        "$50K buy on Binance \u2248 0 bps slippage (millions of units at top)\n"
+        "$50K buy on Gate.io \u2248 0.5 bps slippage (only ~5K units at top)",
+        size=12, color=MUTED, italic=True)
 page_number(s, 15)
 
 # =====================================================================
