@@ -399,7 +399,7 @@ def render_frame(
             style=style, ax=ax, connectionstyle="arc3,rad=0.08",
         )
 
-    # ── Layer 2: explored edges (expanded nodes connected) ──
+    # ── Layer 2: tested/explored edges (both endpoints already expanded) ──
     for u, v, data in G.edges(data=True):
         kind = data.get("kind", "trade")
         if (u, v) in cycle_edge_set or (u, v) in frontier_edge_set:
@@ -409,15 +409,15 @@ def render_frame(
 
         u_ex = G.nodes[u]["exchange"]
         if kind == "transfer":
-            ec, alpha, lw, style = "#BDBDBD", 0.3, 0.8, "dotted"
+            ec, alpha, lw, style = "#9E9E9E", 0.55, 1.3, "dotted"
         else:
             ec = EXCHANGE_COLORS.get(u_ex, "#808080")
-            alpha, lw, style = 0.55, 1.5, "-"
+            alpha, lw, style = 0.85, 2.1, "-"
 
         nx.draw_networkx_edges(
             G, pos, edgelist=[(u, v)],
             edge_color=ec, width=lw, alpha=alpha,
-            arrows=True, arrowsize=10, arrowstyle="->",
+            arrows=True, arrowsize=11, arrowstyle="->",
             style=style, ax=ax, connectionstyle="arc3,rad=0.08",
         )
 
@@ -441,16 +441,25 @@ def render_frame(
                               edgecolor="#FF9800", linewidth=0.6, alpha=0.9),
                     zorder=8)
 
-    # ── Layer 4: cycle edges (bold red) ──
+    # ── Layer 4: cycle edges ──
+    # A cycle found mid-search is only the *best candidate so far* — it can
+    # still be beaten by a cheaper one later. Only the last step is final, so
+    # draw candidates lighter/dashed and reserve solid bold red for the end.
+    is_final_step = step_idx == total_steps - 1
     if cycle_edge_set:
         cycle_list = list(cycle_edge_set)
+        if is_final_step:
+            cyc_color, cyc_alpha, cyc_lw, cyc_style, cyc_arrow = "#D32F2F", 1.0, 3.5, "-", 18
+        else:
+            cyc_color, cyc_alpha, cyc_lw, cyc_style, cyc_arrow = "#EF9A9A", 0.75, 2.2, "--", 13
         nx.draw_networkx_edges(
             G, pos, edgelist=cycle_list,
-            edge_color="#D32F2F", width=3.5, alpha=1.0,
-            arrows=True, arrowsize=18, arrowstyle="->",
-            ax=ax, connectionstyle="arc3,rad=0.08",
+            edge_color=cyc_color, width=cyc_lw, alpha=cyc_alpha,
+            arrows=True, arrowsize=cyc_arrow, arrowstyle="->",
+            style=cyc_style, ax=ax, connectionstyle="arc3,rad=0.08",
         )
         # Rate labels on cycle edges
+        label_color = "#B71C1C" if is_final_step else "#C62828"
         for u, v in cycle_list:
             rate = G.edges[(u, v)].get("rate", 1.0)
             fee = G.edges[(u, v)].get("fee_bps", 0)
@@ -458,9 +467,9 @@ def render_frame(
             my = (pos[u][1] + pos[v][1]) / 2
             ax.text(mx, my, f"{rate:.4f}\n({fee:.1f}bp)",
                     ha="center", va="center", fontsize=6, fontweight="bold",
-                    color="#B71C1C",
+                    color=label_color,
                     bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
-                              edgecolor="#D32F2F", linewidth=1.2),
+                              edgecolor=cyc_color, linewidth=1.2, alpha=0.9 if is_final_step else 0.7),
                     zorder=9)
 
     # ── Nodes (ui.py style: exchange-colored fill, white edge, label inside) ──
@@ -475,8 +484,12 @@ def render_frame(
             # Currently being expanded: bright yellow with thick border
             fc, ec, tc, lw, r = "#FFEB3B", "#F57F17", "#333333", 3.5, 0.48
         elif node in cycle_set:
-            # Part of a profitable cycle: red highlight
-            fc, ec, tc, lw, r = "#FFE0E0", "#D32F2F", "#222222", 3.0, 0.48
+            if is_final_step:
+                # Part of the final profitable cycle: solid red highlight
+                fc, ec, tc, lw, r = "#FFE0E0", "#D32F2F", "#222222", 3.0, 0.48
+            else:
+                # Part of the best-candidate-so-far: lighter, dashed border
+                fc, ec, tc, lw, r = "#FFEBEE", "#EF9A9A", "#222222", 2.0, 0.46
         elif node in expanded_set:
             # Already expanded: exchange-colored fill, white border
             fc, ec, tc, lw, r = base_color, "white", "#222222", 1.8, 0.42
@@ -506,14 +519,18 @@ def render_frame(
     ]
     if step.best_cycle:
         cycle_str = " → ".join(f"{n[0][:3]}:{n[1]}" for n in step.best_cycle)
-        info_lines.append(f"")
-        info_lines.append(f"  CYCLE FOUND: {cycle_str}")
         total_fee = sum(
             G.edges[(step.best_cycle[i], step.best_cycle[i+1])].get("fee_bps", 0)
             for i in range(len(step.best_cycle) - 1)
             if G.has_edge(step.best_cycle[i], step.best_cycle[i+1])
         )
-        info_lines.append(f"  Total cycle cost: {total_fee:.2f} bps")
+        info_lines.append(f"")
+        if is_final_step:
+            info_lines.append(f"  FINAL CYCLE: {cycle_str}")
+            info_lines.append(f"  Total cycle cost: {total_fee:.2f} bps")
+        else:
+            info_lines.append(f"  Candidate (best so far): {cycle_str}")
+            info_lines.append(f"  Cost: {total_fee:.2f} bps \u2014 still searching for cheaper")
 
     info_text = "\n".join(info_lines)
     ax.text(0.02, 0.02, info_text, transform=ax.transAxes, fontsize=7.5,
@@ -532,10 +549,12 @@ def render_frame(
         mlines.Line2D([], [], marker="o", color="w", markerfacecolor="#E0E0E0",
                        markeredgecolor="white", markersize=8, label="Not yet reached"),
         mlines.Line2D([], [], color="#FF9800", linewidth=2.5, label="Frontier (just queued)"),
-        mlines.Line2D([], [], color="#888", linewidth=1.5, label="Intra-exchange trade"),
-        mlines.Line2D([], [], color="#BDBDBD", linewidth=1, linestyle="dotted",
-                       label="Cross-exchange transfer"),
-        mlines.Line2D([], [], color="#D32F2F", linewidth=3.5, label="Profitable cycle"),
+        mlines.Line2D([], [], color=EXCHANGE_COLORS["Binance"], linewidth=2.1, label="Tested (explored trade)"),
+        mlines.Line2D([], [], color="#9E9E9E", linewidth=1.3, linestyle="dotted",
+                       label="Tested (explored transfer)"),
+        mlines.Line2D([], [], color="#EF9A9A", linewidth=2.2, linestyle="--",
+                       label="Candidate cycle (best so far)"),
+        mlines.Line2D([], [], color="#D32F2F", linewidth=3.5, label="Final profitable cycle"),
     ]
     ax.legend(handles=legend, loc="upper right", fontsize=7, framealpha=0.92,
               edgecolor="#777", fancybox=True)
