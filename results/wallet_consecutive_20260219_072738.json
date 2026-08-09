@@ -1,0 +1,24 @@
+{
+  "test": "consecutive_wallet_execution",
+  "timestamp": "2026-02-19T07:27:38.661586+00:00",
+  "config": {
+    "initial_cash": 10000.0,
+    "initial_node": "('binance', 'USDT')"
+  },
+  "results": {
+    "executions": 1,
+    "total_profit": 9.76459696046004,
+    "final_value": 10009.76459696046,
+    "roi_pct": 0.0976459696046004
+  },
+  "execution_log": [
+    {
+      "timestamp": "2026-02-19T07:27:38.642687+00:00",
+      "from_node": "binance:USDT",
+      "to_node": "mexc:TUSD",
+      "starting_cash": 10000.0,
+      "profit": 9.76459696046004,
+      "final_cash": 10009.76459696046
+    }
+  ]
+}

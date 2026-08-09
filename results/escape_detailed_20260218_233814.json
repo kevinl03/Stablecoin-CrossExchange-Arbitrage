@@ -1,0 +1,15 @@
+{
+  "stuck_node": "mexc:TUSD",
+  "stuck_balance": 10009.76,
+  "total_paths_tested": 0,
+  "paths_found": [],
+  "recommendation": "NO ESCAPE - funds are irretrievably stuck",
+  "paths_by_category": {
+    "profitable": [],
+    "breakeven": [],
+    "acceptable_loss": [],
+    "catastrophic": []
+  },
+  "timestamp": "2026-02-19T07:38:14.729001+00:00",
+  "elapsed_seconds": 59.695180892944336
+}

@@ -1,0 +1,233 @@
+{
+  "trades_executed": 0,
+  "paths_rejected": 20,
+  "paths_accepted": 0,
+  "total_profit": 0.0,
+  "final_value": 10000.0,
+  "final_balances": {
+    "binance:USDT": 10000.0
+  },
+  "validation_log": [
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    },
+    {
+      "endpoint": [
+        "mexc",
+        "TUSD"
+      ],
+      "entry_profit": 8.762217169056385,
+      "has_exit": false,
+      "exit_profit": 0,
+      "net_profit": null,
+      "rejected_reason": "Dead-end: \u2717 No exit"
+    }
+  ],
+  "execution_log": []
+}

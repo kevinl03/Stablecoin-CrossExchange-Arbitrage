@@ -1,0 +1,8 @@
+{
+  "stuck_node": "mexc:TUSD",
+  "stuck_balance": 10009.76,
+  "total_paths_tested": 0,
+  "paths_found": [],
+  "timestamp": "2026-02-19T07:36:49.461779+00:00",
+  "elapsed_seconds": 49.54733419418335
+}
